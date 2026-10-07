@@ -1,0 +1,43 @@
+/index.html
+  Content-Type: text/html; charset=utf-8
+  Cache-Control: no-cache
+
+/sw.js
+  Content-Type: application/javascript; charset=utf-8
+  Cache-Control: no-cache
+
+/manifest.webmanifest
+  Content-Type: application/manifest+json
+  Cache-Control: no-cache
+
+/install-ios.js
+  Content-Type: application/javascript; charset=utf-8
+  Cache-Control: no-cache
+
+/static.css
+  Content-Type: text/css; charset=utf-8
+  Cache-Control: no-cache
+
+/assets/*.js
+  Content-Type: application/javascript; charset=utf-8
+  Cache-Control: public, max-age=31536000, immutable
+
+/assets/*.css
+  Content-Type: text/css; charset=utf-8
+  Cache-Control: public, max-age=31536000, immutable
+
+/offline/media/*
+  Cache-Control: public, max-age=31536000, immutable
+
+/branding/*
+  Cache-Control: public, max-age=31536000, immutable
+
+/branding/*.svg
+  Content-Type: image/svg+xml; charset=utf-8
+  Cache-Control: public, max-age=31536000, immutable
+
+/icons/*
+  Cache-Control: public, max-age=31536000, immutable
+
+/vendor/*
+  Cache-Control: public, max-age=31536000, immutable

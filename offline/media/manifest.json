@@ -1,0 +1,17 @@
+{
+  "version": "10.1",
+  "archiveFileName": "media.btca.zip",
+  "password": "1744Alint4471btca",
+  "packs": [
+    {
+      "id": "level3/exercises",
+      "zipUrl": "/offline/media/level3/exercises/media.btca.zip",
+      "bytes": 18348724
+    },
+    {
+      "id": "level3/polez",
+      "zipUrl": "/offline/media/level3/polez/media.btca.zip",
+      "bytes": 6509081
+    }
+  ]
+}

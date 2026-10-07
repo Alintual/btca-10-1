@@ -1,0 +1,2847 @@
+(function () {
+  "use strict";
+
+  var DB = window.BTCA_LEVEL1_DB;
+  var VERSION = "10.1";
+  var BRANDING_UP = "branding/up.png";
+  var BRANDING_BAZA = "branding/baza.png";
+  var TRAILING_SLOT_W = 112;
+  var FORMA_BANNER = "Цель - результативность не менее 70 %";
+  var NAV_FILTER_ALL = "all";
+  var POLEZ_ALL = "all";
+  var POLEZ_HIDDEN = { fig8: 1, fig9: 1, fig10: 1, fig11: 1, fig20: 1, fig21: 1 };
+  var PICK_DELAY_MS = 1500;
+  var PICKER_ROW_SIMPLE = 40;
+  var PICKER_ROW_GROUP = 40;
+  var PICKER_LIST_PAD = 4;
+  var SCREEN_EDGE_GUTTER = 4;
+  var SWIPE_DISTANCE_PX = 56;
+  var SWIPE_HORIZONTAL_DOMINANCE = 1.6;
+
+  function bindHorizontalSwipe(el, handlers) {
+    if (!el || !handlers) return;
+    var startX = 0;
+    var startY = 0;
+    var tracking = false;
+    el.addEventListener("touchstart", function (event) {
+      if (!event.touches || event.touches.length !== 1) return;
+      startX = event.touches[0].clientX;
+      startY = event.touches[0].clientY;
+      tracking = true;
+    }, { passive: true });
+    el.addEventListener("touchend", function (event) {
+      if (!tracking) return;
+      tracking = false;
+      var touch = event.changedTouches && event.changedTouches[0];
+      if (!touch) return;
+      var dx = touch.clientX - startX;
+      var dy = touch.clientY - startY;
+      if (Math.abs(dx) < 12 || Math.abs(dx) <= Math.abs(dy) * SWIPE_HORIZONTAL_DOMINANCE) return;
+      if (dx >= SWIPE_DISTANCE_PX && handlers.onSwipeRight) handlers.onSwipeRight();
+      else if (dx <= -SWIPE_DISTANCE_PX && handlers.onSwipeLeft) handlers.onSwipeLeft();
+    }, { passive: true });
+  }
+
+  function openNavExerciseImage(payload) {
+    openExerciseImage({
+      exerciseValue: payload.exerciseValue,
+      title: payload.title,
+      returnTo: "nav",
+      step: "portrait",
+    });
+  }
+
+  var SHEETS = [
+    { key: "forma", label: "Форма", title: "Форма ввода", emoji: "📊" },
+    { key: "baza", label: "База", title: "База данных", emoji: "" },
+    { key: "nav", label: "Упражнения", title: "Упражнения", emoji: "🔎" },
+    { key: "polez", label: "Полезности", title: "Полезности", emoji: "📚" },
+  ];
+
+  var bootPromise = null;
+  var booted = false;
+
+  function syncUiFromDb() {
+    if (DB && DB.getUiState) state.ui = DB.getUiState();
+  }
+
+  function applyUiPatch(patch) {
+    if (!DB || !DB.patchUiState) return;
+    DB.patchUiState(patch);
+    syncUiFromDb();
+  }
+
+  var state = {
+    root: null,
+    ui: null,
+    data: { exercises: [], polezCatalog: [], polezLinks: [], polezDescriptions: {} },
+    formaFlags: {},
+    bazaStats: { empty: true, fillText: "пуста" },
+    bazaRows: [],
+    bazaExpandedRows: [],
+    bazaOwnKeys: [],
+    bazaRuleTasks: [],
+    bazaNoExercisesInPeriod: false,
+    bazaOwnEmpty: true,
+    bazaMenuOpen: false,
+    bazaDeleteConfirm: null,
+    bazaIdentifierMode: null,
+    bazaUserFileId: "",
+    bazaIdentifierDraft: "",
+    bazaIdentifierError: "",
+    bazaToast: null,
+    bazaToastTimer: null,
+    pickTimer: null,
+    mounted: false,
+  };
+
+  function escapeHtml(v) {
+    return String(v).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+  }
+
+  function formatIsoDateAsDdMmYyyy(iso) {
+    var m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(iso || "").trim());
+    return m ? m[3] + "-" + m[2] + "-" + m[1] : iso;
+  }
+
+  function numericB5(b5) {
+    if (typeof b5 === "number" && Number.isFinite(b5)) return b5;
+    if (typeof b5 === "string") {
+      if (b5.indexOf("Тест") === 0) return null;
+      var n = Number(b5);
+      return Number.isFinite(n) ? n : null;
+    }
+    return null;
+  }
+
+  function b5FromSelectValue(selValue) {
+    var s = String(selValue || "").trim();
+    if (s.indexOf("Тест") === 0) return s;
+    var n = Number(s);
+    return Number.isFinite(n) ? n : s;
+  }
+
+  function taskActiveFormL1(b5, task) {
+    if (b5 === "" || b5 == null) return false;
+    var n = numericB5(b5);
+    if (task >= 7 && task <= 12) return false;
+    if (task === 1) return true;
+    if (task === 2 || task === 3) return !(n === 9 || n === 10 || n === 11 || n === 14 || b5 === "Тест1");
+    if (task === 4) return !(n === 9 || n === 10 || n === 11 || n === 12 || n === 14 || b5 === "Тест1");
+    if (task === 5) return !(n === 1 || n === 2 || n === 9 || n === 10 || n === 11 || n === 12 || n === 14 || b5 === "Тест1");
+    if (task === 6) return n === 3 || n === 4 || n === 6 || n === 7 || n === 8 || n === 13;
+    return false;
+  }
+
+  function requiredStrikesFormL1(b5, task) {
+    if (!taskActiveFormL1(b5, task)) return null;
+    var n = numericB5(b5);
+    if (task === 1) {
+      if (n === 9 || n === 10 || b5 === "Тест1") return 30;
+      if (n === 14) return 16;
+      return 15;
+    }
+    if (task >= 2 && task <= 6) return n === 14 ? 16 : 15;
+    return null;
+  }
+
+  function exerciseRulesL1(b5) {
+    var requiredByTask = [];
+    for (var task = 1; task <= 12; task += 1) requiredByTask.push(requiredStrikesFormL1(b5, task));
+    return { requiredByTask: requiredByTask };
+  }
+
+  function parseNonNegativeInt(raw) {
+    var s = String(raw || "").trim();
+    if (!s) return null;
+    if (!/^\d+$/.test(s)) return NaN;
+    return Number(s);
+  }
+
+  function exerciseOptionLabel(b5) {
+    return typeof b5 === "string" && b5.indexOf("Тест") === 0 ? b5 : String(b5);
+  }
+
+  function optionValueForB5(b5) {
+    return typeof b5 === "number" ? String(b5) : b5;
+  }
+
+  function neighborActiveOkTask(fromTask, dir, b5) {
+    for (var t = fromTask + dir; t >= 1 && t <= 12; t += dir) {
+      if (!taskActiveFormL1(b5, t)) continue;
+      if (requiredStrikesFormL1(b5, t) === null) continue;
+      return t;
+    }
+    return null;
+  }
+
+  function isFormaOkValueValid(okRaw, req) {
+    if (req === null) return false;
+    var ok = parseNonNegativeInt(okRaw);
+    if (ok === null || Number.isNaN(ok)) return false;
+    return ok >= 1 && ok <= req;
+  }
+
+  function syncFormaSaveButton(content, canSave) {
+    var saveBtn = content.querySelector("[data-btca-forma-save]");
+    if (!saveBtn) return;
+    saveBtn.setAttribute("data-btca-forma-can-save", canSave ? "1" : "0");
+    saveBtn.classList.toggle("btca-l1-save--disabled", !canSave);
+    var icon = saveBtn.querySelector(".btca-l1-save__icon");
+    var label = saveBtn.querySelector(".btca-l1-save__label");
+    if (icon) icon.classList.toggle("btca-l1-save__icon--disabled", !canSave);
+    if (label) label.classList.toggle("btca-l1-save__label--disabled", !canSave);
+  }
+
+  var formaOkFocusState = { task: null, blockDismissUntil: 0 };
+  var formaSaveInFlight = false;
+  var formaSaveWatchdog = null;
+
+  function readTaskOkFromDom(content) {
+    var taskOk = {};
+    if (!content) return taskOk;
+    if (useFormaCustomNumpad()) {
+      content.querySelectorAll("[data-btca-forma-ok-cell]").forEach(function (cell) {
+        var task = cell.getAttribute("data-btca-forma-ok-cell");
+        var valueEl = cell.querySelector("[data-btca-forma-ok-value]");
+        var raw = valueEl ? String(valueEl.textContent || "").trim() : "";
+        if (task) taskOk[String(task)] = raw.replace(/[^\d]/g, "");
+      });
+    } else {
+      content.querySelectorAll("[data-btca-forma-ok-input]").forEach(function (input) {
+        var task = input.getAttribute("data-btca-forma-ok-input");
+        if (task) taskOk[String(task)] = String(input.value || "").replace(/[^\d]/g, "");
+      });
+    }
+    return taskOk;
+  }
+
+  function mergeDomTaskOkIntoState(content) {
+    if (!content) return;
+    if (!content.querySelector("[data-btca-forma-ok-cell], [data-btca-forma-ok-input]")) return;
+    var domTaskOk = readTaskOkFromDom(content);
+    applyUiPatch({ taskOk: Object.assign({}, state.ui.taskOk || {}, domTaskOk) });
+  }
+
+  function clearFormaSaveWatchdog() {
+    if (formaSaveWatchdog) {
+      window.clearTimeout(formaSaveWatchdog);
+      formaSaveWatchdog = null;
+    }
+  }
+
+  function armFormaSaveWatchdog() {
+    clearFormaSaveWatchdog();
+    formaSaveWatchdog = window.setTimeout(function () {
+      formaSaveWatchdog = null;
+      if (!formaSaveInFlight) return;
+      formaSaveInFlight = false;
+      state.formaFlags.statusOverride = { text: "Ошибка записи", tone: "error" };
+      renderTitleBar();
+    }, 8000);
+  }
+
+  function markFormaNumpadInteraction() {
+    formaOkFocusState.blockDismissUntil = Date.now() + 450;
+  }
+
+  function shouldBlockFormaNumpadDismiss() {
+    return Date.now() < formaOkFocusState.blockDismissUntil;
+  }
+
+  function isAppleTouchDevice() {
+    var ua = navigator.userAgent || "";
+    return /iPhone|iPad|iPod/.test(ua) ||
+      (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+  }
+
+  function useFormaCustomNumpad() {
+    return isAppleTouchDevice();
+  }
+
+  function reinforceFormaOkInputKeyboard(input) {
+    if (!input) return;
+    input.type = "text";
+    input.inputMode = "numeric";
+    input.setAttribute("inputmode", "numeric");
+    input.setAttribute("pattern", "[0-9]*");
+    input.setAttribute("autocomplete", "off");
+    input.removeAttribute("name");
+    input.removeAttribute("lang");
+  }
+
+  function blurActiveField() {
+    var active = document.activeElement;
+    if (active && active !== document.body && typeof active.blur === "function") active.blur();
+  }
+
+  function createFormaOkInput(task, row) {
+    var input = document.createElement("input");
+    input.className = "btca-l1-ok-input" + (row.invalid ? " btca-l1-ok-input--invalid" : "");
+    input.setAttribute("data-btca-forma-ok-input", String(task));
+    input.setAttribute("autocorrect", "off");
+    input.setAttribute("autocapitalize", "off");
+    input.setAttribute("spellcheck", "false");
+    input.setAttribute("enterkeyhint", "done");
+    input.setAttribute("aria-label", "Успешные удары задача " + task);
+    reinforceFormaOkInputKeyboard(input);
+    input.value = row.okRaw || "";
+    return input;
+  }
+
+  function mountFormaOkCellButton(slot, task, row) {
+    var btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "btca-l1-ok-cell" + (row.invalid ? " btca-l1-ok-cell--invalid" : "");
+    btn.setAttribute("data-btca-forma-ok-cell", String(task));
+    btn.setAttribute("aria-label", "Успешные удары задача " + task);
+    var display = document.createElement("span");
+    display.className = "btca-l1-ok-display";
+    display.setAttribute("data-btca-forma-ok-display", "");
+    var value = document.createElement("span");
+    value.className = "btca-l1-ok-value";
+    value.setAttribute("data-btca-forma-ok-value", "");
+    value.textContent = row.okRaw || "";
+    var caret = document.createElement("span");
+    caret.className = "btca-l1-ok-caret";
+    caret.setAttribute("data-btca-forma-ok-caret", "");
+    caret.setAttribute("aria-hidden", "true");
+    caret.hidden = true;
+    display.appendChild(value);
+    display.appendChild(caret);
+    btn.appendChild(display);
+    slot.textContent = "";
+    slot.appendChild(btn);
+  }
+
+  function getFormaOkInput(content, task) {
+    return content.querySelector('[data-btca-forma-ok-input="' + task + '"]');
+  }
+
+  function getFormaOkCell(content, task) {
+    return content.querySelector('[data-btca-forma-ok-cell="' + task + '"]');
+  }
+
+  function getFormaOkAnchor(content, task) {
+    return useFormaCustomNumpad() ? getFormaOkCell(content, task) : getFormaOkInput(content, task);
+  }
+
+  function getFormaNumpad(content) {
+    return content.querySelector("[data-btca-forma-numpad]");
+  }
+
+  function createFormaNumpadKey(label, value, opts) {
+    opts = opts || {};
+    var btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "btca-l1-forma-numpad-key";
+    if (opts.action) btn.className += " btca-l1-forma-numpad-key--action";
+    if (opts.enter) btn.className += " btca-l1-forma-numpad-key--enter";
+    btn.setAttribute("data-btca-forma-numpad-key", value);
+    if (value === "backspace") btn.setAttribute("aria-label", "Стереть");
+    else if (value === "enter") btn.setAttribute("aria-label", "Ввод");
+    else btn.setAttribute("aria-label", "Цифра " + label);
+    if (opts.enter) {
+      btn.innerHTML = '<span class="btca-l1-forma-numpad-enter-glyph" aria-hidden="true">' +
+        '<span class="btca-l1-forma-numpad-enter-arrow">→</span>' +
+        '<span class="btca-l1-forma-numpad-enter-bar">|</span></span>';
+    } else {
+      btn.textContent = label;
+    }
+    return btn;
+  }
+
+  function ensureFormaNumpad(content) {
+    var existing = getFormaNumpad(content);
+    if (existing) return existing;
+    var host = content.querySelector(".btca-l1-forma");
+    if (!host) return null;
+    var dock = document.createElement("div");
+    dock.className = "btca-l1-forma-numpad-dock";
+    dock.setAttribute("data-btca-forma-numpad", "");
+
+    var grid = document.createElement("div");
+    grid.className = "btca-l1-forma-numpad-grid";
+    ["1", "2", "3", "4", "5", "6", "7", "8", "9"].forEach(function (digit) {
+      grid.appendChild(createFormaNumpadKey(digit, digit));
+    });
+    grid.appendChild(createFormaNumpadKey("⌫", "backspace", { action: true }));
+    grid.appendChild(createFormaNumpadKey("0", "0"));
+    grid.appendChild(createFormaNumpadKey("", "enter", { action: true, enter: true }));
+    dock.appendChild(grid);
+
+    host.appendChild(dock);
+    wireFormaNumpad(content, dock);
+    return dock;
+  }
+
+  function setFormaNumpadOpen(content, open) {
+    var forma = content.querySelector(".btca-l1-forma");
+    var dock = ensureFormaNumpad(content);
+    if (!forma || !dock) return;
+    forma.classList.toggle("btca-l1-forma--numpad-open", !!open);
+    if (open) blurActiveField();
+  }
+
+  function closeFormaOkCell(content) {
+    setFormaNumpadOpen(content, false);
+    setActiveFormaOkCell(content, null);
+  }
+
+  function setActiveFormaOkCell(content, task) {
+    formaOkFocusState.task = task;
+    if (useFormaCustomNumpad()) {
+      content.querySelectorAll("[data-btca-forma-ok-cell]").forEach(function (cell) {
+        var cellTask = Number(cell.getAttribute("data-btca-forma-ok-cell"));
+        cell.classList.toggle("btca-l1-ok-cell--active", cellTask === task);
+      });
+      syncFormaOkCaret(content);
+      return;
+    }
+    content.querySelectorAll("[data-btca-forma-ok-input]").forEach(function (input) {
+      var cellTask = Number(input.getAttribute("data-btca-forma-ok-input"));
+      input.classList.toggle("btca-l1-ok-input--active", cellTask === task);
+    });
+  }
+
+  function mountFormaOkCells(content, forma) {
+    forma.rows.forEach(function (row) {
+      if (!row.active || row.required === null) return;
+      var slot = content.querySelector('[data-btca-forma-ok-slot="' + row.task + '"]');
+      if (!slot) return;
+      if (useFormaCustomNumpad()) {
+        mountFormaOkCellButton(slot, row.task, row);
+      } else {
+        slot.textContent = "";
+        slot.appendChild(createFormaOkInput(row.task, row));
+      }
+    });
+    if (useFormaCustomNumpad()) ensureFormaNumpad(content);
+  }
+
+  function openFormaOkCell(content, task, opts) {
+    opts = opts || {};
+    markFormaNumpadInteraction();
+    setActiveFormaOkCell(content, task);
+    if (useFormaCustomNumpad()) {
+      setFormaNumpadOpen(content, true);
+      syncFormaOkCaret(content);
+      scrollFormaOkRowIntoView(content, task);
+      return;
+    }
+    if (opts.scroll) scrollFormaOkRowIntoView(content, task);
+    var input = getFormaOkInput(content, task);
+    if (!input) return;
+    var digits = state.ui.taskOk[String(task)] || "";
+    var b5 = b5FromSelectValue(state.ui.exerciseValue);
+    var nextOk = neighborActiveOkTask(task, 1, b5);
+    input.setAttribute("enterkeyhint", nextOk !== null ? "next" : "done");
+    input.value = digits;
+    reinforceFormaOkInputKeyboard(input);
+    input.focus({ preventScroll: true });
+  }
+
+  function syncFormaOkCaret(content) {
+    if (!useFormaCustomNumpad()) return;
+    var activeTask = formaOkFocusState.task;
+    content.querySelectorAll("[data-btca-forma-ok-caret]").forEach(function (caret) {
+      var cell = caret.closest("[data-btca-forma-ok-cell]");
+      if (!cell) return;
+      var cellTask = Number(cell.getAttribute("data-btca-forma-ok-cell"));
+      caret.hidden = cellTask !== activeTask;
+    });
+  }
+
+  function syncFormaOkTableDom(content, forma) {
+    forma.rows.forEach(function (row) {
+      if (useFormaCustomNumpad()) {
+        var cell = getFormaOkCell(content, row.task);
+        if (!cell) return;
+        var valueEl = cell.querySelector("[data-btca-forma-ok-value]");
+        if (valueEl) valueEl.textContent = row.okRaw || "";
+        cell.classList.toggle("btca-l1-ok-cell--invalid", !!row.invalid);
+        cell.classList.toggle("btca-l1-ok-cell--active", formaOkFocusState.task === row.task);
+      } else {
+        var input = getFormaOkInput(content, row.task);
+        if (!input) return;
+        if (document.activeElement !== input && input.value !== (row.okRaw || "")) {
+          input.value = row.okRaw || "";
+        }
+        input.classList.toggle("btca-l1-ok-input--invalid", !!row.invalid);
+        input.classList.toggle("btca-l1-ok-input--active", formaOkFocusState.task === row.task);
+      }
+      var anchor = getFormaOkAnchor(content, row.task);
+      if (!anchor) return;
+      var rowEl = anchor.closest(".btca-l1-table-row");
+      if (!rowEl) return;
+      var okCell = rowEl.querySelector(".btca-l1-col--ok");
+      if (okCell) okCell.classList.toggle("btca-l1-table-cell--invalid", !!row.invalid);
+      var pctCell = rowEl.querySelector(".btca-l1-col--pct .btca-l1-td");
+      if (pctCell) pctCell.textContent = row.pct;
+    });
+    syncFormaOkCaret(content);
+    syncFormaSaveButton(content, forma.canSave);
+  }
+
+  function getFormaNumpadObstruction(content) {
+    if (!useFormaCustomNumpad()) return 16;
+    var forma = content.querySelector(".btca-l1-forma");
+    if (!forma || !forma.classList.contains("btca-l1-forma--numpad-open")) return 16;
+    var dock = getFormaNumpad(content);
+    if (!dock) return 220;
+    var h = dock.getBoundingClientRect().height;
+    return h > 0 ? h + 8 : 220;
+  }
+
+  function scrollFormaTableToTop(content) {
+    var scroll = content && content.querySelector("[data-btca-forma-table-scroll]");
+    if (scroll) scroll.scrollTop = 0;
+  }
+
+  function scrollFormaOkRowIntoView(content, task) {
+    var scroll = content.querySelector("[data-btca-forma-table-scroll]");
+    var anchor = getFormaOkAnchor(content, task);
+    if (!scroll || !anchor) return;
+    var rowEl = anchor.closest(".btca-l1-table-row");
+    if (!rowEl) return;
+
+    function apply() {
+      var scrollRect = scroll.getBoundingClientRect();
+      var rowRect = rowEl.getBoundingClientRect();
+      var margin = 8;
+      var obstruction = getFormaNumpadObstruction(content);
+      var visibleBottom = Math.min(scrollRect.bottom, window.innerHeight - obstruction) - margin;
+      var visibleTop = scrollRect.top + margin;
+      if (rowRect.bottom > visibleBottom) {
+        scroll.scrollTop += rowRect.bottom - visibleBottom;
+      } else if (rowRect.top < visibleTop) {
+        scroll.scrollTop -= visibleTop - rowRect.top;
+      }
+    }
+
+    requestAnimationFrame(function () {
+      requestAnimationFrame(apply);
+    });
+    window.setTimeout(apply, 80);
+  }
+
+  function finishOrAdvanceFormaOkTask(content, task) {
+    var b5 = b5FromSelectValue(state.ui.exerciseValue);
+    var req = requiredStrikesFormL1(b5, task);
+    var digits = state.ui.taskOk[String(task)] || "";
+    if (!isFormaOkValueValid(digits, req)) return;
+    var next = neighborActiveOkTask(task, 1, b5);
+    if (next !== null) {
+      openFormaOkCell(content, next, { scroll: true });
+      return;
+    }
+    if (!useFormaCustomNumpad()) {
+      var input = getFormaOkInput(content, task);
+      if (input) input.blur();
+    }
+    closeFormaOkCell(content);
+    var scroll = content.querySelector("[data-btca-forma-table-scroll]");
+    if (scroll) scroll.scrollTop = 0;
+  }
+
+  function handleFormaOkDigits(content, task, digits) {
+    var nextTaskOk = Object.assign({}, (state.ui && state.ui.taskOk) || {});
+    nextTaskOk[String(task)] = digits;
+    applyUiPatch({ taskOk: nextTaskOk });
+    state.formaFlags.suppressExerciseActive = false;
+    state.formaFlags.statusOverride = null;
+    var forma = computeFormaRows();
+    state.formaFlags.invalidData = !forma.allActiveOkAreEmptyOrValid;
+    syncFormaOkTableDom(content, forma);
+    renderTitleBar();
+    var b5 = b5FromSelectValue(state.ui.exerciseValue);
+    var req = requiredStrikesFormL1(b5, task);
+    if (req !== null && digits && isFormaOkValueValid(digits, req) && digits.length >= String(req).length) {
+      finishOrAdvanceFormaOkTask(content, task);
+    }
+  }
+
+  function appendFormaOkDigit(content, task, digit) {
+    var digits = String(state.ui.taskOk[String(task)] || "") + String(digit);
+    handleFormaOkDigits(content, task, digits);
+  }
+
+  function backspaceFormaOkDigit(content, task) {
+    var digits = String(state.ui.taskOk[String(task)] || "");
+    if (!digits) return;
+    handleFormaOkDigits(content, task, digits.slice(0, -1));
+  }
+
+  function handleFormaNumpadKey(content, key) {
+    var task = formaOkFocusState.task;
+    if (task === null) return;
+    if (key === "backspace") backspaceFormaOkDigit(content, task);
+    else if (key === "enter") {
+      var b5 = b5FromSelectValue(state.ui.exerciseValue);
+      var req = requiredStrikesFormL1(b5, task);
+      var digits = state.ui.taskOk[String(task)] || "";
+      if (isFormaOkValueValid(digits, req)) finishOrAdvanceFormaOkTask(content, task);
+      else closeFormaOkCell(content);
+    } else appendFormaOkDigit(content, task, key);
+  }
+
+  function wireFormaNumpad(content, dock) {
+    if (!dock || dock.getAttribute("data-btca-forma-numpad-wired") === "1") return;
+    dock.setAttribute("data-btca-forma-numpad-wired", "1");
+    dock.querySelectorAll("[data-btca-forma-numpad-key]").forEach(function (keyBtn) {
+      function onNumpadPress(event) {
+        event.preventDefault();
+        event.stopPropagation();
+        markFormaNumpadInteraction();
+        handleFormaNumpadKey(content, keyBtn.getAttribute("data-btca-forma-numpad-key"));
+      }
+      keyBtn.addEventListener("pointerdown", onNumpadPress);
+      keyBtn.addEventListener("click", function (event) {
+        event.preventDefault();
+        event.stopPropagation();
+      });
+    });
+    dock.addEventListener("pointerdown", function (event) {
+      event.stopPropagation();
+      markFormaNumpadInteraction();
+    });
+    if (!content._formaNumpadDismissWired) {
+      content._formaNumpadDismissWired = true;
+      document.addEventListener("click", function (event) {
+        if (shouldBlockFormaNumpadDismiss()) return;
+        var forma = content.querySelector(".btca-l1-forma");
+        if (!forma || !forma.classList.contains("btca-l1-forma--numpad-open")) return;
+        if (event.target.closest("[data-btca-forma-numpad]")) return;
+        if (event.target.closest("[data-btca-forma-ok-cell]")) return;
+        if (event.target.closest("[data-btca-forma-save]")) return;
+        closeFormaOkCell(content);
+      });
+    }
+  }
+
+  function wireFormaOkInputs(content) {
+    if (useFormaCustomNumpad()) {
+      content.querySelectorAll("[data-btca-forma-ok-cell]").forEach(function (cell) {
+        cell.addEventListener("click", function (event) {
+          event.stopPropagation();
+          openFormaOkCell(content, Number(cell.getAttribute("data-btca-forma-ok-cell")));
+        });
+      });
+      return;
+    }
+    content.querySelectorAll("[data-btca-forma-ok-input]").forEach(function (input) {
+      var task = Number(input.getAttribute("data-btca-forma-ok-input"));
+      input.addEventListener("pointerdown", function () {
+        reinforceFormaOkInputKeyboard(input);
+      });
+      input.addEventListener("focus", function () {
+        setActiveFormaOkCell(content, task);
+        reinforceFormaOkInputKeyboard(input);
+      });
+      input.addEventListener("blur", function () {
+        if (formaOkFocusState.task === task) setActiveFormaOkCell(content, null);
+      });
+      input.addEventListener("input", function () {
+        var digits = String(input.value || "").replace(/[^\d]/g, "");
+        if (input.value !== digits) input.value = digits;
+        handleFormaOkDigits(content, task, digits);
+      });
+      input.addEventListener("keydown", function (event) {
+        if (event.key !== "Enter") return;
+        event.preventDefault();
+        finishOrAdvanceFormaOkTask(content, task);
+      });
+    });
+  }
+
+  function exerciseImageFile(level, exerciseValue) {
+    var k = String(exerciseValue || "").trim();
+    var testMatch = /^Тест\s*(\d+)$/i.exec(k);
+    if (testMatch) return "test_" + testMatch[1] + ".jpg";
+    var b5 = b5FromSelectValue(k);
+    if (typeof b5 === "number" && Number.isFinite(b5)) {
+      var n = Math.trunc(b5);
+      if (level === 1 && n >= 1 && n <= 14) return n + ".jpg";
+      if (level === 2 && n >= 1 && n <= 32) return n + ".jpg";
+    }
+    return null;
+  }
+
+  function assetPath(relativePath) {
+    var base = window.__BTCA_BASE__ || "/btca-8-1/";
+    var rel = String(relativePath || "").replace(/^\//, "");
+    return base.replace(/\/?$/, "/") + rel;
+  }
+
+  function mediaUrl(packId, fileName) {
+    if (!fileName) return "";
+    return assetPath("offline-unpacked/" + packId + "/" + fileName);
+  }
+
+  function exerciseImageUrl(exerciseValue) {
+    var file = exerciseImageFile(1, exerciseValue);
+    return file ? mediaUrl("level1/exercises", file) : "";
+  }
+
+  function polezImageUrl(file) {
+    return file ? mediaUrl("level3/polez", file) : "";
+  }
+
+  function brandingUrl(name) {
+    return assetPath(name);
+  }
+
+  function dateFaceHtml(label, dataAttr) {
+    return '<button type="button" class="btca-l1-face btca-l1-date-face" ' + dataAttr + ">" +
+      '<span class="btca-l1-date-face__icon" aria-hidden="true">📅</span>' +
+      '<span class="btca-l1-face__text">' + escapeHtml(label) + "</span></button>";
+  }
+
+  function filterFaceHtml(label, opts) {
+    opts = opts || {};
+    var cls = "btca-l1-face btca-l1-face--filter";
+    if (opts.wide) cls += " btca-l1-face--wide";
+    if (opts.disabled) cls += " btca-l1-face--disabled";
+    if (opts.extraClass) cls += " " + opts.extraClass;
+    var attrs = opts.dataAttr || "";
+    if (opts.disabled) attrs += " disabled";
+    return '<button type="button" class="' + cls + '" ' + attrs + ">" +
+      '<span class="btca-l1-face__text">' + escapeHtml(label) + "</span>" +
+      '<span class="btca-l1-face__chevron" aria-hidden="true">▼</span></button>';
+  }
+
+  function sectionFaceHtml(label) {
+    return '<div class="btca-l1-face btca-l1-face--filter btca-l1-face--section btca-l1-face--disabled">' +
+      '<span class="btca-l1-face__text">' + escapeHtml(label) + "</span>" +
+      '<span class="btca-l1-face__chevron" aria-hidden="true">▼</span></div>';
+  }
+
+  function greenArrowHtml(opts) {
+    opts = opts || {};
+    var cls = "btca-l1-green-arrow";
+    if (opts.disabled) cls += " btca-l1-green-arrow--disabled";
+    if (opts.extraClass) cls += " " + opts.extraClass;
+    var attrs = opts.dataAttr || "";
+    if (opts.disabled) attrs += " disabled";
+    return '<button type="button" class="' + cls + '" ' + attrs + ">" +
+      '<img class="btca-l1-green-arrow__img" src="' + escapeHtml(brandingUrl(BRANDING_UP)) +
+      '" alt="" draggable="false"></button>';
+  }
+
+  function saveButtonHtml(canSave, dataAttr) {
+    return '<button type="button" class="btca-l1-save' + (canSave ? "" : " btca-l1-save--disabled") +
+      '" ' + dataAttr + ' data-btca-forma-can-save="' + (canSave ? "1" : "0") + '">' +
+      '<img class="btca-l1-save__icon' + (canSave ? "" : " btca-l1-save__icon--disabled") +
+      '" src="' + escapeHtml(brandingUrl(BRANDING_BAZA)) + '" alt="" draggable="false">' +
+      '<span class="btca-l1-save__label' + (canSave ? "" : " btca-l1-save__label--disabled") +
+      '">Записать</span></button>';
+  }
+
+  function formaTableHeadHtml() {
+    return '<div class="btca-l1-table-head"><div class="btca-l1-table-row">' +
+      '<div class="btca-l1-table-cell btca-l1-col--task"><span class="btca-l1-th">Задача</span></div>' +
+      '<div class="btca-l1-table-cell btca-l1-col--req"><span class="btca-l1-th">Требуемое<br>число ударов</span></div>' +
+      '<div class="btca-l1-table-cell btca-l1-col--ok"><span class="btca-l1-th">Число успешных<br>ударов</span></div>' +
+      '<div class="btca-l1-table-cell btca-l1-col--pct"><span class="btca-l1-th">%</span></div>' +
+      "</div></div>";
+  }
+
+  function periodDateFaceHtml(label, dataAttr, disabled) {
+    return '<button type="button" class="btca-l1-face btca-l1-period-face' + (disabled ? " btca-l1-face--disabled" : "") +
+      '" ' + dataAttr + (disabled ? " disabled" : "") + ">" +
+      '<span class="btca-l1-period-face__icon" aria-hidden="true">📅</span>' +
+      '<span class="btca-l1-face__text">' + escapeHtml(label) + "</span></button>";
+  }
+
+  function getBazaChartTitle(exercise, exerciseFieldDisabled, dbEmpty) {
+    var showChart =
+      !exerciseFieldDisabled &&
+      exercise !== "all" &&
+      exercise !== "__foreign_data__" &&
+      String(exercise || "").trim() !== "";
+    return {
+      text: showChart
+        ? "Успешные удары по упражнению за период"
+        : "Нет данных по упражнению",
+      arrowDisabled: Boolean(dbEmpty),
+      showChart: showChart,
+    };
+  }
+
+  function getBazaChartMeta(baza, exerciseFilterDisabled) {
+    return getBazaChartTitle(baza.exercise, exerciseFilterDisabled, state.bazaStats.empty);
+  }
+
+  function buildBazaTableTitle(baza, fullDb) {
+    if (fullDb) return "БД по всем упражнениям (вся база)";
+    var period = DB.normalizeBazaPeriod(baza.periodFrom, baza.periodTo);
+    var from = period.from;
+    var to = period.to;
+    var fromLabel = formatIsoDateAsDdMmYyyy(from) || from;
+    var toLabel = formatIsoDateAsDdMmYyyy(to) || to;
+    var exercisePart = baza.exercise === "all"
+      ? "по всем упражнениям"
+      : "по Упражнению " + labelForExerciseValue(baza.exercise);
+    var periodPart = from && to && from === to
+      ? "на " + fromLabel
+      : "за период с " + fromLabel + " по " + toLabel;
+    return "БД " + exercisePart + " " + periodPart;
+  }
+
+  function setBazaTableLandscape(on) {
+    document.body.classList.toggle("btca-force-landscape-table", !!on);
+    if (on && screen.orientation && typeof screen.orientation.lock === "function") {
+      screen.orientation.lock("landscape").catch(function () {});
+    } else if (!on && screen.orientation && typeof screen.orientation.unlock === "function") {
+      screen.orientation.unlock().catch(function () {});
+    }
+  }
+
+  function expandBazaRowsAllL1(rawRows) {
+    var byDateExercise = {};
+    rawRows.forEach(function (r) {
+      var d = String(r.date || "");
+      var ex = String(r.exercise || "");
+      var t = Number(r.task || 0);
+      if (!d || !ex || !Number.isFinite(t)) return;
+      if (!byDateExercise[d]) byDateExercise[d] = {};
+      if (!byDateExercise[d][ex]) byDateExercise[d][ex] = {};
+      byDateExercise[d][ex][t] = r;
+    });
+    var out = [];
+    Object.keys(byDateExercise).sort().forEach(function (d) {
+      Object.keys(byDateExercise[d]).sort().forEach(function (ex) {
+        var byTask = byDateExercise[d][ex];
+        var rules = exerciseRulesL1(b5FromSelectValue(ex));
+        var allowed = taskNumbersForExercise(ex);
+        var first = true;
+        allowed.forEach(function (t) {
+          var r = byTask[t];
+          var reqFromRule = rules.requiredByTask[t - 1];
+          out.push({
+            date: first ? d : "",
+            exercise: first ? labelForExerciseValue(ex) : "",
+            exerciseKey: ex,
+            task: t,
+            req: r && r.req != null ? r.req : (reqFromRule == null ? null : Number(reqFromRule)),
+            ok: r && r.ok != null ? r.ok : null,
+            pct: r && r.pct != null ? r.pct : null,
+            sets: r && r.sets != null ? r.sets : null,
+            clusterFirst: first,
+          });
+          first = false;
+        });
+      });
+    });
+    return out;
+  }
+
+  function loadBazaTableRows(baza) {
+    var queryEx = baza.exercise;
+    var task = baza.task === "all" ? "all" : baza.task;
+    return DB.bazaQuery({
+      from: baza.periodFrom,
+      to: baza.periodTo,
+      exercise: queryEx,
+      task: task,
+    }).then(function (result) {
+      var raw = result.rows || [];
+      if (queryEx === "all") return expandBazaRowsAllL1(raw);
+      return expandBazaRowsL1(raw, queryEx).map(function (row) {
+        if (row.exercise) row.exercise = labelForExerciseValue(row.exerciseKey || row.exercise);
+        return row;
+      });
+    });
+  }
+
+  var BAZA_TABLE_SECTION_CURRENT = "--- ТЕКУЩИЕ ---";
+
+  function loadBazaTableDisplayItems(baza, fullDb) {
+    var queryEx = fullDb
+      ? "all"
+      : (baza.exercise === "all" || baza.exercise === "__foreign_data__" ? "all" : baza.exercise);
+    var task = fullDb ? "all" : (baza.task === "all" ? "all" : baza.task);
+    var query = fullDb
+      ? { from: "", to: "", exercise: "all", task: "all" }
+      : {
+        from: baza.periodFrom,
+        to: baza.periodTo,
+        exercise: queryEx,
+        task: task,
+      };
+    return DB.bazaQuery(query).then(function (result) {
+      var rows = queryEx === "all"
+        ? expandBazaRowsAllL1(result.rows || [])
+        : expandBazaRowsL1(result.rows || [], queryEx).map(function (row) {
+          if (row.exercise) row.exercise = labelForExerciseValue(row.exerciseKey || row.exercise);
+          return row;
+        });
+      var items = [{ kind: "section", key: "sec-own", title: BAZA_TABLE_SECTION_CURRENT }];
+      rows.forEach(function (row, i) {
+        items.push({ kind: "row", key: "own-" + i, row: row });
+      });
+      return items;
+    });
+  }
+
+  function formatBazaReqCell(exerciseKey, task, okMerged, setsCount) {
+    var ex = String(exerciseKey || "").trim();
+    var t = Number(task || 0);
+    if (!ex || !Number.isFinite(t) || t < 1 || t > 12) return "";
+    var rules = exerciseRulesL1(b5FromSelectValue(ex));
+    var baseN = rules.requiredByTask[t - 1];
+    if (baseN == null) return "";
+    if (okMerged == null) return String(baseN);
+    var k = setsCount != null && setsCount > 0 ? setsCount : 1;
+    return baseN + " x " + k;
+  }
+
+  function bazaTableColumnsHeadHtml() {
+    return '<div class="btca-l1-baza-table-head"><div class="btca-l1-baza-table-row btca-l1-baza-table-row--head">' +
+      '<div class="btca-l1-baza-col btca-l1-baza-col--date"><span>Дата</span></div>' +
+      '<div class="btca-l1-baza-col btca-l1-baza-col--ex"><span>Упражнение</span></div>' +
+      '<div class="btca-l1-baza-col btca-l1-baza-col--task"><span>Задачи</span></div>' +
+      '<div class="btca-l1-baza-col btca-l1-baza-col--req"><span>Требуется</span></div>' +
+      '<div class="btca-l1-baza-col btca-l1-baza-col--ok"><span>Успех</span></div>' +
+      '<div class="btca-l1-baza-col btca-l1-baza-col--pct"><span>%</span></div>' +
+      "</div></div>";
+  }
+
+  function renderBazaTableRowHtml(row) {
+    var exKey = row.exerciseKey || row.exercise;
+    var exLabel = row.exercise || labelForExerciseValue(exKey);
+    var reqText = formatBazaReqCell(exKey, row.task, row.ok, row.sets);
+    if (!reqText && row.req != null) reqText = String(row.req);
+    if (!reqText) reqText = "—";
+    var rowClass = "btca-l1-baza-table-row";
+    if (row.clusterFirst === true) rowClass += " btca-l1-baza-table-row--cluster-first";
+    if (row.clusterFirst === false) rowClass += " btca-l1-baza-table-row--cluster";
+    return '<div class="' + rowClass + '">' +
+      '<div class="btca-l1-baza-col btca-l1-baza-col--date"><span>' +
+      escapeHtml(row.date ? formatIsoDateAsDdMmYyyy(row.date) : "") + "</span></div>" +
+      '<div class="btca-l1-baza-col btca-l1-baza-col--ex"><span>' + escapeHtml(exLabel) + "</span></div>" +
+      '<div class="btca-l1-baza-col btca-l1-baza-col--task"><span>' + row.task + "</span></div>" +
+      '<div class="btca-l1-baza-col btca-l1-baza-col--req"><span>' + escapeHtml(reqText) + "</span></div>" +
+      '<div class="btca-l1-baza-col btca-l1-baza-col--ok"><span>' + (row.ok == null ? "—" : row.ok) + "</span></div>" +
+      '<div class="btca-l1-baza-col btca-l1-baza-col--pct"><span>' + (row.pct == null ? "—" : row.pct) + "</span></div></div>";
+  }
+
+  function renderBazaTableBodyHtml(rows) {
+    return rows.map(function (row) { return renderBazaTableRowHtml(row); }).join("");
+  }
+
+  function renderBazaTableItemsHtml(items) {
+    return items.map(function (item) {
+      if (item.kind === "section") {
+        return '<div class="btca-l1-baza-table-row btca-l1-baza-table-row--section">' +
+          '<div class="btca-l1-baza-col btca-l1-baza-col--section"><span>' + escapeHtml(item.title) + "</span></div></div>";
+      }
+      return renderBazaTableRowHtml(item.row);
+    }).join("");
+  }
+
+  function taskNumbersForExercise(exerciseKey) {
+    var rules = exerciseRulesL1(b5FromSelectValue(exerciseKey));
+    var out = [];
+    for (var i = 0; i < rules.requiredByTask.length; i += 1) {
+      if (rules.requiredByTask[i] != null) out.push(i + 1);
+    }
+    return out;
+  }
+
+  function expandBazaRowsL1(rawRows, exerciseFilter) {
+    if (exerciseFilter === "all") return [];
+    var rules = exerciseRulesL1(b5FromSelectValue(exerciseFilter));
+    var allowed = taskNumbersForExercise(exerciseFilter);
+    var byDate = {};
+    rawRows.forEach(function (r) {
+      var d = String(r.date || "");
+      var t = Number(r.task || 0);
+      if (!d || !Number.isFinite(t)) return;
+      if (!byDate[d]) byDate[d] = {};
+      byDate[d][t] = r;
+    });
+    var out = [];
+    Object.keys(byDate).sort().forEach(function (d) {
+      var byTask = byDate[d];
+      var first = true;
+      allowed.forEach(function (t) {
+        var r = byTask[t];
+        var reqFromRule = rules.requiredByTask[t - 1];
+        out.push({
+          date: first ? d : "",
+          exercise: first ? labelForExerciseValue(exerciseFilter) : "",
+          exerciseKey: exerciseFilter,
+          task: t,
+          req: r && r.req != null ? r.req : (reqFromRule == null ? null : Number(reqFromRule)),
+          ok: r && r.ok != null ? r.ok : null,
+          pct: r && r.pct != null ? r.pct : null,
+          sets: r && r.sets != null ? r.sets : null,
+          clusterFirst: first,
+        });
+        first = false;
+      });
+    });
+    return out;
+  }
+
+  function bazaFiltersDisabled() {
+    return state.bazaStats.empty || state.bazaOwnEmpty;
+  }
+
+  function buildBazaExercisePickerOptions() {
+    if (state.bazaOwnEmpty) return [];
+    var out = [{ value: "all", label: "Все" }];
+    state.bazaOwnKeys.forEach(function (key) {
+      out.push({ value: key, label: labelForExerciseValue(key) });
+    });
+    return out;
+  }
+
+  function bazaExerciseFaceLabel(exercise, disabled) {
+    if (disabled) return "---";
+    if (exercise === "all") return "Все";
+    return labelForExerciseValue(exercise);
+  }
+
+  function isBazaExerciseSelectionValid(exercise) {
+    if (exercise === "all") return true;
+    return state.bazaOwnKeys.indexOf(exercise) >= 0;
+  }
+
+  function bazaChartDisplayRows(baza) {
+    var rows = state.bazaExpandedRows;
+    if (baza.task !== "all") {
+      var t = Number(baza.task);
+      rows = rows.filter(function (r) { return r.task === t; });
+    }
+    return rows;
+  }
+
+  function bazaTableDisplayRows(baza) {
+    if (baza.exercise === "all") return state.bazaRows;
+    var rows = state.bazaExpandedRows;
+    if (baza.task !== "all") {
+      var t = Number(baza.task);
+      rows = rows.filter(function (r) { return r.task === t; });
+    }
+    return rows;
+  }
+
+  function onPickBazaExercise(item) {
+    if (!item || item.groupHeader) return;
+    if (item.value === "all") {
+      state.ui.baza.exercise = "all";
+      state.ui.baza.task = "all";
+      applyUiPatch({ baza: { exercise: "all", task: "all" } });
+      return refreshBazaContext().then(function () {
+        renderActiveTab();
+        renderTitleBar();
+      });
+    }
+    state.ui.baza.exercise = item.value;
+    state.ui.baza.task = "all";
+    applyUiPatch({ baza: { exercise: item.value, task: "all" } });
+    return refreshBazaContext().then(function () {
+      renderActiveTab();
+      renderTitleBar();
+    });
+  }
+
+  function safeGutter() {
+    return SCREEN_EDGE_GUTTER;
+  }
+
+  function computeAnchoredPickerLayout(anchorEl) {
+    var rect = anchorEl.getBoundingClientRect();
+    var gap = 6;
+    var panelW = Math.max(96, Math.round(rect.width));
+    var gutterL = safeGutter();
+    var gutterR = safeGutter();
+    var left = Math.max(gutterL, Math.min(Math.round(rect.left), window.innerWidth - gutterR - panelW));
+    var top = Math.round(rect.bottom + gap);
+    var bottomReserve = safeGutter() + 12;
+    var availableH = Math.max(0, window.innerHeight - top - bottomReserve);
+    var maxCap = Math.round(window.innerHeight * 0.52);
+    var panelH = Math.min(maxCap, Math.max(120, availableH));
+    return { top: top, left: left, width: panelW, height: panelH };
+  }
+
+  /** Меню «База» — якорь под кнопкой «⋯» (top задаёт BTCA_SLIDE_MENU.positionHostBelow). */
+  function positionBazaSheetMenuBelowTrigger(layer) {
+    var SL = window.BTCA_SLIDE_MENU;
+    if (!SL || !state.root) return;
+    SL.positionHostBelow(state.root, "[data-btca-baza-menu]", layer);
+  }
+
+  function closeSlideMenuLayer(layer, done) {
+    var SL = window.BTCA_SLIDE_MENU;
+    if (SL) SL.closeLayer(layer, done);
+    else {
+      layer.setAttribute("hidden", "hidden");
+      layer.innerHTML = "";
+      if (done) done();
+    }
+  }
+
+  function computeCenteredDateSheetLayout() {
+    var gutterL = safeGutter();
+    var gutterR = safeGutter();
+    return {
+      top: Math.round(window.innerHeight * 0.2),
+      left: gutterL,
+      width: Math.max(280, window.innerWidth - gutterL - gutterR),
+    };
+  }
+
+  function scrollPickerListActiveToCenter(listEl) {
+    if (!listEl) return;
+    function run() {
+      var viewportH = listEl.clientHeight;
+      if (viewportH <= 0) return;
+      var active = listEl.querySelector(".btca-level1-picker__item--active");
+      if (!active) return;
+      var itemTop = active.offsetTop;
+      var itemH = active.offsetHeight;
+      var maxScroll = Math.max(0, listEl.scrollHeight - viewportH);
+      var centered = itemTop - (viewportH - itemH) / 2;
+      listEl.scrollTop = Math.min(maxScroll, Math.max(0, centered));
+    }
+    requestAnimationFrame(function () {
+      requestAnimationFrame(run);
+    });
+    window.setTimeout(run, 50);
+    window.setTimeout(run, 150);
+  }
+
+  function pickerScrollOffset(options, index, viewportHeight, rowHeight) {
+    if (index < 0 || index >= options.length || viewportHeight <= 0) return 0;
+    var offset = PICKER_LIST_PAD;
+    var i;
+    for (i = 0; i < index; i += 1) offset += rowHeight;
+    var length = rowHeight;
+    var contentHeight = PICKER_LIST_PAD * 2 + options.length * rowHeight;
+    var maxScroll = Math.max(0, contentHeight - viewportHeight);
+    var centered = offset - (viewportHeight - length) / 2;
+    return Math.min(maxScroll, Math.max(0, centered));
+  }
+
+  function scrollPickerToActive(listEl, options, currentValue, rowHeight) {
+    scrollPickerListActiveToCenter(listEl);
+  }
+
+  function getNavCardsScrollEl(content) {
+    return content ? content.querySelector(".btca-l1-nav-cards") : null;
+  }
+
+  function getPolezCardsScrollEl(content) {
+    return content ? content.querySelector("[data-btca-polez-cards]") : null;
+  }
+
+  /** iOS/WebKit: scrollTop часто игнорируется; overflow-трюк + проход по предкам. */
+  function forceElementScrollTop(el) {
+    if (!el) return;
+    function wipe(node) {
+      if (!node || node.nodeType !== 1) return;
+      var oy = node.style.overflowY;
+      node.style.overflowY = "hidden";
+      node.scrollTop = 0;
+      node.scrollLeft = 0;
+      node.style.overflowY = oy;
+      node.scrollTop = 0;
+      node.scrollLeft = 0;
+    }
+    wipe(el);
+    var node = el.parentElement;
+    while (node && node !== document.documentElement) {
+      if (node.scrollTop || node.scrollLeft || node.scrollHeight > node.clientHeight + 1) wipe(node);
+      node = node.parentElement;
+    }
+    if (typeof window.scrollTo === "function") window.scrollTo(0, 0);
+    if (document.documentElement) document.documentElement.scrollTop = 0;
+    if (document.body) document.body.scrollTop = 0;
+  }
+
+  /** Новый DOM-узел скролла — гарантированный scrollTop=0 на iOS после длинного списка. */
+  function remountPolezCardsHost(polezRoot, catalogKey) {
+    var prev = polezRoot.querySelector("[data-btca-polez-cards]");
+    var host = document.createElement("div");
+    host.className = "btca-l1-tab-body btca-l1-polez-cards";
+    host.setAttribute("data-btca-polez-cards", "");
+    host.setAttribute("data-btca-polez-catalog-key", String(catalogKey || ""));
+    if (prev) prev.replaceWith(host);
+    else polezRoot.appendChild(host);
+    return host;
+  }
+
+  /** Подтянуть карточку рисунка к верху области прокрутки (под полем «Каталог»). */
+  function applyPolezCardsScrollAlign(el, content) {
+    if (!el || !el.isConnected) return;
+    forceElementScrollTop(el);
+    if (content) forceElementScrollTop(content);
+    var catalogKey = state.ui.polez.catalogKey;
+    if (catalogKey === POLEZ_ALL) return;
+    var card = el.querySelector(".btca-l1-polez-card");
+    if (!card) return;
+    var delta = card.getBoundingClientRect().top - el.getBoundingClientRect().top;
+    if (Math.abs(delta) > 1) {
+      el.scrollTop = Math.max(0, el.scrollTop + delta);
+    }
+  }
+
+  /** Сброс прокрутки списка карточек вверх (с учётом отступа до sticky-head). */
+  function scheduleCardsScroll(el) {
+    if (!el) return;
+
+    function apply() {
+      if (!el.isConnected) return;
+      el.scrollTop = 0;
+      el.scrollLeft = 0;
+    }
+
+    apply();
+    requestAnimationFrame(function () {
+      apply();
+      requestAnimationFrame(apply);
+    });
+    setTimeout(apply, 0);
+    setTimeout(apply, 50);
+    setTimeout(apply, 120);
+    setTimeout(apply, 400);
+    setTimeout(apply, 800);
+
+    el.querySelectorAll("img").forEach(function (img) {
+      if (img.complete) return;
+      var onDone = function () {
+        apply();
+        setTimeout(apply, 80);
+      };
+      img.addEventListener("load", onDone, { once: true });
+      img.addEventListener("error", onDone, { once: true });
+    });
+  }
+
+  /** Сброс прокрутки списка: «Выбрать» видна (одно упражнение) или первое упражнение («Все»). */
+  function scheduleNavCardsScroll(content) {
+    scheduleCardsScroll(getNavCardsScrollEl(content));
+  }
+
+  /** Сброс прокрутки Полезности: карточка рисунка / Описание под полем Каталог. */
+  function schedulePolezCardsScroll(content) {
+    var el = getPolezCardsScrollEl(content);
+    if (!el) return;
+
+    function apply() {
+      applyPolezCardsScrollAlign(el, content);
+    }
+
+    apply();
+    requestAnimationFrame(function () {
+      apply();
+      requestAnimationFrame(apply);
+    });
+    setTimeout(apply, 0);
+    setTimeout(apply, 50);
+    setTimeout(apply, 120);
+    setTimeout(apply, 250);
+    setTimeout(apply, 400);
+    setTimeout(apply, 800);
+
+    el.querySelectorAll("img").forEach(function (img) {
+      if (img.complete) return;
+      var onDone = function () {
+        apply();
+        setTimeout(apply, 80);
+      };
+      img.addEventListener("load", onDone, { once: true });
+      img.addEventListener("error", onDone, { once: true });
+    });
+  }
+
+  function applyNavExerciseFilterChange(content, value, filterKey) {
+    if (!value || value.indexOf("__group:") === 0) return;
+    if (value === NAV_FILTER_ALL) {
+      state.ui.nav.exerciseFilterKey = NAV_FILTER_ALL;
+      applyUiPatch({ nav: { exerciseFilterKey: NAV_FILTER_ALL } });
+      renderNavTab(content);
+      renderTitleBar();
+      return;
+    }
+    state.ui.nav.exerciseFilterKey = value;
+    applyUiPatch({ nav: { exerciseFilterKey: value } });
+    renderNavTab(content);
+    renderTitleBar();
+  }
+
+  function deriveNavSectionLabel(exerciseFilterKey) {
+    if (exerciseFilterKey === NAV_FILTER_ALL) return "Все";
+    if (exerciseFilterKey === "Тест1") return "Тренировочные тесты";
+    return "Тренировка одиночными";
+  }
+
+  function labelForExerciseValue(value) {
+    var item = state.data.exercises.filter(function (it) { return it.value === value; })[0];
+    return item ? item.label : value;
+  }
+
+  function polezRowsForLevel1() {
+    return state.data.polezCatalog.filter(function (row) { return !POLEZ_HIDDEN[row.key]; });
+  }
+
+  function sheetByKey(key) {
+    return SHEETS.filter(function (s) { return s.key === key; })[0] || SHEETS[0];
+  }
+
+  function getTitleStatus() {
+    var tab = state.ui.tab;
+    var label = labelForExerciseValue(state.ui.exerciseValue);
+    if (tab === "forma") {
+      if (state.formaFlags.statusOverride) {
+        return { text: state.formaFlags.statusOverride.text, tone: state.formaFlags.statusOverride.tone || "active" };
+      }
+      if (state.formaFlags.invalidData) return { text: "Некорректные данные", tone: "error" };
+      if (state.formaFlags.suppressExerciseActive) return { text: "", tone: "base" };
+      return label && label !== "—" ? { text: "Упр. " + label + " - активно! ", tone: "active" } : { text: "", tone: "base" };
+    }
+    if (tab === "baza") {
+      return state.bazaStats.empty
+        ? { text: "пуста", tone: "active" }
+        : { text: state.bazaStats.fillText, tone: "active" };
+    }
+    if (tab === "nav") {
+      return label && label !== "—" ? { text: "Упр. " + label + " - активно! ", tone: "active" } : { text: "", tone: "base" };
+    }
+    return { text: "Справочное пособие", tone: "muted" };
+  }
+
+  function renderTitleBar() {
+    var titlebar = state.root && state.root.querySelector("[data-btca-level1-titlebar]");
+    if (!titlebar) return;
+    var sheet = sheetByKey(state.ui.tab);
+    var status = getTitleStatus();
+
+    if (state.ui.tab === "baza") {
+      var fillText = state.bazaStats.fillText || (state.bazaStats.empty ? "пуста" : "");
+      titlebar.innerHTML =
+        (fillText
+          ? '<div class="btca-level1-titlebar__baza-fill" aria-live="polite">' + escapeHtml(fillText) + "</div>"
+          : "") +
+        '<div class="btca-level1-titlebar__row btca-level1-titlebar__row--baza">' +
+        '<div class="btca-level1-titlebar__title-group btca-level1-titlebar__title-group--baza">' +
+        '<span class="btca-level1-titlebar__title">' + escapeHtml(sheet.title) + "</span>" +
+        '<img class="btca-level1-titlebar__baza-icon" src="' + escapeHtml(brandingUrl(BRANDING_BAZA)) +
+        '" alt="" draggable="false"></div>' +
+        '<button type="button" class="btca-level1-baza-menu" data-btca-baza-menu aria-label="Меню базы">' +
+        "<span></span><span></span><span></span></button></div>";
+      return;
+    }
+
+    titlebar.innerHTML =
+      '<div class="btca-level1-titlebar__row">' +
+      '<div class="btca-level1-titlebar__title-group">' +
+      '<span class="btca-level1-titlebar__title">' + escapeHtml(sheet.title) + "</span>" +
+      (sheet.emoji ? '<span class="btca-level1-titlebar__emoji' +
+        (state.ui.tab === "forma" ? " btca-level1-titlebar__emoji--forma" :
+          state.ui.tab === "nav" ? " btca-level1-titlebar__emoji--nav" :
+          state.ui.tab === "polez" ? " btca-level1-titlebar__emoji--polez" : "") +
+        '" aria-hidden="true">' + sheet.emoji + "</span>" : "") +
+      "</div>" +
+      '<span class="btca-level1-titlebar__spacer"></span>' +
+      '<span class="btca-level1-titlebar__status' +
+      (status.tone === "muted" ? " btca-level1-titlebar__status--muted" : "") +
+      (status.tone === "error" ? " btca-level1-titlebar__status--error" : "") +
+      '">' + escapeHtml(status.text) + "</span></div>";
+  }
+
+  function closePicker() {
+    var layer = state.root && state.root.querySelector("[data-btca-level1-picker]");
+    if (layer) layer.setAttribute("hidden", "hidden");
+  }
+
+  function openPicker(title, options, current, onSelect, anchorEl, pickerOpts) {
+    pickerOpts = pickerOpts || {};
+    var layer = state.root.querySelector("[data-btca-level1-picker]");
+    if (!layer) return;
+    layer.removeAttribute("hidden");
+    var rowHeight = pickerOpts.rowHeight || PICKER_ROW_SIMPLE;
+    var itemExtraClass = pickerOpts.itemClass || "";
+    var pickerClass = "btca-level1-picker btca-level1-picker--anchored";
+    var pickerStyle = "";
+    var layout = anchorEl && anchorEl.getBoundingClientRect
+      ? computeAnchoredPickerLayout(anchorEl)
+      : null;
+    if (layout) {
+      pickerStyle =
+        ' style="position:fixed;top:' + layout.top + "px;left:" + layout.left + "px;width:" + layout.width +
+        "px;height:" + layout.height + 'px;right:auto;"';
+    }
+    layer.innerHTML =
+      '<button class="btca-level1-menu-backdrop" type="button" data-btca-picker-close aria-label="Закрыть"></button>' +
+      '<div class="' + pickerClass + '" role="dialog" aria-label="' + escapeHtml(title) + '"' + pickerStyle + ">" +
+      '<div class="btca-level1-picker__list" data-btca-picker-list>' +
+      options.map(function (opt) {
+        if (opt.groupHeader) {
+          var groupClass = "btca-level1-picker__group";
+          if (opt.sectionHeader) groupClass += " btca-level1-picker__group--section";
+          if (opt.disabledHeader) groupClass += " btca-level1-picker__group--disabled";
+          return '<div class="' + groupClass + '">' + escapeHtml(opt.label) + "</div>";
+        }
+        var active = opt.value === current;
+        var itemClass = "btca-level1-picker__item";
+        if (pickerOpts.catalogList) itemClass += " btca-level1-picker__item--catalog";
+        if (itemExtraClass) itemClass += itemExtraClass;
+        return '<button type="button" class="' + itemClass +
+          (active ? " btca-level1-picker__item--active" : "") +
+          '" data-btca-picker-value="' + escapeHtml(opt.value) + '"><span class="btca-level1-picker__text">' +
+          escapeHtml(opt.label) + "</span></button>";
+      }).join("") +
+      "</div></div>";
+    var listEl = layer.querySelector("[data-btca-picker-list]");
+    scrollPickerToActive(listEl, options, current, rowHeight);
+    layer.onclick = function (event) {
+      if (event.target.closest("[data-btca-picker-close]")) { closePicker(); return; }
+      var btn = event.target.closest("[data-btca-picker-value]");
+      if (!btn) return;
+      var value = btn.getAttribute("data-btca-picker-value");
+      if (!value || value.indexOf("__group:") === 0 || value.indexOf("__section:") === 0) return;
+      closePicker();
+      onSelect(value);
+    };
+  }
+
+  function computeFormaRows() {
+    syncUiFromDb();
+    var b5 = b5FromSelectValue(state.ui.exerciseValue);
+    var rules = exerciseRulesL1(b5);
+    var okByTask = state.ui.taskOk || {};
+    var hasAnyValidOk = false;
+    var allActiveOkAreEmptyOrValid = true;
+    var rows = [];
+    for (var task = 1; task <= 12; task += 1) {
+      var active = taskActiveFormL1(b5, task);
+      var req = rules.requiredByTask[task - 1];
+      var okRaw = okByTask[String(task)] || "";
+      var pct = "";
+      var invalid = false;
+      if (!active || req === null) {
+        rows.push({ task: task, active: active, required: req, okRaw: okRaw, pct: pct, invalid: invalid });
+        continue;
+      }
+      var ok = parseNonNegativeInt(okRaw);
+      if (!okRaw.trim()) {
+        rows.push({ task: task, active: active, required: req, okRaw: okRaw, pct: "", invalid: false });
+        continue;
+      }
+      if (ok === null || Number.isNaN(ok)) {
+        allActiveOkAreEmptyOrValid = false;
+        rows.push({ task: task, active: active, required: req, okRaw: okRaw, pct: "", invalid: true });
+        continue;
+      }
+      if (ok === 0) {
+        rows.push({ task: task, active: active, required: req, okRaw: "", pct: "", invalid: false });
+        continue;
+      }
+      if (!Number.isFinite(ok) || ok < 0 || ok > req) {
+        allActiveOkAreEmptyOrValid = false;
+        rows.push({ task: task, active: active, required: req, okRaw: okRaw, pct: "", invalid: true });
+        continue;
+      }
+      hasAnyValidOk = true;
+      pct = Math.round((ok / req) * 100) + " %";
+      rows.push({ task: task, active: active, required: req, okRaw: okRaw, pct: pct, invalid: false });
+    }
+    return { rows: rows, canSave: hasAnyValidOk && allActiveOkAreEmptyOrValid, allActiveOkAreEmptyOrValid: allActiveOkAreEmptyOrValid };
+  }
+
+  function renderFormaTab(content) {
+    formaOkFocusState.task = null;
+    var forma = computeFormaRows();
+    state.formaFlags.invalidData = !forma.allActiveOkAreEmptyOrValid;
+    var dateLabel = formatIsoDateAsDdMmYyyy(state.ui.trainingDate) || state.ui.trainingDate;
+    var exerciseLabel = labelForExerciseValue(state.ui.exerciseValue);
+    var exerciseOptions = state.data.exercises.map(function (it) {
+      return { value: it.value, label: it.label };
+    });
+    var b5 = b5FromSelectValue(state.ui.exerciseValue);
+
+    content.innerHTML =
+      '<div class="btca-l1-tab btca-l1-forma">' +
+      '<div class="btca-l1-sticky-head">' +
+      '<div class="btca-l1-toolbar btca-l1-toolbar-top">' +
+      '<div class="btca-l1-forma-date-col">' +
+      '<span class="btca-l1-field-label">Дата</span>' +
+      dateFaceHtml(dateLabel, 'data-btca-forma-date aria-label="Дата тренировки"') +
+      "</div>" +
+      '<div class="btca-l1-trailing-wrap" data-btca-forma-trailing>' +
+      saveButtonHtml(forma.canSave, "data-btca-forma-save") +
+      "</div></div>" +
+      '<div class="btca-l1-toolbar btca-l1-toolbar-second">' +
+      '<div class="btca-l1-exercise-row">' +
+      '<div class="btca-l1-exercise-col">' +
+      '<span class="btca-l1-field-label">Упражнение</span>' +
+      filterFaceHtml(exerciseLabel, { wide: true, dataAttr: "data-btca-forma-exercise" }) +
+      "</div>" +
+      '<div class="btca-l1-trailing-slot">' +
+      greenArrowHtml({ dataAttr: 'data-btca-forma-desc aria-label="Описание упражнения"' }) +
+      "</div></div></div>" +
+      '<div class="btca-l1-banner">' + escapeHtml(FORMA_BANNER) + "</div></div>" +
+      '<div class="btca-l1-tab-body btca-l1-forma-body">' +
+      '<div class="btca-l1-table-area"><div class="btca-l1-table-wrap">' +
+      formaTableHeadHtml() +
+      '<div class="btca-l1-table-scroll" data-btca-forma-table-scroll><div class="btca-l1-table-body">' +
+      forma.rows.map(function (row, idx) {
+        var rowClass = !row.active || row.required === null ? "btca-l1-table__row--unused" : (idx % 2 ? "btca-l1-table__row--odd" : "btca-l1-table__row--even");
+        var okCell = row.active && row.required !== null
+          ? '<div class="btca-l1-table-cell btca-l1-col--ok' + (row.invalid ? " btca-l1-table-cell--invalid" : "") +
+            '" data-btca-forma-ok-slot="' + row.task + '"></div>'
+          : '<div class="btca-l1-table-cell btca-l1-col--ok btca-l1-table-cell--unused"></div>';
+        return '<div class="btca-l1-table-row ' + rowClass + '">' +
+          '<div class="btca-l1-table-cell btca-l1-col--task"><span class="btca-l1-td' +
+          (!row.active ? " btca-l1-td--muted" : " btca-l1-td--task") + '">' +
+          (row.active ? String(row.task) : "") + "</span></div>" +
+          '<div class="btca-l1-table-cell btca-l1-col--req"><span class="btca-l1-td' +
+          (!row.active ? " btca-l1-td--muted" : "") + '">' +
+          (row.required == null ? "" : String(row.required)) + "</span></div>" +
+          okCell +
+          '<div class="btca-l1-table-cell btca-l1-col--pct"><span class="btca-l1-td' +
+          (!row.active ? " btca-l1-td--muted" : "") + '">' + escapeHtml(row.pct) + "</span></div></div>";
+      }).join("") +
+      "</div></div></div></div></div></div>";
+
+    content.querySelector("[data-btca-forma-date]").addEventListener("click", function () {
+      openDateInput(state.ui.trainingDate, function (iso) {
+        state.formaFlags.suppressExerciseActive = false;
+        state.formaFlags.statusOverride = null;
+        state.ui.trainingDate = iso;
+        applyUiPatch({ trainingDate: iso });
+        renderFormaTab(content);
+        renderTitleBar();
+      });
+    });
+    content.querySelector("[data-btca-forma-exercise]").addEventListener("click", function (event) {
+      openPicker("Упражнение", exerciseOptions, state.ui.exerciseValue, function (value) {
+        state.formaFlags.suppressExerciseActive = false;
+        state.formaFlags.statusOverride = null;
+        state.ui.exerciseValue = value;
+        state.ui.taskOk = {};
+        state.ui.nav.exerciseFilterKey = value;
+        applyUiPatch({ exerciseValue: value, taskOk: {}, nav: { exerciseFilterKey: value } });
+        renderFormaTab(content);
+        renderTitleBar();
+        scrollFormaTableToTop(content);
+      }, event.currentTarget);
+    });
+    content.querySelector("[data-btca-forma-desc]").addEventListener("click", function () {
+      openExerciseImage({
+        exerciseValue: state.ui.exerciseValue,
+        title: exerciseLabel,
+        returnTo: "forma",
+        step: "portrait",
+      });
+    });
+    var formaRoot = content.querySelector(".btca-l1-forma");
+    if (formaRoot) {
+      bindHorizontalSwipe(formaRoot, {
+        onSwipeRight: function () {
+          openExerciseImage({
+            exerciseValue: state.ui.exerciseValue,
+            title: exerciseLabel,
+            returnTo: "forma",
+            step: "portrait",
+          });
+        },
+      });
+    }
+    mountFormaOkCells(content, forma);
+    wireFormaOkInputs(content);
+    syncFormaSaveButton(content, forma.canSave);
+    wireFormaSaveOnContent(content);
+  }
+
+  function wireFormaSaveOnContent(content) {
+    if (!content || content._formaSaveTouchWired) return;
+    content._formaSaveTouchWired = true;
+    content.addEventListener("touchstart", function (event) {
+      if (!state.mounted || !state.ui || state.ui.tab !== "forma") return;
+      var btn = event.target.closest("[data-btca-forma-save]");
+      if (!btn) return;
+      if (event.cancelable) event.preventDefault();
+      event.stopPropagation();
+      markFormaNumpadInteraction();
+      saveFormaCluster(content);
+    }, { capture: true, passive: false });
+    content.addEventListener("click", function (event) {
+      if (!state.mounted || !state.ui || state.ui.tab !== "forma") return;
+      if (useFormaCustomNumpad()) return;
+      var btn = event.target.closest("[data-btca-forma-save]");
+      if (!btn) return;
+      event.preventDefault();
+      event.stopPropagation();
+      saveFormaCluster(content);
+    }, true);
+  }
+
+  function openDateInput(currentIso, onPick, title) {
+    if (typeof window.__BTCA_OPEN_DATE_INPUT__ === "function") {
+      window.__BTCA_OPEN_DATE_INPUT__(currentIso, onPick, title);
+    }
+  }
+
+  function buildFormaSaveRows() {
+    syncUiFromDb();
+    var b5 = b5FromSelectValue(state.ui.exerciseValue);
+    var rules = exerciseRulesL1(b5);
+    var okByTask = state.ui.taskOk || {};
+    var rows = [];
+    for (var task = 1; task <= 12; task += 1) {
+      var req = rules.requiredByTask[task - 1];
+      var okRaw = okByTask[String(task)] || "";
+      var okParsed = parseNonNegativeInt(okRaw);
+      var ok = okParsed === null || Number.isNaN(okParsed) ? null : Number(okParsed);
+      rows.push({ task: task, req: req === null ? null : Number(req), ok: ok });
+    }
+    return rows;
+  }
+
+  function saveFormaCluster(contentFromCaller) {
+    if (formaSaveInFlight) return;
+    var content = contentFromCaller || (state.root && state.root.querySelector("[data-btca-level1-content]"));
+    if (content) {
+      closeFormaOkCell(content);
+      mergeDomTaskOkIntoState(content);
+    } else {
+      syncUiFromDb();
+    }
+    blurActiveField();
+    var forma = computeFormaRows();
+    if (!forma.canSave) {
+      state.formaFlags.statusOverride = {
+        text: forma.allActiveOkAreEmptyOrValid ? "Введите данные" : "Некорректные данные",
+        tone: "error",
+      };
+      renderTitleBar();
+      return;
+    }
+    formaSaveInFlight = true;
+    armFormaSaveWatchdog();
+    state.formaFlags.statusOverride = { text: "Сохранение…", tone: "active" };
+    renderTitleBar();
+    var rows = buildFormaSaveRows();
+    var savePromise = DB.flushUiState ? DB.flushUiState() : Promise.resolve();
+    savePromise.then(function () {
+      return DB.saveCluster({
+        date: state.ui.trainingDate,
+        exercise: state.ui.exerciseValue,
+        rows: rows,
+      });
+    }).then(function (res) {
+      if (!res || !res.ok) {
+        state.formaFlags.statusOverride = { text: "Ошибка записи", tone: "error" };
+        renderTitleBar();
+        return;
+      }
+      state.ui.taskOk = {};
+      state.ui.baza.periodFrom = state.ui.trainingDate;
+      state.ui.baza.periodTo = state.ui.trainingDate;
+      state.ui.baza.exercise = state.ui.exerciseValue;
+      state.ui.baza.task = "all";
+      applyUiPatch({
+        taskOk: {},
+        baza: { periodFrom: state.ui.trainingDate, periodTo: state.ui.trainingDate, exercise: state.ui.exerciseValue, task: "all" },
+      });
+      state.formaFlags.suppressExerciseActive = true;
+      state.formaFlags.statusOverride = { text: "Данные записаны!", tone: "active" };
+      window.setTimeout(function () {
+        state.formaFlags.statusOverride = null;
+        state.formaFlags.suppressExerciseActive = false;
+        renderTitleBar();
+      }, 5000);
+      refreshBazaContext().then(function () {
+        renderActiveTab();
+        renderTitleBar();
+      });
+    }).catch(function () {
+      state.formaFlags.statusOverride = { text: "Ошибка записи", tone: "error" };
+      renderTitleBar();
+    }).then(function () {
+      clearFormaSaveWatchdog();
+      formaSaveInFlight = false;
+    });
+  }
+
+  function refreshBazaStats() {
+    return DB.dbStats().then(function (stats) {
+      state.bazaStats.empty = stats.empty;
+      state.bazaStats.fillText = DB.bazaFillStatusText(stats.filledRows, stats.maxRows);
+    });
+  }
+
+  function refreshBazaContext() {
+    var baza = state.ui.baza;
+    var today = DB.formatYmd(new Date());
+    var from = baza.periodFrom || today;
+    var to = baza.periodTo || today;
+    return Promise.all([
+      DB.dbStats(),
+      refreshBazaStats(),
+      DB.bazaQuery({ from: from, to: to, exercise: "all", task: "all" }),
+    ]).then(function (parts) {
+      var ownStats = parts[0];
+      var periodQuery = parts[2];
+      state.bazaOwnKeys = periodQuery.exercises || [];
+      state.bazaOwnEmpty = Number(ownStats.totalRows || 0) <= 0;
+      state.bazaNoExercisesInPeriod = state.bazaOwnKeys.length <= 0;
+      var ex = baza.exercise;
+
+      if (!state.bazaOwnKeys.length && ex === "all") {
+        state.bazaRuleTasks = [];
+        state.bazaRows = [];
+        state.bazaExpandedRows = [];
+        return;
+      }
+
+      if (ex !== "all") {
+        state.bazaRuleTasks = taskNumbersForExercise(ex);
+      } else {
+        state.bazaRuleTasks = [];
+      }
+
+      return refreshBazaRows();
+    });
+  }
+
+  function refreshBazaRows() {
+    var baza = state.ui.baza;
+    if (baza.exercise === "all") {
+      state.bazaRows = [];
+      state.bazaExpandedRows = [];
+      return Promise.resolve({ rows: [] });
+    }
+    return DB.bazaQuery({
+      from: baza.periodFrom,
+      to: baza.periodTo,
+      exercise: baza.exercise,
+      task: "all",
+    }).then(function (result) {
+      var rawRows = result.rows || [];
+      state.bazaExpandedRows = expandBazaRowsL1(rawRows, baza.exercise);
+      if (baza.task === "all") {
+        state.bazaRows = rawRows;
+        return result;
+      }
+      return DB.bazaQuery({
+        from: baza.periodFrom,
+        to: baza.periodTo,
+        exercise: baza.exercise,
+        task: baza.task,
+      }).then(function (filtered) {
+        state.bazaRows = filtered.rows || [];
+        return filtered;
+      });
+    });
+  }
+
+  function showBazaToast(message, color) {
+    var DLG = window.BTCA_BAZA_DIALOGS;
+    if (state.bazaToastTimer) {
+      window.clearTimeout(state.bazaToastTimer);
+      state.bazaToastTimer = null;
+    }
+    state.bazaToast = {
+      message: message,
+      color: color || (DLG ? DLG.TOAST_SUCCESS : "#111111"),
+    };
+    renderBazaToast();
+    state.bazaToastTimer = window.setTimeout(function () {
+      state.bazaToast = null;
+      state.bazaToastTimer = null;
+      renderBazaToast();
+    }, DLG ? DLG.TOAST_MS : 3000);
+  }
+
+  function showBazaSuccessToast() {
+    var DLG = window.BTCA_BAZA_DIALOGS;
+    showBazaToast(DLG ? DLG.TOAST_MSG_SUCCESS : "Успех!", DLG && DLG.TOAST_SUCCESS);
+  }
+
+  function showBazaErrorToast(message) {
+    var DLG = window.BTCA_BAZA_DIALOGS;
+    showBazaToast(message || (DLG && DLG.TOAST_MSG_SCREENSHOT_ERROR) || "Не удалось сохранить скриншот.", DLG && DLG.TOAST_ERROR);
+  }
+
+  function renderBazaToast() {
+    var DLG = window.BTCA_BAZA_DIALOGS;
+    var host = state.root && state.root.querySelector("[data-btca-level1-baza-toast]");
+    if (!host) return;
+    if (!state.bazaToast) {
+      host.setAttribute("hidden", "hidden");
+      host.innerHTML = "";
+      return;
+    }
+    host.removeAttribute("hidden");
+    host.innerHTML = DLG
+      ? DLG.buildToastHtml(state.bazaToast.message, state.bazaToast.color)
+      : '<div class="btca-baza-toast-layer btca-baza-toast-layer--show" role="status"><div class="btca-baza-toast-card btca-baza-toast-card--success">' +
+        escapeHtml(state.bazaToast.message) + "</div></div>";
+    var layer = host.querySelector(".btca-baza-toast-layer");
+    if (layer) {
+      layer.classList.remove("btca-baza-toast-layer--show");
+      void layer.offsetWidth;
+      requestAnimationFrame(function () {
+        layer.classList.add("btca-baza-toast-layer--show");
+      });
+    }
+  }
+
+  function wireBazaIdentifierInput(layer) {
+    var DLG = window.BTCA_BAZA_DIALOGS;
+    if (!DLG || !DLG.wireBazaIdentifierInput) return;
+    DLG.wireBazaIdentifierInput(layer, function (value, host) {
+      state.bazaIdentifierDraft = value;
+      state.bazaIdentifierError = "";
+      var confirmBtn = host && host.querySelector("[data-btca-baza-id-confirm]");
+      var ok = String(value || "").trim().length > 0;
+      if (confirmBtn) {
+        confirmBtn.disabled = !ok;
+        confirmBtn.classList.toggle("btca-baza-dialog-icon-btn--disabled", !ok);
+      }
+    });
+  }
+
+  function validateBazaIdentifierInput(raw) {
+    var DLG = window.BTCA_BAZA_DIALOGS;
+    if (DLG && DLG.validateBazaIdentifierInput) return DLG.validateBazaIdentifierInput(raw);
+    var trimmed = String(raw || "").trim();
+    if (!trimmed) return { ok: false, error: "Введите идентификатор." };
+    return { ok: true, value: trimmed };
+  }
+
+  function mountBazaDiagramInTab(content) {
+    var DIAG = window.BTCA_BAZA_DIAGRAM;
+    if (!DIAG) return;
+    var baza = state.ui.baza;
+    var root = content.querySelector("[data-btca-baza-diagram-capture]");
+    if (!root || !state.bazaExpandedRows.length) return;
+    var panel = content.closest("[data-btca-level1-content]") || content;
+    var fallback = panel ? Math.max(280, panel.clientWidth - 24) : 320;
+    var mount = function () {
+      DIAG.mountBazaDiagram(
+        root,
+        state.bazaExpandedRows,
+        taskNumbersForExercise(baza.exercise),
+        baza.task,
+        fallback
+      );
+    };
+    requestAnimationFrame(function () {
+      requestAnimationFrame(mount);
+    });
+  }
+
+  function bazaMenuCapabilities() {
+    var baza = state.ui.baza;
+    var exerciseDisabled = bazaFiltersDisabled() || state.bazaNoExercisesInPeriod;
+    var chartMeta = getBazaChartMeta(baza, exerciseDisabled);
+    return {
+      canDeleteOwn: !state.bazaStats.empty,
+      canScreenshot: chartMeta.showChart && state.bazaExpandedRows.length > 0,
+    };
+  }
+
+  function renderBazaMenuLayer() {
+    var layer = state.root && state.root.querySelector("[data-btca-level1-baza-menu-layer]");
+    if (!layer) return;
+    if (!state.bazaMenuOpen) {
+      closeSlideMenuLayer(layer);
+      return;
+    }
+    var caps = bazaMenuCapabilities();
+    var SL = window.BTCA_SLIDE_MENU;
+    var items =
+      '<button type="button" class="btca-l1-baza-sheet-menu__item' + (caps.canDeleteOwn ? "" : " btca-l1-baza-sheet-menu__item--disabled") +
+      '" data-btca-baza-action="deleteOwn"><span class="btca-l2-baza-menu__icon" aria-hidden="true">🔴</span><span>Удалить данные</span></button>' +
+      '<button type="button" class="btca-l1-baza-sheet-menu__item' + (caps.canScreenshot ? "" : " btca-l1-baza-sheet-menu__item--disabled") +
+      '" data-btca-baza-action="screenshot"><span class="btca-l2-baza-menu__icon btca-l2-baza-menu__icon--shot" aria-hidden="true">📷</span><span>Скриншот</span></button>';
+    layer.removeAttribute("hidden");
+    layer.innerHTML =
+      '<button class="btca-level1-menu-backdrop" type="button" data-btca-baza-menu-close aria-label="Закрыть меню"></button>' +
+      (SL
+        ? SL.hostHtml("", "btca-l1-baza-sheet-menu", ' role="navigation" aria-label="Меню базы"', items)
+        : '<nav class="btca-l1-baza-sheet-menu" aria-label="Меню базы">' + items + "</nav>");
+    requestAnimationFrame(function () {
+      positionBazaSheetMenuBelowTrigger(layer);
+      if (SL) SL.openLayer(layer);
+    });
+    layer.onclick = function (event) {
+      if (event.target.closest("[data-btca-baza-menu-close]")) {
+        state.bazaMenuOpen = false;
+        renderBazaMenuLayer();
+        return;
+      }
+      var btn = event.target.closest("[data-btca-baza-action]");
+      if (!btn || btn.classList.contains("btca-l1-baza-sheet-menu__item--disabled")) return;
+      handleBazaMenuAction(btn.getAttribute("data-btca-baza-action"));
+    };
+  }
+
+  function openBazaIdentifierDialog(mode) {
+    state.bazaIdentifierMode = mode || "screenshot";
+    state.bazaIdentifierDraft = state.bazaUserFileId || "";
+    state.bazaIdentifierError = "";
+    var DLG = window.BTCA_BAZA_DIALOGS;
+    if (DLG && typeof DLG.ensureDialogIconsReady === "function") {
+      DLG.ensureDialogIconsReady().finally(function () {
+        if (state.bazaIdentifierMode) renderBazaIdentifierDialog();
+      });
+      return;
+    }
+    renderBazaIdentifierDialog();
+  }
+
+  function renderBazaIdentifierDialog() {
+    var DLG = window.BTCA_BAZA_DIALOGS;
+    var layer = state.root && state.root.querySelector("[data-btca-level1-baza-id-layer]");
+    if (!layer || !DLG) return;
+    if (!state.bazaIdentifierMode) {
+      layer.setAttribute("hidden", "hidden");
+      layer.innerHTML = "";
+      return;
+    }
+    var mode = state.bazaIdentifierMode;
+    var hasId = !!state.bazaUserFileId;
+    var showInput = !hasId;
+    var canConfirm = hasId || String(state.bazaIdentifierDraft || "").trim().length > 0;
+    layer.removeAttribute("hidden");
+    layer.innerHTML = DLG.buildLayerWithPanel(
+      'data-btca-baza-id-close',
+      DLG.buildPanel({
+        bodyText: DLG.identifierBodyText(mode, hasId),
+        showInput: showInput,
+        inputValue: state.bazaIdentifierDraft,
+        inputError: state.bazaIdentifierError,
+        confirmIcon: "gal",
+        canConfirm: canConfirm,
+        closeAttr: 'data-btca-baza-id-close',
+        confirmAttr: 'data-btca-baza-id-confirm',
+      })
+    );
+    wireBazaIdentifierInput(layer);
+    layer.onclick = function (event) {
+      if (event.target.closest("[data-btca-baza-id-close]")) {
+        state.bazaIdentifierMode = null;
+        state.bazaIdentifierError = "";
+        renderBazaIdentifierDialog();
+        return;
+      }
+      if (!event.target.closest("[data-btca-baza-id-confirm]")) return;
+      var confirmBtn = layer.querySelector("[data-btca-baza-id-confirm]");
+      if (confirmBtn && confirmBtn.disabled) return;
+      var input = layer.querySelector(".btca-baza-dialog-input");
+      var id = state.bazaUserFileId;
+      if (!id && input) {
+        var validation = validateBazaIdentifierInput(input.value);
+        if (!validation.ok) {
+          state.bazaIdentifierError = validation.error;
+          renderBazaIdentifierDialog();
+          return;
+        }
+        id = validation.value;
+      }
+      state.bazaIdentifierMode = null;
+      state.bazaIdentifierError = "";
+      renderBazaIdentifierDialog();
+      runBazaScreenshot(id);
+    };
+  }
+
+  function runBazaScreenshot(userId) {
+    var SHOT = window.BTCA_BAZA_SCREENSHOT;
+    var tab = state.root && state.root.querySelector(".btca-l1-baza");
+    if (!SHOT || !tab) {
+      showBazaErrorToast(window.BTCA_BAZA_DIALOGS && window.BTCA_BAZA_DIALOGS.TOAST_MSG_SCREENSHOT_ERROR);
+      return;
+    }
+    var saveId = function () {
+      if (userId && !state.bazaUserFileId && DB.saveUserFileIdentifier) {
+        return DB.saveUserFileIdentifier(userId).then(function () { state.bazaUserFileId = userId; });
+      }
+      return Promise.resolve();
+    };
+    saveId().then(function () {
+      return SHOT.captureBazaScreenshotPng(tab);
+    }).then(function (pngBlob) {
+      var baza = state.ui.baza;
+      var id = userId || state.bazaUserFileId || "user";
+      var fileName = SHOT.buildBazaScreenshotFileName(
+        id,
+        baza.exercise,
+        baza.periodFrom,
+        baza.periodTo,
+        1
+      );
+      state.bazaMenuOpen = false;
+      renderBazaMenuLayer();
+      return SHOT.saveBazaScreenshotBlob(fileName, pngBlob);
+    }).then(function () {
+      showBazaSuccessToast();
+    }).catch(function (err) {
+      if (err && String(err.message || err) === "cancelled") return;
+      showBazaErrorToast(window.BTCA_BAZA_DIALOGS && window.BTCA_BAZA_DIALOGS.TOAST_MSG_SCREENSHOT_ERROR);
+    });
+  }
+
+  function openBazaDeleteConfirm() {
+    state.bazaDeleteConfirm = true;
+    var DLG = window.BTCA_BAZA_DIALOGS;
+    if (DLG && typeof DLG.ensureDialogIconsReady === "function") {
+      DLG.ensureDialogIconsReady().finally(function () {
+        if (state.bazaDeleteConfirm) renderBazaDeleteConfirm();
+      });
+      return;
+    }
+    renderBazaDeleteConfirm();
+  }
+
+  function renderBazaDeleteConfirm() {
+    var DLG = window.BTCA_BAZA_DIALOGS;
+    var layer = state.root && state.root.querySelector("[data-btca-level1-baza-delete-layer]");
+    if (!layer || !DLG) return;
+    if (!state.bazaDeleteConfirm) {
+      layer.setAttribute("hidden", "hidden");
+      layer.innerHTML = "";
+      return;
+    }
+    layer.removeAttribute("hidden");
+    layer.innerHTML = DLG.buildLayerWithPanel(
+      'data-btca-baza-del-close',
+      DLG.buildPanel({
+        bodyText: DLG.buildBazaDeleteConfirmMessage({
+          trainingLevel: 1,
+          target: "own",
+          periodFrom: state.ui.baza.periodFrom,
+          periodTo: state.ui.baza.periodTo,
+          exercise: state.ui.baza.exercise,
+          exerciseLabel: bazaExerciseFaceLabel(state.ui.baza.exercise, false),
+          task: "all",
+        }),
+        confirmIcon: "del",
+        canConfirm: true,
+        closeAttr: 'data-btca-baza-del-close',
+        confirmAttr: 'data-btca-baza-del-confirm',
+      })
+    );
+    layer.onclick = function (event) {
+      if (event.target.closest("[data-btca-baza-del-close]")) {
+        state.bazaDeleteConfirm = null;
+        renderBazaDeleteConfirm();
+        return;
+      }
+      if (!event.target.closest("[data-btca-baza-del-confirm]")) return;
+      state.bazaDeleteConfirm = null;
+      renderBazaDeleteConfirm();
+      runBazaDelete();
+    };
+  }
+
+  function runBazaDelete() {
+    var baza = state.ui.baza;
+    DB.bazaDeleteCurrentByFilters({
+      from: baza.periodFrom,
+      to: baza.periodTo,
+      exercise: baza.exercise === "all" ? "all" : baza.exercise,
+      task: "all",
+    }).then(function () {
+      state.bazaMenuOpen = false;
+      renderBazaMenuLayer();
+      return refreshBazaContext();
+    }).then(function () {
+      renderActiveTab();
+      renderTitleBar();
+      showBazaSuccessToast();
+    }).catch(function () {
+      /* как на Android: при сбое удаления тост не показываем */
+    });
+  }
+
+  function handleBazaMenuAction(action) {
+    var caps = bazaMenuCapabilities();
+    if (action === "deleteOwn" && caps.canDeleteOwn) {
+      state.bazaMenuOpen = false;
+      renderBazaMenuLayer();
+      openBazaDeleteConfirm();
+      return;
+    }
+    if (action === "screenshot" && caps.canScreenshot) {
+      openBazaIdentifierDialog("screenshot");
+    }
+  }
+
+  function renderBazaTab(content) {
+    var baza = state.ui.baza;
+    var periodDisabled = bazaFiltersDisabled();
+    var exerciseDisabled = periodDisabled || state.bazaNoExercisesInPeriod;
+    var taskFilterEmpty = exerciseDisabled;
+    var fromLabel = periodDisabled ? "---" : (formatIsoDateAsDdMmYyyy(baza.periodFrom) || "—");
+    var toLabel = periodDisabled ? "---" : (formatIsoDateAsDdMmYyyy(baza.periodTo) || "—");
+    var exerciseLabel = bazaExerciseFaceLabel(baza.exercise, exerciseDisabled);
+    var taskLabel = taskFilterEmpty || baza.exercise === "all" ? (taskFilterEmpty ? "---" : "Все") : (baza.task === "all" ? "Все" : baza.task);
+    var taskDisabled = taskFilterEmpty || baza.exercise === "all";
+    var chartMeta = getBazaChartMeta(baza, exerciseDisabled);
+    var DIAG = window.BTCA_BAZA_DIAGRAM;
+    var diagramPanel = chartMeta.showChart
+      ? (DIAG ? DIAG.renderBazaDiagramPanelHtml(state.bazaExpandedRows.length) : "")
+      : "";
+
+    content.innerHTML =
+      '<div class="btca-l1-tab btca-l1-baza">' +
+      '<div class="btca-l1-sticky-head btca-l1-baza-head">' +
+      '<div class="btca-l1-baza-filter-row">' +
+      '<span class="btca-l1-field-label btca-l1-field-label--center">Период</span>' +
+      '<div class="btca-l1-period-faces">' +
+      periodDateFaceHtml(fromLabel, "data-btca-baza-from", periodDisabled) +
+      periodDateFaceHtml(toLabel, "data-btca-baza-to", periodDisabled) +
+      "</div></div>" +
+      '<div class="btca-l1-baza-filter-row">' +
+      '<div class="btca-l1-baza-labels-row">' +
+      '<span class="btca-l1-field-label btca-l1-field-label--center">Упражнение</span>' +
+      '<span class="btca-l1-field-label btca-l1-field-label--center btca-l1-task-label-col">Задача</span>' +
+      "</div>" +
+      '<div class="btca-l1-baza-fields-row">' +
+      '<div class="btca-l1-exercise-col">' +
+      filterFaceHtml(exerciseLabel, { wide: true, disabled: exerciseDisabled, dataAttr: "data-btca-baza-exercise" }) +
+      "</div>" +
+      '<div class="btca-l1-trailing-slot btca-l1-task-field-col">' +
+      filterFaceHtml(taskLabel, { wide: true, disabled: taskDisabled, dataAttr: "data-btca-baza-task" }) +
+      "</div></div></div>" +
+      '<div class="btca-l1-baza-chart-header">' +
+      '<span class="btca-l1-baza-chart-title">' + escapeHtml(chartMeta.text) + "</span>" +
+      '<div class="btca-l1-trailing-slot btca-l1-chart-arrow-slot">' +
+      greenArrowHtml({
+        disabled: chartMeta.arrowDisabled,
+        dataAttr: 'data-btca-baza-table aria-label="Таблица"',
+      }) +
+      "</div></div></div>" +
+      '<div class="btca-l1-tab-body btca-l1-baza-body">' +
+      (chartMeta.showChart ? diagramPanel : "") +
+      "</div></div>";
+
+    if (!periodDisabled) {
+      content.querySelector("[data-btca-baza-from]").addEventListener("click", function () {
+        openDateInput(baza.periodFrom, function (iso) {
+          state.ui.baza.periodFrom = iso;
+          applyUiPatch({ baza: { periodFrom: iso } });
+          refreshBazaContext().then(function () { renderBazaTab(content); renderTitleBar(); });
+        }, "Период с");
+      });
+      content.querySelector("[data-btca-baza-to]").addEventListener("click", function () {
+        openDateInput(baza.periodTo, function (iso) {
+          state.ui.baza.periodTo = iso;
+          applyUiPatch({ baza: { periodTo: iso } });
+          refreshBazaContext().then(function () { renderBazaTab(content); renderTitleBar(); });
+        }, "Период по");
+      });
+    }
+    if (!exerciseDisabled) {
+      var exerciseOptions = buildBazaExercisePickerOptions();
+      content.querySelector("[data-btca-baza-exercise]").addEventListener("click", function (event) {
+        openPicker("Упражнение", exerciseOptions, baza.exercise, function (value) {
+          var item = exerciseOptions.filter(function (o) { return o.value === value; })[0];
+          onPickBazaExercise(item || { value: value });
+        }, event.currentTarget);
+      });
+    }
+    var taskBtn = content.querySelector("[data-btca-baza-task]");
+    if (taskBtn && !taskDisabled) {
+      taskBtn.addEventListener("click", function (event) {
+        var options = [{ value: "all", label: "Все" }].concat(
+          state.bazaRuleTasks.map(function (t) { return { value: String(t), label: String(t) }; })
+        );
+        openPicker("Задача", options, baza.task, function (value) {
+          state.ui.baza.task = value;
+          applyUiPatch({ baza: { task: value } });
+          refreshBazaRows().then(function () { renderBazaTab(content); });
+        }, event.currentTarget);
+      });
+    }
+    var tableBtn = content.querySelector("[data-btca-baza-table]");
+    if (tableBtn && !chartMeta.arrowDisabled) tableBtn.addEventListener("click", function () { openBazaTable(); });
+    if (chartMeta.showChart) mountBazaDiagramInTab(content);
+  }
+
+  function openBazaTable() {
+    var baza = state.ui.baza;
+    var fullDb = state.bazaNoExercisesInPeriod && !state.bazaStats.empty;
+    var title = buildBazaTableTitle(baza, fullDb);
+    setBazaTableLandscape(true);
+    var overlay = document.createElement("div");
+    overlay.className = "btca-l1-overlay btca-l1-overlay--baza-table";
+    overlay.innerHTML =
+      '<header class="btca-l1-overlay__header btca-l1-overlay__header--baza-table">' +
+      '<button type="button" class="btca-back-button" data-btca-overlay-close aria-label="Назад">←</button>' +
+      "<strong>" + escapeHtml(title) + "</strong></header>" +
+      '<div class="btca-l1-baza-table-wrap">' +
+      bazaTableColumnsHeadHtml() +
+      '<div class="btca-l1-baza-table-scroll"><div class="btca-l1-baza-table-body"></div></div></div>';
+    state.root.appendChild(overlay);
+    var bodyEl = overlay.querySelector(".btca-l1-baza-table-body");
+    function closeTable() {
+      setBazaTableLandscape(false);
+      overlay.remove();
+    }
+    overlay.querySelector("[data-btca-overlay-close]").addEventListener("click", closeTable);
+    bindHorizontalSwipe(overlay, { onSwipeLeft: closeTable });
+    loadBazaTableDisplayItems(baza, fullDb).then(function (items) {
+      if (!bodyEl || !overlay.isConnected) return;
+      bodyEl.innerHTML = items.length ? renderBazaTableItemsHtml(items) : "";
+    });
+  }
+
+  function isNavCardVisibleL1(item, filterKey) {
+    return filterKey === NAV_FILTER_ALL || item.value === filterKey;
+  }
+
+  function buildNavCardHtmlL1(item) {
+    var img = exerciseImageUrl(item.value);
+    return '<article class="btca-l1-nav-card" data-btca-nav-card data-btca-nav-card-value="' + escapeHtml(item.value) + '">' +
+      '<div class="btca-l1-nav-card-inner">' +
+      '<div class="btca-l1-nav-card-top">' +
+      '<button type="button" class="btca-l1-pick" data-btca-nav-pick="' + escapeHtml(item.value) + '">' +
+      '<span class="btca-l1-pick__icon" aria-hidden="true">🎯</span><span class="btca-l1-pick__text">Выбрать</span></button>' +
+      "</div>" +
+      (img
+        ? '<div class="btca-l1-nav-card-frame" data-btca-nav-card-frame data-btca-nav-card-value="' + escapeHtml(item.value) + '">' +
+          '<img src="' + escapeHtml(img) + '" alt="' + escapeHtml(item.label) + '" loading="lazy" draggable="false"></div>'
+        : '<div class="btca-l1-nav-card-frame"><div class="btca-l1-card-placeholder">' + escapeHtml(item.label) + "</div></div>") +
+      "</div></article>";
+  }
+
+  function ensureNavTabDelegatesL1(content) {
+    if (content.getAttribute("data-btca-nav-delegated") === "1") return;
+    content.setAttribute("data-btca-nav-delegated", "1");
+    content.addEventListener("click", function (event) {
+      var pick = event.target.closest("[data-btca-nav-pick]");
+      if (pick && !pick.disabled) {
+        var pickValue = pick.getAttribute("data-btca-nav-pick");
+        pick.classList.add("btca-l1-pick--consumed");
+        pick.disabled = true;
+        if (state.pickTimer) window.clearTimeout(state.pickTimer);
+        state.pickTimer = window.setTimeout(function () {
+          state.ui.exerciseValue = pickValue;
+          state.ui.nav.exerciseFilterKey = pickValue;
+          state.ui.tab = "forma";
+          applyUiPatch({ exerciseValue: pickValue, nav: { exerciseFilterKey: pickValue }, tab: "forma" });
+          renderActiveTab();
+          renderTitleBar();
+        }, PICK_DELAY_MS);
+        return;
+      }
+      var frame = event.target.closest(".btca-l1-nav-card-frame--hot");
+      if (!frame) return;
+      if (state.ui.nav.exerciseFilterKey !== NAV_FILTER_ALL) return;
+      applyNavExerciseFilterChange(content, frame.getAttribute("data-btca-nav-card-value"), state.ui.nav.exerciseFilterKey);
+    });
+  }
+
+  function syncNavCardsVisibilityL1(content, filterKey) {
+    content.querySelectorAll("[data-btca-nav-card]").forEach(function (card) {
+      var value = card.getAttribute("data-btca-nav-card-value");
+      var item = state.data.exercises.filter(function (it) { return it.value === value; })[0];
+      if (!item) {
+        card.hidden = true;
+        card.classList.add("btca-l1-nav-card--hidden");
+        return;
+      }
+      var visible = isNavCardVisibleL1(item, filterKey);
+      card.hidden = !visible;
+      card.classList.toggle("btca-l1-nav-card--hidden", !visible);
+    });
+  }
+
+  function syncNavPickButtons(content) {
+    content.querySelectorAll("[data-btca-nav-pick]").forEach(function (btn) {
+      var value = btn.getAttribute("data-btca-nav-pick");
+      var consumed = state.ui.exerciseValue === value;
+      btn.classList.toggle("btca-l1-pick--consumed", consumed);
+      btn.disabled = consumed;
+    });
+  }
+
+  function syncNavCardInteractionL1(content, filterIsAll) {
+    content.querySelectorAll("[data-btca-nav-card-frame][data-btca-nav-card-value]").forEach(function (frame) {
+      var card = frame.closest("[data-btca-nav-card]");
+      if (!card || card.hidden) {
+        frame.classList.remove("btca-l1-nav-card-frame--hot", "btca-l1-nav-card-frame--swipe");
+        frame.removeAttribute("data-btca-nav-swipe-bound");
+        return;
+      }
+      frame.classList.toggle("btca-l1-nav-card-frame--hot", filterIsAll);
+      frame.classList.toggle("btca-l1-nav-card-frame--swipe", !filterIsAll);
+      frame.removeAttribute("data-btca-nav-swipe-bound");
+    });
+    if (!filterIsAll) {
+      content.querySelectorAll(".btca-l1-nav-card-frame--swipe").forEach(function (frame) {
+        if (frame.getAttribute("data-btca-nav-swipe-bound") === "1") return;
+        var value = frame.getAttribute("data-btca-nav-card-value");
+        frame.setAttribute("data-btca-nav-swipe-bound", "1");
+        bindHorizontalSwipe(frame, {
+          onSwipeRight: function () {
+            openNavExerciseImage({ exerciseValue: value, title: labelForExerciseValue(value) });
+          },
+        });
+      });
+    }
+  }
+
+  function renderNavTab(content) {
+    var filterKey = state.ui.nav.exerciseFilterKey;
+    var sectionLabel = deriveNavSectionLabel(filterKey);
+    var filterIsAll = filterKey === NAV_FILTER_ALL;
+    var displayExercise = filterIsAll ? "Все" : labelForExerciseValue(filterKey);
+    var exerciseOptions = [{ value: NAV_FILTER_ALL, label: "Все" }].concat(state.data.exercises.map(function (it) {
+      return { value: it.value, label: it.label };
+    }));
+
+    var navRoot = content.querySelector("[data-btca-nav-root]");
+    if (!navRoot) {
+      content.innerHTML =
+        '<div class="btca-l1-tab btca-l1-nav" data-btca-nav-root>' +
+        '<div data-btca-nav-head></div>' +
+        '<div class="btca-l1-tab-body btca-l1-nav-cards" data-btca-nav-cards></div></div>';
+      navRoot = content.querySelector("[data-btca-nav-root]");
+      ensureNavTabDelegatesL1(content);
+    }
+
+    var head = navRoot.querySelector("[data-btca-nav-head]");
+    head.innerHTML =
+      '<div class="btca-l1-sticky-head">' +
+      '<div class="btca-l1-toolbar btca-l1-toolbar-second">' +
+      '<div class="btca-l1-nav-section">' +
+      '<span class="btca-l1-field-label">Раздел</span>' +
+      sectionFaceHtml(sectionLabel) +
+      "</div></div>" +
+      '<div class="btca-l1-toolbar btca-l1-toolbar-second">' +
+      '<div class="btca-l1-exercise-row">' +
+      '<div class="btca-l1-exercise-col">' +
+      '<span class="btca-l1-field-label">Упражнение</span>' +
+      filterFaceHtml(displayExercise, { wide: true, dataAttr: "data-btca-nav-filter" }) +
+      "</div>" +
+      '<div class="btca-l1-trailing-slot">' +
+      greenArrowHtml({
+        disabled: filterIsAll,
+        dataAttr: 'data-btca-nav-desc aria-label="Описание"',
+      }) +
+      "</div></div></div></div>";
+
+    var cardsHost = navRoot.querySelector("[data-btca-nav-cards]");
+    var cardCount = String(state.data.exercises.length);
+    if (cardsHost.getAttribute("data-btca-nav-card-count") !== cardCount) {
+      cardsHost.innerHTML = state.data.exercises.map(buildNavCardHtmlL1).join("");
+      cardsHost.setAttribute("data-btca-nav-card-count", cardCount);
+    }
+
+    syncNavCardsVisibilityL1(navRoot, filterKey);
+    syncNavPickButtons(navRoot);
+    syncNavCardInteractionL1(navRoot, filterIsAll);
+
+    head.querySelector("[data-btca-nav-filter]").addEventListener("click", function (event) {
+      openPicker("Упражнение", exerciseOptions, filterKey, function (value) {
+        applyNavExerciseFilterChange(content, value, filterKey);
+      }, event.currentTarget);
+    });
+    var descBtn = head.querySelector("[data-btca-nav-desc]");
+    if (descBtn) descBtn.addEventListener("click", function () {
+      openNavExerciseImage({ exerciseValue: filterKey, title: labelForExerciseValue(filterKey) });
+    });
+
+    scheduleNavCardsScroll(content);
+  }
+
+  function renderPolezTab(content) {
+    var catalogKey = state.ui.polez.catalogKey;
+    var rows = polezRowsForLevel1();
+    var visible = catalogKey === POLEZ_ALL ? rows : rows.filter(function (r) { return r.key === catalogKey; });
+    var catalogOptions = [{ value: POLEZ_ALL, label: "Весь список" }].concat(rows.map(function (r) {
+      return { value: r.key, label: r.label };
+    }));
+    var catalogLabel = catalogKey === POLEZ_ALL ? "Весь список" : (rows.filter(function (r) { return r.key === catalogKey; })[0] || {}).label || "Весь список";
+
+    var polezRoot = content.querySelector("[data-btca-polez-root]");
+    if (!polezRoot) {
+      content.innerHTML =
+        '<div class="btca-l1-tab btca-l1-polez" data-btca-polez-root>' +
+        '<div class="btca-l1-sticky-head" data-btca-polez-head></div>' +
+        '<div class="btca-l1-tab-body btca-l1-polez-cards" data-btca-polez-cards></div></div>';
+      polezRoot = content.querySelector("[data-btca-polez-root]");
+    }
+
+    var polezHead = polezRoot.querySelector("[data-btca-polez-head]");
+    polezHead.innerHTML =
+      '<div class="btca-l1-toolbar btca-l1-toolbar--polez">' +
+      '<div class="btca-l1-polez-catalog-col">' +
+      '<span class="btca-l1-field-label btca-l1-field-label--center">Каталог</span>' +
+      filterFaceHtml(catalogLabel, { wide: true, dataAttr: "data-btca-polez-catalog" }) +
+      "</div></div>";
+
+    var cardsHost = polezRoot.querySelector("[data-btca-polez-cards]");
+    var prevKey = cardsHost ? cardsHost.getAttribute("data-btca-polez-catalog-key") : null;
+    if (!cardsHost || prevKey !== String(catalogKey)) {
+      cardsHost = remountPolezCardsHost(polezRoot, catalogKey);
+    }
+    cardsHost.innerHTML = visible.map(function (row) {
+        if (row.key === "links") {
+          return '<section class="btca-l1-links-panel"><h3>Ссылки, документы, литература, видео</h3>' +
+            state.data.polezLinks.map(function (line) {
+              return '<a class="btca-l1-link" href="' + escapeHtml(line.href) + '" target="_blank" rel="noopener">' +
+                escapeHtml(line.num + " " + line.title) + "</a>";
+            }).join("") + "</section>";
+        }
+        var img = polezImageUrl(row.file);
+        var hasDesc = row.key !== POLEZ_ALL && row.key !== "links";
+        var single = catalogKey !== POLEZ_ALL;
+        var imageHtml = img
+          ? (single
+            ? '<img src="' + escapeHtml(img) + '" alt="' + escapeHtml(row.label) + '" loading="lazy" draggable="false">'
+            : '<button type="button" class="btca-l1-card-image-btn" data-btca-polez-image="' + escapeHtml(row.key) + '">' +
+              '<img src="' + escapeHtml(img) + '" alt="' + escapeHtml(row.label) + '" loading="lazy"></button>')
+          : '<div class="btca-l1-card-placeholder">' + escapeHtml(row.label) + "</div>";
+        var frameClass = "btca-l1-polez-card-frame" + (single && img ? " btca-l1-nav-card-frame--swipe" : "");
+        var frameAttr = single && img ? ' data-btca-polez-image-swipe="' + escapeHtml(row.key) + '"' : "";
+        return '<article class="btca-l1-polez-card">' +
+          '<div class="btca-l1-polez-card-inner">' +
+          (single && hasDesc
+            ? '<div class="btca-l1-nav-card-top">' +
+              '<button type="button" class="btca-l1-pick" data-btca-polez-desc="' + escapeHtml(row.key) + '">' +
+              '<span class="btca-l1-pick__icon" aria-hidden="true">📖</span>' +
+              '<span class="btca-l1-pick__text">Описание</span></button></div>'
+            : "") +
+          '<div class="' + frameClass + '"' + frameAttr + ">" + imageHtml + "</div></div></article>";
+      }).join("");
+
+    content.querySelector("[data-btca-polez-catalog]").addEventListener("click", function (event) {
+      openPicker("Каталог", catalogOptions, catalogKey, function (value) {
+        state.ui.polez.catalogKey = value;
+        applyUiPatch({ polez: { catalogKey: value } });
+        renderPolezTab(content);
+      }, event.currentTarget, { catalogList: true });
+    });
+    content.querySelectorAll("[data-btca-polez-desc]").forEach(function (btn) {
+      btn.addEventListener("click", function () {
+        openPolezDescription(btn.getAttribute("data-btca-polez-desc"));
+      });
+    });
+    content.querySelectorAll("[data-btca-polez-image]").forEach(function (btn) {
+      btn.addEventListener("click", function () {
+        var key = btn.getAttribute("data-btca-polez-image");
+        state.ui.polez.catalogKey = key;
+        applyUiPatch({ polez: { catalogKey: key } });
+        renderPolezTab(content);
+      });
+    });
+    content.querySelectorAll("[data-btca-polez-image-swipe]").forEach(function (frame) {
+      var key = frame.getAttribute("data-btca-polez-image-swipe");
+      bindHorizontalSwipe(frame, {
+        onSwipeRight: function () { openPolezImagePortrait(key); },
+      });
+    });
+    schedulePolezCardsScroll(content);
+  }
+
+  function scrollNavAfterExerciseImageClose() {
+    if (!state.root || !state.ui || state.ui.tab !== "nav") return;
+    var content = state.root.querySelector("[data-btca-level1-content]");
+    if (!content) return;
+    scheduleNavCardsScroll(content);
+  }
+
+  function scrollPolezAfterImageClose() {
+    if (!state.root || !state.ui || state.ui.tab !== "polez") return;
+    var content = state.root.querySelector("[data-btca-level1-content]");
+    if (!content) return;
+    var polezRoot = content.querySelector("[data-btca-polez-root]");
+    if (polezRoot) {
+      var key = state.ui.polez.catalogKey;
+      var oldHost = polezRoot.querySelector("[data-btca-polez-cards]");
+      var html = oldHost ? oldHost.innerHTML : "";
+      var host = remountPolezCardsHost(polezRoot, key);
+      host.innerHTML = html;
+      content.querySelectorAll("[data-btca-polez-desc]").forEach(function (btn) {
+        btn.addEventListener("click", function () {
+          openPolezDescription(btn.getAttribute("data-btca-polez-desc"));
+        });
+      });
+      content.querySelectorAll("[data-btca-polez-image-swipe]").forEach(function (frame) {
+        var swipeKey = frame.getAttribute("data-btca-polez-image-swipe");
+        bindHorizontalSwipe(frame, {
+          onSwipeRight: function () { openPolezImagePortrait(swipeKey); },
+        });
+      });
+    }
+    schedulePolezCardsScroll(content);
+  }
+
+  function exerciseImageReturnTo(payload) {
+    if (payload && payload.returnTo) return payload.returnTo;
+    if (payload && payload.fromNav) return "nav";
+    return "forma";
+  }
+
+  function afterExerciseImageClose(returnTo) {
+    if (returnTo === "nav") scrollNavAfterExerciseImageClose();
+  }
+
+  function openExerciseImagePortrait(payload) {
+    var url = exerciseImageUrl(payload.exerciseValue);
+    if (!url) return;
+    var returnTo = exerciseImageReturnTo(payload);
+    var overlay = document.createElement("div");
+    overlay.className = "btca-l1-overlay btca-l1-overlay--forma-image-portrait";
+    overlay.innerHTML =
+      '<header class="btca-l1-overlay__header btca-l1-overlay__header--portrait-image">' +
+      '<button type="button" class="btca-back-button" data-btca-forma-img-close aria-label="Назад">←</button>' +
+      '<span aria-hidden="true"></span>' +
+      greenArrowHtml({ dataAttr: 'data-btca-forma-img-landscape aria-label="Просмотр в альбомной ориентации"' }) +
+      "</header>" +
+      '<div class="btca-l1-image-view" data-btca-forma-img-swipe>' +
+      '<img src="' + escapeHtml(url) + '" alt="' + escapeHtml(payload.title || "Упражнение") + '"></div>';
+    state.root.appendChild(overlay);
+
+    function closePortrait() {
+      overlay.remove();
+      afterExerciseImageClose(returnTo);
+    }
+    function openLandscape() {
+      overlay.remove();
+      openExerciseImageLandscape({
+        exerciseValue: payload.exerciseValue,
+        title: payload.title,
+        returnTo: returnTo,
+      });
+    }
+
+    overlay.querySelector("[data-btca-forma-img-close]").addEventListener("click", closePortrait);
+    var landscapeBtn = overlay.querySelector("[data-btca-forma-img-landscape]");
+    if (landscapeBtn) landscapeBtn.addEventListener("click", openLandscape);
+    bindHorizontalSwipe(overlay.querySelector("[data-btca-forma-img-swipe]") || overlay, {
+      onSwipeLeft: closePortrait,
+      onSwipeRight: openLandscape,
+    });
+  }
+
+  function openExerciseImageLandscape(payload) {
+    var url = exerciseImageUrl(payload.exerciseValue);
+    if (!url) return;
+    var returnTo = exerciseImageReturnTo(payload);
+    var overlay = document.createElement("div");
+    overlay.className = "btca-l1-overlay btca-l1-overlay--forma-image";
+    overlay.innerHTML =
+      '<header class="btca-l1-overlay__header btca-l1-overlay__header--forma-image btca-l1-overlay__header--compact">' +
+      '<button type="button" class="btca-back-button" data-btca-overlay-close aria-label="Назад">←</button>' +
+      "</header>" +
+      '<div class="btca-l1-image-view"><img src="' + escapeHtml(url) + '" alt="' +
+      escapeHtml(payload.title || "Упражнение") + '"></div>';
+    state.root.appendChild(overlay);
+    function closeOverlay() {
+      setBazaTableLandscape(false);
+      overlay.remove();
+      afterExerciseImageClose(returnTo);
+    }
+    setBazaTableLandscape(true);
+    overlay.querySelector("[data-btca-overlay-close]").addEventListener("click", closeOverlay);
+    bindHorizontalSwipe(overlay, { onSwipeLeft: closeOverlay });
+  }
+
+  function openExerciseImage(payload) {
+    if (!exerciseImageUrl(payload.exerciseValue)) return;
+    var step = payload.step;
+    if (!step) {
+      if (payload.formaLandscape || payload.navLandscape) step = "landscape";
+      else if (payload.fromForma || payload.fromNav) step = "portrait";
+      else step = "landscape";
+    }
+    if (step === "portrait") {
+      openExerciseImagePortrait(payload);
+      return;
+    }
+    openExerciseImageLandscape(payload);
+  }
+
+  function polezDescriptionScreenHtml(desc) {
+    return (
+      '<main class="btca-about-screen">' +
+      '<header class="btca-screen-header">' +
+      '<button type="button" class="btca-back-button" data-btca-overlay-close aria-label="Назад">←</button>' +
+      "<strong>Описание</strong>" +
+      '<span aria-hidden="true"></span>' +
+      "</header>" +
+      '<section class="btca-about-content"><h1>' + escapeHtml(desc.title || "") + "</h1>" +
+      '<p>' + formatPolezBody(desc.body || "") + "</p></section></main>"
+    );
+  }
+
+  function openPolezDescription(catalogKey) {
+    var desc = state.data.polezDescriptions[catalogKey];
+    if (!desc) return;
+    document.body.classList.add("btca-screen-mode");
+    var overlay = document.createElement("div");
+    overlay.className = "btca-polez-desc-root";
+    overlay.innerHTML = polezDescriptionScreenHtml(desc);
+    state.root.appendChild(overlay);
+    function closeOverlay() {
+      document.body.classList.remove("btca-screen-mode");
+      overlay.remove();
+    }
+    overlay.querySelector("[data-btca-overlay-close]").addEventListener("click", closeOverlay);
+    bindHorizontalSwipe(overlay, {
+      onSwipeLeft: closeOverlay,
+    });
+  }
+
+  function openPolezImagePortrait(catalogKey) {
+    var row = polezRowsForLevel1().filter(function (r) { return r.key === catalogKey; })[0];
+    if (!row || !row.file) return;
+    var url = polezImageUrl(row.file);
+    if (!url) return;
+    var overlay = document.createElement("div");
+    overlay.className = "btca-l1-overlay btca-l1-overlay--forma-image-portrait";
+    overlay.innerHTML =
+      '<header class="btca-l1-overlay__header btca-l1-overlay__header--portrait-image">' +
+      '<button type="button" class="btca-back-button" data-btca-polez-img-close aria-label="Назад">←</button>' +
+      '<span aria-hidden="true"></span>' +
+      greenArrowHtml({ dataAttr: 'data-btca-polez-img-landscape aria-label="Просмотр в альбомной ориентации"' }) +
+      "</header>" +
+      '<div class="btca-l1-image-view" data-btca-polez-img-swipe>' +
+      '<img src="' + escapeHtml(url) + '" alt="' + escapeHtml(row.label) + '"></div>';
+    state.root.appendChild(overlay);
+
+    function closePortrait() {
+      overlay.remove();
+      scrollPolezAfterImageClose();
+    }
+    function openLandscape() {
+      overlay.remove();
+      openPolezImageLandscape(catalogKey);
+    }
+
+    overlay.querySelector("[data-btca-polez-img-close]").addEventListener("click", closePortrait);
+    var landscapeBtn = overlay.querySelector("[data-btca-polez-img-landscape]");
+    if (landscapeBtn) landscapeBtn.addEventListener("click", openLandscape);
+    bindHorizontalSwipe(overlay.querySelector("[data-btca-polez-img-swipe]") || overlay, {
+      onSwipeLeft: closePortrait,
+      onSwipeRight: openLandscape,
+    });
+  }
+
+  function openPolezImageLandscape(catalogKey) {
+    var row = polezRowsForLevel1().filter(function (r) { return r.key === catalogKey; })[0];
+    if (!row || !row.file) return;
+    var url = polezImageUrl(row.file);
+    var overlay = document.createElement("div");
+    overlay.className = "btca-l1-overlay btca-l1-overlay--forma-image";
+    overlay.innerHTML =
+      '<header class="btca-l1-overlay__header btca-l1-overlay__header--forma-image btca-l1-overlay__header--compact">' +
+      '<button type="button" class="btca-back-button" data-btca-overlay-close aria-label="Назад">←</button>' +
+      "</header>" +
+      '<div class="btca-l1-image-view"><img src="' + escapeHtml(url) + '" alt="' + escapeHtml(row.label) + '"></div>';
+    state.root.appendChild(overlay);
+    function closeOverlay() {
+      setBazaTableLandscape(false);
+      overlay.remove();
+      scrollPolezAfterImageClose();
+    }
+    setBazaTableLandscape(true);
+    overlay.querySelector("[data-btca-overlay-close]").addEventListener("click", closeOverlay);
+    bindHorizontalSwipe(overlay, { onSwipeLeft: closeOverlay });
+  }
+
+  function formatPolezBody(body) {
+    return escapeHtml(body)
+      .replace(/&lt;b&gt;([\s\S]*?)&lt;\/b&gt;/g, "<strong>$1</strong>")
+      .replace(/&lt;i&gt;([\s\S]*?)&lt;\/i&gt;/g, "<em>$1</em>")
+      .replace(
+        /&lt;a\s+href=&quot;(https?:\/\/[^&]+)&quot;(\s+target=&quot;_blank&quot;)?(\s+rel=&quot;noopener noreferrer&quot;)?&gt;([\s\S]*?)&lt;\/a&gt;/g,
+        '<a href="$1" target="_blank" rel="noopener noreferrer">$4</a>',
+      )
+      .replace(/\n/g, "<br>");
+  }
+
+  function renderActiveTab() {
+    var content = state.root && state.root.querySelector("[data-btca-level1-content]");
+    if (!content) return;
+    if (state.ui.tab === "forma") renderFormaTab(content);
+    else if (state.ui.tab === "baza") renderBazaTab(content);
+    else if (state.ui.tab === "nav") renderNavTab(content);
+    else renderPolezTab(content);
+  }
+
+  function renderSheetMenu(open) {
+    var layer = state.root.querySelector("[data-btca-level1-menu-layer]");
+    if (!layer) return;
+    if (!open) {
+      closeSlideMenuLayer(layer);
+      return;
+    }
+    var SL = window.BTCA_SLIDE_MENU;
+    var items = SHEETS.map(function (sheet) {
+      var active = sheet.key === state.ui.tab;
+      return '<button class="btca-level1-sheet-menu__item' + (active ? " btca-level1-sheet-menu__item--active" : "") +
+        '" type="button" data-btca-level1-sheet="' + sheet.key + '">' + escapeHtml(sheet.label) + "</button>";
+    }).join("");
+    layer.removeAttribute("hidden");
+    layer.innerHTML =
+      '<button class="btca-level1-menu-backdrop" type="button" data-btca-level1-menu-close aria-label="Закрыть меню"></button>' +
+      (SL
+        ? SL.hostHtml("btca-level1-slide-menu-host--sheet-nav", "btca-level1-sheet-menu", ' role="navigation" aria-label="Меню листов"', items)
+        : '<nav class="btca-level1-sheet-menu" aria-label="Меню листов">' + items + "</nav>");
+    if (SL) requestAnimationFrame(function () { SL.openLayer(layer); });
+  }
+
+  function setSheet(key) {
+    state.ui.tab = key;
+    applyUiPatch({ tab: key });
+    renderSheetMenu(false);
+    if (key === "baza") {
+      refreshBazaContext().then(function () {
+        renderActiveTab();
+        renderTitleBar();
+      });
+    } else {
+      renderActiveTab();
+      renderTitleBar();
+    }
+  }
+
+  function fetchJsonCached(url) {
+    if ("caches" in window) {
+      return caches.match(url).then(function (cached) {
+        if (cached) return cached.json();
+        return fetch(url).then(function (response) {
+          if (!response.ok) throw new Error("Не удалось загрузить " + url);
+          return response.json();
+        });
+      });
+    }
+    return fetch(url).then(function (response) {
+      if (!response.ok) throw new Error("Не удалось загрузить " + url);
+      return response.json();
+    });
+  }
+
+  function loadData() {
+    return Promise.all([
+      fetchJsonCached(assetPath("level1/data/forma_exercise_list.json")),
+      fetchJsonCached(assetPath("level1/data/polezCatalog.json")),
+      fetchJsonCached(assetPath("level1/data/polezLinks.json")),
+      fetchJsonCached(assetPath("level1/data/polezDescriptions.json")),
+    ]).then(function (parts) {
+      var list = parts[0];
+      state.data.exercises = list.map(function (r) {
+        var v = String(r.value || "").trim();
+        var b5 = v.indexOf("Тест") === 0 ? v : Number(v);
+        return { value: optionValueForB5(b5), label: exerciseOptionLabel(b5) };
+      });
+      if (!state.data.exercises.some(function (it) { return it.value === "Тест1"; })) {
+        state.data.exercises.push({ value: "Тест1", label: "Тест1" });
+      }
+      state.data.polezCatalog = parts[1];
+      state.data.polezLinks = parts[2];
+      state.data.polezDescriptions = parts[3];
+    });
+  }
+
+  function boot() {
+    if (booted) {
+      return loadData().then(function () {
+        return DB.loadUiState();
+      }).then(function (ui) {
+        state.ui = ui;
+        return { ui: state.ui, data: state.data };
+      });
+    }
+    if (bootPromise) return bootPromise;
+    DB = window.BTCA_LEVEL1_DB;
+    if (!DB) {
+      return Promise.reject(new Error("Модуль базы данных не загружен"));
+    }
+    bootPromise = loadData().then(function () {
+      return DB.loadUiState();
+    }).then(function (ui) {
+      state.ui = ui;
+      return DB.warmDb ? DB.warmDb() : Promise.resolve();
+    }).then(function () {
+      booted = true;
+      return { ui: state.ui, data: state.data };
+    });
+    return bootPromise;
+  }
+
+  function mount(rootEl, hooks) {
+    state.root = rootEl;
+    state.mounted = true;
+    state.formaFlags = {};
+    if (!booted) {
+      return Promise.reject(new Error("Приложение ещё не завершило загрузку. Перезапустите."));
+    }
+    return refreshBazaContext().then(function () {
+      renderTitleBar();
+      renderActiveTab();
+      var menuBtn = rootEl.querySelector("[data-btca-level1-menu]");
+      var menuLayer = rootEl.querySelector("[data-btca-level1-menu-layer]");
+      if (menuBtn) {
+        menuBtn.addEventListener("click", function () {
+          if (state.bazaMenuOpen) {
+            state.bazaMenuOpen = false;
+            var bazaLayer = rootEl.querySelector("[data-btca-level1-baza-menu-layer]");
+            if (bazaLayer) {
+              closeSlideMenuLayer(bazaLayer, function () { renderSheetMenu(true); });
+              return;
+            }
+            renderBazaMenuLayer();
+          }
+          renderSheetMenu(true);
+        });
+      }
+      if (menuLayer) {
+        menuLayer.addEventListener("click", function (event) {
+          if (event.target.closest("[data-btca-level1-menu-close]")) { renderSheetMenu(false); return; }
+          var item = event.target.closest("[data-btca-level1-sheet]");
+          if (item) setSheet(item.getAttribute("data-btca-level1-sheet"));
+        });
+      }
+      rootEl.addEventListener("click", function (event) {
+        if (event.target.closest("[data-btca-baza-menu]")) {
+          var sheetLayer = rootEl.querySelector("[data-btca-level1-menu-layer]");
+          if (sheetLayer && !sheetLayer.hasAttribute("hidden")) {
+            closeSlideMenuLayer(sheetLayer, function () {
+              state.bazaMenuOpen = true;
+              renderBazaMenuLayer();
+            });
+            return;
+          }
+          state.bazaMenuOpen = true;
+          renderBazaMenuLayer();
+        }
+      });
+      if (DB.loadUserFileIdentifier) {
+        DB.loadUserFileIdentifier().then(function (id) { state.bazaUserFileId = id || ""; });
+      }
+      renderBazaToast();
+      if (hooks && hooks.onReady) hooks.onReady();
+    });
+  }
+
+  function unmount() {
+    if (state.pickTimer) window.clearTimeout(state.pickTimer);
+    clearFormaSaveWatchdog();
+    formaSaveInFlight = false;
+    state.mounted = false;
+    state.root = null;
+  }
+
+  window.BTCA_LEVEL1 = {
+    VERSION: VERSION,
+    boot: boot,
+    mount: mount,
+    unmount: unmount,
+    setSheet: setSheet,
+  };
+})();

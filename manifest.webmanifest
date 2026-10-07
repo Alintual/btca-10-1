@@ -1,0 +1,26 @@
+{
+  "name": "BTCA 10.1",
+  "short_name": "BTCA 10.1",
+  "description": "Web/PWA версия БТКА 10.1 для установки на iOS/iPadOS и offline-работы (Уровень 3 — Продвинутый).",
+  "lang": "ru",
+  "start_url": "/btca-10-1/",
+  "scope": "/btca-10-1/",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#1a4854",
+  "theme_color": "#1a4854",
+  "icons": [
+    {
+      "src": "/btca-10-1/icons/btca-icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/btca-10-1/icons/btca-icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
