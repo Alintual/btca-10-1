@@ -2,8 +2,8 @@
   "use strict";
 
   var BTCA_BASE = "/btca-10-1/";
-  var INSTALL_CACHE = "btca10-web-10.1:static-install";
-  var MEDIA_CACHE = "btca10-web-10.1:static-media";
+  var INSTALL_CACHE = "btca10-web-10.1.1:static-install";
+  var MEDIA_CACHE = "btca10-web-10.1.1:static-media";
   var MEDIA_PROBE_RE = /offline-unpacked\/level3\/exercises\/[^/]+\.(jpe?g|png|webp|gif)$/i;
   var MEDIA_STATE_KEY = "btca10-web:static-media-state";
   var APP_READY_KEY = "btca10-web:app-ready";
