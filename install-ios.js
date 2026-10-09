@@ -2,8 +2,8 @@
   "use strict";
 
   var BTCA_BASE = "/btca-10-1/";
-  var INSTALL_CACHE = "btca10-web-10.1.7:static-install";
-  var MEDIA_CACHE = "btca10-web-10.1.7:static-media";
+  var INSTALL_CACHE = "btca10-web-10.1.8:static-install";
+  var MEDIA_CACHE = "btca10-web-10.1.8:static-media";
   var MEDIA_PROBE_RE = /offline-unpacked\/level3\/exercises\/[^/]+\.(jpe?g|png|webp|gif)$/i;
   var MEDIA_STATE_KEY = "btca10-web:static-media-state";
   var APP_READY_KEY = "btca10-web:app-ready";
@@ -25,8 +25,8 @@
   var ABOUT_MAIN_TEXT = "Настоящее Приложение разработано для локальной установки (развёртывания) на смартфоне или планшете с операционными системами Android или iOS и рассчитано для обучения и тренировки учеников с уровнем подготовки «Уровень 3 — Продвинутый».";
   var ABOUT_POST_TEXT = "*****\nБТКА, это — учебно-тренировочный программный комплекс, предназначенный для комплексного обучения игре на русском бильярде, выработки и закрепления практических навыков ведения бильярдной игры в Пирамиду, как самостоятельно, так и с тренером, с применением современных методик и технологий.\nТренировочный комплекс БТКА в сочетании с уникальной Методологией обучения составляют общую Систему тренировок БТКА школы русского бильярда «Абриколь» г. Красноярск.\n<a href=\"https://cloud.mail.ru/public/sujN/mpE8mr6aW\">Методика обучения</a>\n\nВ текущей версии Приложения БТКА 10.1 доступен раздел:\n•  *Уровень 3 — Продвинутый* Упражнений – 40, Задач – 263, Полезностей – 15.\n\nВсе Приложения функционируют без использования сети Интернет.\nКаждое Приложение:\n•  Содержит специфический (соответствующий уровню подготовки) набор упражнений, задач и тестов (в графическом виде), ранжированных по принципу - \"от простого к сложному\", и сгруппированных в тематические разделы по видам тренировок;\n•  Включает необходимые инструкции, методическую и справочную информацию;\n•  Обеспечивает возможность ввода, хранения и обработки результатов прогресса выполнения учеником практических заданий для последующего статистического анализа с использованием локальной Базы данных (БД);\n•  Имеет весь необходимый функционал и автоматизацию, а также интуитивно-понятный интерфейс, что способствует осуществлению полноценного, эффективного тренировочного процесса в комфортных условиях.\n\nОТ АВТОРА. Система тренировок БТКА разработана по результатам систематизации методик обучения русскому бильярду на основе: секретов ведущих тренеров и игроков (в т.ч. В. Симонича, В. Лазарева, С. Баурова, Е. Сталева и др.), опыта «старой школы», а также современных научных и экспериментальных исследований и IT-технологий.\n<a href=\"https://cloud.mail.ru/public/Ye3r/ZYwpjB9uz\">Подробное описание комплекса БТКА</a>\n\nCopyright © Юрий Алинт (Андрей Юрьев) 2026";
   var installedHomeSnapshot = "";
-  var LEVEL1_MODULE_VERSION = "10.1.6";
-  var LEVEL3_MODULE_VERSION = "10.1.6";
+  var LEVEL1_MODULE_VERSION = "10.1.7";
+  var LEVEL3_MODULE_VERSION = "10.1.7";
 
   var CORE_REL_PATHS = [
     "",
@@ -2029,6 +2029,13 @@
     if (panel) panel.removeAttribute("hidden");
   }
 
+  var SUBSCRIPTION_INACTIVE_MSG =
+    "Подписка не активна. Для оформления или продления доступа обратитесь к автору по телефону +7 983 205 2230";
+
+  function isSubscriptionInactiveError(message) {
+    return /подписка не активна/i.test(String(message || ""));
+  }
+
   function renderAuthGate(onUnlocked) {
     var gate = ensureAuthGateMount();
     if (!gate) {
@@ -2044,10 +2051,12 @@
     } catch (e) {}
     var mode = savedPhone ? "login" : "register";
     var debugCode = "";
+    var subscriptionBlocked = false;
 
     function paint() {
       var title =
         mode === "register" ? "Регистрация" : mode === "otp" ? "Код подтверждения" : "Вход";
+      var showSubmit = !(mode === "login" && subscriptionBlocked);
       gate.innerHTML =
         '<div class="auth-gate__tabs" role="tablist">' +
         '<button type="button" class="auth-gate__tab' +
@@ -2079,10 +2088,14 @@
         (debugCode && mode === "otp"
           ? '<p class="auth-gate__debug">Тестовый код: ' + escapeHtml(debugCode) + "</p>"
           : "") +
-        '<p class="auth-gate__error" data-auth-error hidden></p>' +
-        '<button class="platform-button auth-gate__submit" type="submit"><span>' +
-        (mode === "register" ? "Зарегистрироваться" : mode === "otp" ? "Подтвердить код" : "Получить код") +
-        "</span></button>" +
+        '<p class="auth-gate__error" data-auth-error' +
+        (subscriptionBlocked ? ">" + escapeHtml(SUBSCRIPTION_INACTIVE_MSG) : " hidden>") +
+        "</p>" +
+        (showSubmit
+          ? '<button class="platform-button auth-gate__submit" type="submit"><span>' +
+            (mode === "register" ? "Зарегистрироваться" : mode === "otp" ? "Подтвердить код" : "Получить код") +
+            "</span></button>"
+          : "") +
         "</form>";
     }
 
@@ -2098,16 +2111,43 @@
       el.textContent = message;
     }
 
+    function markInactive() {
+      subscriptionBlocked = true;
+      mode = "login";
+      debugCode = "";
+      paint();
+      setError(SUBSCRIPTION_INACTIVE_MSG);
+    }
+
     paint();
     gate.onclick = function (event) {
       var tab = event.target && event.target.closest ? event.target.closest("[data-auth-mode]") : null;
       if (!tab) return;
       mode = tab.getAttribute("data-auth-mode") === "register" ? "register" : "login";
       debugCode = "";
+      subscriptionBlocked = false;
       paint();
+    };
+    gate.oninput = function (event) {
+      if (!subscriptionBlocked) return;
+      if (event.target && event.target.name === "phone") {
+        subscriptionBlocked = false;
+        setError("");
+        savedPhone = String(event.target.value || "");
+        paint();
+        var phoneEl = gate.querySelector('input[name="phone"]');
+        if (phoneEl) {
+          phoneEl.focus();
+          try {
+            var len = phoneEl.value.length;
+            phoneEl.setSelectionRange(len, len);
+          } catch (e) {}
+        }
+      }
     };
     gate.onsubmit = function (event) {
       event.preventDefault();
+      if (mode === "login" && subscriptionBlocked) return;
       setError("");
       var form = event.target;
       if (!form || form.tagName !== "FORM") return;
@@ -2164,16 +2204,22 @@
       chain
         .then(function (data) {
           if (mode === "otp") return;
+          subscriptionBlocked = false;
           debugCode = (data && data.debug_code) || "";
           mode = "otp";
           paint();
         })
         .catch(function (err) {
-          setError((err && err.message) || "Ошибка запроса");
+          var message = (err && err.message) || "Ошибка запроса";
+          if (mode !== "otp" && isSubscriptionInactiveError(message)) {
+            markInactive();
+            return;
+          }
+          setError(message);
           if (mode === "register") {
             mode = "login";
             paint();
-            setError((err && err.message) || "Ошибка запроса");
+            setError(message);
           }
         })
         .then(function () {
