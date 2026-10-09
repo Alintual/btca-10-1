@@ -2,8 +2,8 @@
   "use strict";
 
   var BTCA_BASE = "/btca-10-1/";
-  var INSTALL_CACHE = "btca10-web-10.1.16:static-install";
-  var MEDIA_CACHE = "btca10-web-10.1.16:static-media";
+  var INSTALL_CACHE = "btca10-web-10.1.17:static-install";
+  var MEDIA_CACHE = "btca10-web-10.1.17:static-media";
   var MEDIA_PROBE_RE = /offline-unpacked\/level3\/exercises\/[^/]+\.(jpe?g|png|webp|gif)$/i;
   var MEDIA_STATE_KEY = "btca10-web:static-media-state";
   var APP_READY_KEY = "btca10-web:app-ready";
@@ -2068,29 +2068,35 @@
       return;
     }
     gate.removeAttribute("hidden");
+    var loginOnly = isStandalone();
     var savedPhone = "";
     var savedName = "";
     try {
       savedPhone = localStorage.getItem(LICENSE_PHONE_KEY) || "";
       savedName = localStorage.getItem(LICENSE_NAME_KEY) || "";
     } catch (e) {}
-    var mode = savedPhone ? "login" : "register";
+    // В установленном PWA регистрации нет — только вход (клиент уже получил доступ на загрузке).
+    var mode = loginOnly ? "login" : savedPhone ? "login" : "register";
     var debugCode = "";
     var subscriptionBlocked = false;
 
     function paint() {
+      if (loginOnly && mode === "register") mode = "login";
       var title =
         mode === "register" ? "Регистрация" : mode === "otp" ? "Код подтверждения" : "Вход";
       var showSubmit = !(mode === "login" && subscriptionBlocked);
+      var tabsHtml = loginOnly
+        ? ""
+        : '<div class="auth-gate__tabs" role="tablist">' +
+          '<button type="button" class="auth-gate__tab' +
+          (mode !== "register" ? " auth-gate__tab--active" : "") +
+          '" data-auth-mode="login">Вход</button>' +
+          '<button type="button" class="auth-gate__tab' +
+          (mode === "register" ? " auth-gate__tab--active" : "") +
+          '" data-auth-mode="register">Регистрация</button>' +
+          "</div>";
       gate.innerHTML =
-        '<div class="auth-gate__tabs" role="tablist">' +
-        '<button type="button" class="auth-gate__tab' +
-        (mode !== "register" ? " auth-gate__tab--active" : "") +
-        '" data-auth-mode="login">Вход</button>' +
-        '<button type="button" class="auth-gate__tab' +
-        (mode === "register" ? " auth-gate__tab--active" : "") +
-        '" data-auth-mode="register">Регистрация</button>' +
-        "</div>" +
+        tabsHtml +
         '<p class="auth-gate__title">' +
         escapeHtml(title) +
         "</p>" +
@@ -2146,6 +2152,7 @@
 
     paint();
     gate.onclick = function (event) {
+      if (loginOnly) return;
       var tab = event.target && event.target.closest ? event.target.closest("[data-auth-mode]") : null;
       if (!tab) return;
       mode = tab.getAttribute("data-auth-mode") === "register" ? "register" : "login";
@@ -2187,6 +2194,11 @@
 
       var chain = Promise.resolve();
       if (mode === "register") {
+        if (loginOnly) {
+          setError("В приложении доступен только вход");
+          if (submitBtn) submitBtn.disabled = false;
+          return;
+        }
         chain = licensePost("/v1/register", { name: name, phone: phone }).then(function (data) {
           savedName = name;
           savedPhone = data.phone || phone;
@@ -2269,6 +2281,22 @@
     });
   }
 
+  function ensureInstalledHomeTitle() {
+    var home = document.querySelector(".home");
+    var title = document.querySelector(".home__app-title");
+    var release = document.querySelector(".home__app-release");
+    if (!home || !title) return;
+    if (home.firstElementChild !== title) {
+      home.insertBefore(title, home.firstElementChild);
+    }
+    if (release && title.nextElementSibling !== release) {
+      home.insertBefore(release, title.nextSibling);
+    }
+    title.removeAttribute("hidden");
+    if (release) release.removeAttribute("hidden");
+    home.setAttribute("aria-labelledby", "btca-installed-header");
+  }
+
   function renderInstalledHome(options) {
     options = options || {};
     var preserveSplash = Boolean(options.preserveSplash);
@@ -2281,6 +2309,7 @@
     document.body.classList.add("btca-installed-mode");
     document.body.classList.remove("btca-screen-mode", "btca-level1-mode", "btca-level3-mode");
 
+    ensureInstalledHomeTitle();
     if (intro) intro.setAttribute("hidden", "hidden");
     if (panel && !preserveSplash) {
       panel.className = "ios-panel";

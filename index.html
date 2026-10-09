@@ -2,17 +2,17 @@
 <html lang="ru">
   <head>
     <meta charset="UTF-8" />
-    <meta name="btca-cache-version" content="btca10-web-10.1.16" />
+    <meta name="btca-cache-version" content="btca10-web-10.1.17" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <meta name="theme-color" content="#1a4854" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-title" content="BTCA 10.1" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <link rel="manifest" href="/btca-10-1/manifest.webmanifest" />
-    <link rel="apple-touch-icon" sizes="180x180" href="/btca-10-1/icons/touch-10-1-16.png" />
-    <link rel="icon" type="image/png" sizes="32x32" href="/btca-10-1/icons/tab-10-1-16-32.png" />
-    <link rel="icon" type="image/png" sizes="192x192" href="/btca-10-1/icons/tab-10-1-16.png" />
-    <link rel="icon" type="image/x-icon" href="/btca-10-1/favicon-10-1-16.ico" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/btca-10-1/icons/touch-10-1-17.png" />
+    <link rel="icon" type="image/png" sizes="32x32" href="/btca-10-1/icons/tab-10-1-17-32.png" />
+    <link rel="icon" type="image/png" sizes="192x192" href="/btca-10-1/icons/tab-10-1-17.png" />
+    <link rel="icon" type="image/x-icon" href="/btca-10-1/favicon-10-1-17.ico" />
     <style>
 :root {
   color: #ffffff;
@@ -90,6 +90,8 @@ html.btca-early-apple:not(.btca-installed-mode) .app {
   }
 }
 
+html.btca-standalone-boot:not(.btca-shell-ready) .home__app-title,
+html.btca-standalone-boot:not(.btca-shell-ready) .home__app-release,
 html.btca-standalone-boot:not(.btca-shell-ready) .home__intro,
 html.btca-standalone-boot:not(.btca-shell-ready) .platform-menu,
 html.btca-standalone-boot:not(.btca-shell-ready) #btca-static-ios-panel,
@@ -444,8 +446,38 @@ body:not(.btca-installed-mode) .home__tagline-slot .home__phrase2-line2 {
   }
 }
 
+.btca-installed-mode .home {
+  min-height: calc(100vh - 56px);
+}
+
+.btca-installed-mode .home__app-title,
+.btca-installed-mode .home__app-release {
+  margin: 0;
+  padding: 0 calc(16rem / 17);
+  color: #ffffff;
+  text-align: center;
+  font-size: 1rem;
+  font-weight: 500;
+  letter-spacing: normal;
+  line-height: 1.25;
+}
+
+.btca-installed-mode .home__app-title {
+  margin-bottom: calc(4rem / 17);
+  text-transform: uppercase;
+}
+
+.btca-installed-mode .home__app-release {
+  margin-bottom: calc(10rem / 17);
+  text-transform: none;
+}
+
 .btca-installed-mode .home__intro {
   margin-top: calc(-162rem / 17);
+}
+
+.btca-installed-mode .auth-gate__tabs {
+  display: none;
 }
 
 .home__intro {
@@ -3869,8 +3901,8 @@ body.btca-apple-comfort.btca-landscape-mode #root {
           </div>
 
           <div class="home__intro">
-            <p class="eyebrow">Система тренировок БТКА 10.1</p>
-            <p class="eyebrow eyebrow--release">версия от 07.10.2026</p>
+            <p class="eyebrow home__app-title" id="btca-installed-header">Система тренировок БТКА 10.1</p>
+            <p class="eyebrow eyebrow--release home__app-release">версия от 07.10.2026</p>
             <p class="eyebrow eyebrow--levels">
               <span>|&nbsp;&nbsp;Уровень 3 - Продвинутый&nbsp;&nbsp;|</span>
             </p>
@@ -3938,8 +3970,8 @@ body.btca-apple-comfort.btca-landscape-mode #root {
   "use strict";
 
   var BTCA_BASE = "/btca-10-1/";
-  var INSTALL_CACHE = "btca10-web-10.1.16:static-install";
-  var MEDIA_CACHE = "btca10-web-10.1.16:static-media";
+  var INSTALL_CACHE = "btca10-web-10.1.17:static-install";
+  var MEDIA_CACHE = "btca10-web-10.1.17:static-media";
   var MEDIA_PROBE_RE = /offline-unpacked\/level3\/exercises\/[^/]+\.(jpe?g|png|webp|gif)$/i;
   var MEDIA_STATE_KEY = "btca10-web:static-media-state";
   var APP_READY_KEY = "btca10-web:app-ready";
@@ -6004,29 +6036,35 @@ body.btca-apple-comfort.btca-landscape-mode #root {
       return;
     }
     gate.removeAttribute("hidden");
+    var loginOnly = isStandalone();
     var savedPhone = "";
     var savedName = "";
     try {
       savedPhone = localStorage.getItem(LICENSE_PHONE_KEY) || "";
       savedName = localStorage.getItem(LICENSE_NAME_KEY) || "";
     } catch (e) {}
-    var mode = savedPhone ? "login" : "register";
+    // В установленном PWA регистрации нет — только вход (клиент уже получил доступ на загрузке).
+    var mode = loginOnly ? "login" : savedPhone ? "login" : "register";
     var debugCode = "";
     var subscriptionBlocked = false;
 
     function paint() {
+      if (loginOnly && mode === "register") mode = "login";
       var title =
         mode === "register" ? "Регистрация" : mode === "otp" ? "Код подтверждения" : "Вход";
       var showSubmit = !(mode === "login" && subscriptionBlocked);
+      var tabsHtml = loginOnly
+        ? ""
+        : '<div class="auth-gate__tabs" role="tablist">' +
+          '<button type="button" class="auth-gate__tab' +
+          (mode !== "register" ? " auth-gate__tab--active" : "") +
+          '" data-auth-mode="login">Вход</button>' +
+          '<button type="button" class="auth-gate__tab' +
+          (mode === "register" ? " auth-gate__tab--active" : "") +
+          '" data-auth-mode="register">Регистрация</button>' +
+          "</div>";
       gate.innerHTML =
-        '<div class="auth-gate__tabs" role="tablist">' +
-        '<button type="button" class="auth-gate__tab' +
-        (mode !== "register" ? " auth-gate__tab--active" : "") +
-        '" data-auth-mode="login">Вход</button>' +
-        '<button type="button" class="auth-gate__tab' +
-        (mode === "register" ? " auth-gate__tab--active" : "") +
-        '" data-auth-mode="register">Регистрация</button>' +
-        "</div>" +
+        tabsHtml +
         '<p class="auth-gate__title">' +
         escapeHtml(title) +
         "</p>" +
@@ -6082,6 +6120,7 @@ body.btca-apple-comfort.btca-landscape-mode #root {
 
     paint();
     gate.onclick = function (event) {
+      if (loginOnly) return;
       var tab = event.target && event.target.closest ? event.target.closest("[data-auth-mode]") : null;
       if (!tab) return;
       mode = tab.getAttribute("data-auth-mode") === "register" ? "register" : "login";
@@ -6123,6 +6162,11 @@ body.btca-apple-comfort.btca-landscape-mode #root {
 
       var chain = Promise.resolve();
       if (mode === "register") {
+        if (loginOnly) {
+          setError("В приложении доступен только вход");
+          if (submitBtn) submitBtn.disabled = false;
+          return;
+        }
         chain = licensePost("/v1/register", { name: name, phone: phone }).then(function (data) {
           savedName = name;
           savedPhone = data.phone || phone;
@@ -6205,6 +6249,22 @@ body.btca-apple-comfort.btca-landscape-mode #root {
     });
   }
 
+  function ensureInstalledHomeTitle() {
+    var home = document.querySelector(".home");
+    var title = document.querySelector(".home__app-title");
+    var release = document.querySelector(".home__app-release");
+    if (!home || !title) return;
+    if (home.firstElementChild !== title) {
+      home.insertBefore(title, home.firstElementChild);
+    }
+    if (release && title.nextElementSibling !== release) {
+      home.insertBefore(release, title.nextSibling);
+    }
+    title.removeAttribute("hidden");
+    if (release) release.removeAttribute("hidden");
+    home.setAttribute("aria-labelledby", "btca-installed-header");
+  }
+
   function renderInstalledHome(options) {
     options = options || {};
     var preserveSplash = Boolean(options.preserveSplash);
@@ -6217,6 +6277,7 @@ body.btca-apple-comfort.btca-landscape-mode #root {
     document.body.classList.add("btca-installed-mode");
     document.body.classList.remove("btca-screen-mode", "btca-level1-mode", "btca-level3-mode");
 
+    ensureInstalledHomeTitle();
     if (intro) intro.setAttribute("hidden", "hidden");
     if (panel && !preserveSplash) {
       panel.className = "ios-panel";

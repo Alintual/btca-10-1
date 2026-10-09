@@ -1,4 +1,4 @@
-const CACHE_VERSION = "btca10-web-10.1.16";
+const CACHE_VERSION = "btca10-web-10.1.17";
 const APP_CACHE = `${CACHE_VERSION}:app`;
 const RUNTIME_CACHE = `${CACHE_VERSION}:runtime`;
 const BASE_PATH = "/btca-10-1";
@@ -12,12 +12,7 @@ const SHELL_PATHS = new Set([
 
 const CORE_ASSETS = [
   "/btca-10-1/",
-  "/btca-10-1/favicon-10-1-16.ico",
-  "/btca-10-1/icons/favicon-10-1-16.png",
   "/btca-10-1/icons/btca-apple-touch-icon.png",
-  "/btca-10-1/icons/touch-10-1-16.png",
-  "/btca-10-1/icons/tab-10-1-16.png",
-  "/btca-10-1/icons/tab-10-1-16-32.png",
   "/btca-10-1/icons/btca-icon-192.png",
   "/btca-10-1/icons/btca-icon-512.png",
   "/btca-10-1/offline/app-shell.json",
