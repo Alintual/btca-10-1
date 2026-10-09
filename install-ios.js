@@ -2,8 +2,8 @@
   "use strict";
 
   var BTCA_BASE = "/btca-10-1/";
-  var INSTALL_CACHE = "btca10-web-10.1.14:static-install";
-  var MEDIA_CACHE = "btca10-web-10.1.14:static-media";
+  var INSTALL_CACHE = "btca10-web-10.1.15:static-install";
+  var MEDIA_CACHE = "btca10-web-10.1.15:static-media";
   var MEDIA_PROBE_RE = /offline-unpacked\/level3\/exercises\/[^/]+\.(jpe?g|png|webp|gif)$/i;
   var MEDIA_STATE_KEY = "btca10-web:static-media-state";
   var APP_READY_KEY = "btca10-web:app-ready";
@@ -30,10 +30,12 @@
 
   var CORE_REL_PATHS = [
     "",
+    "favicon.ico",
+    "favicon.png",
     "icons/btca-apple-touch-icon.png",
-    "icons/btca-apple-touch-icon-v101.png",
-    "icons/btca-favicon.png",
-    "icons/btca-favicon-32.png",
+    "icons/touch-10-1-15.png",
+    "icons/tab-10-1-15.png",
+    "icons/tab-10-1-15-32.png",
     "icons/btca-icon-192.png",
     "icons/btca-icon-512.png",
     "branding/logo3.png",
