@@ -244,7 +244,7 @@ code {
   min-height: 64px;
   margin: 0 auto;
   padding: 10px 16px;
-  border: 2px solid #bb20e8;
+  border: 2px solid #d31472;
   border-radius: 16px;
   align-content: center;
   gap: 4px;
@@ -312,7 +312,7 @@ code {
 }
 
 .btca-work-menu__item--level3 {
-  border-color: #bb20e8;
+  border-color: #d31472;
 }
 
 .btca-work-menu__item--about {
