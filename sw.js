@@ -1,4 +1,4 @@
-const CACHE_VERSION = "btca10-web-10.1.15";
+const CACHE_VERSION = "btca10-web-10.1.16";
 const APP_CACHE = `${CACHE_VERSION}:app`;
 const RUNTIME_CACHE = `${CACHE_VERSION}:runtime`;
 const BASE_PATH = "/btca-10-1";
@@ -12,12 +12,12 @@ const SHELL_PATHS = new Set([
 
 const CORE_ASSETS = [
   "/btca-10-1/",
-  "/btca-10-1/favicon.ico",
-  "/btca-10-1/favicon.png",
+  "/btca-10-1/favicon-10-1-16.ico",
+  "/btca-10-1/icons/favicon-10-1-16.png",
   "/btca-10-1/icons/btca-apple-touch-icon.png",
-  "/btca-10-1/icons/touch-10-1-15.png",
-  "/btca-10-1/icons/tab-10-1-15.png",
-  "/btca-10-1/icons/tab-10-1-15-32.png",
+  "/btca-10-1/icons/touch-10-1-16.png",
+  "/btca-10-1/icons/tab-10-1-16.png",
+  "/btca-10-1/icons/tab-10-1-16-32.png",
   "/btca-10-1/icons/btca-icon-192.png",
   "/btca-10-1/icons/btca-icon-512.png",
   "/btca-10-1/offline/app-shell.json",
@@ -145,7 +145,7 @@ self.addEventListener("activate", (event) => {
 
 self.addEventListener("fetch", (event) => {
   if (event.request.method !== "GET") return;
-  // Safari/iPad: Range и спец. режимы часто роняют respondWith.
+  // Safari/iPad: Range Рё СЃРїРµС†. СЂРµР¶РёРјС‹ С‡Р°СЃС‚Рѕ СЂРѕРЅСЏСЋС‚ respondWith.
   if (event.request.headers && event.request.headers.get("range")) return;
   const requestUrl = new URL(event.request.url);
   if (requestUrl.origin !== self.location.origin) return;
