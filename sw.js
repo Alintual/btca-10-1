@@ -145,7 +145,7 @@ self.addEventListener("activate", (event) => {
 
 self.addEventListener("fetch", (event) => {
   if (event.request.method !== "GET") return;
-  // Safari/iPad: Range Рё СЃРїРµС†. СЂРµР¶РёРјС‹ С‡Р°СЃС‚Рѕ СЂРѕРЅСЏСЋС‚ respondWith.
+  // Safari/iPad: Range и спец. режимы часто роняют respondWith.
   if (event.request.headers && event.request.headers.get("range")) return;
   const requestUrl = new URL(event.request.url);
   if (requestUrl.origin !== self.location.origin) return;

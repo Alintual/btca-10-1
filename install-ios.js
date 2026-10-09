@@ -21,9 +21,9 @@
   var IOS_TYPO_TABLET_BODY_PX = 21;
   var IMAGE_RE = /\.(jpe?g|png|gif|webp|bmp|avif)$/i;
   var OFFLINE_PREPARE_URL = "/btca-10-1/";
-  var ABOUT_HEADING = "РџР РћР•РљРў BTCA 10.1";
-  var ABOUT_MAIN_TEXT = "РќР°СЃС‚РѕСЏС‰РµРµ РџСЂРёР»РѕР¶РµРЅРёРµ СЂР°Р·СЂР°Р±РѕС‚Р°РЅРѕ РґР»СЏ Р»РѕРєР°Р»СЊРЅРѕР№ СѓСЃС‚Р°РЅРѕРІРєРё (СЂР°Р·РІС‘СЂС‚С‹РІР°РЅРёСЏ) РЅР° СЃРјР°СЂС‚С„РѕРЅРµ РёР»Рё РїР»Р°РЅС€РµС‚Рµ СЃ РѕРїРµСЂР°С†РёРѕРЅРЅС‹РјРё СЃРёСЃС‚РµРјР°РјРё Android РёР»Рё iOS Рё СЂР°СЃСЃС‡РёС‚Р°РЅРѕ РґР»СЏ РѕР±СѓС‡РµРЅРёСЏ Рё С‚СЂРµРЅРёСЂРѕРІРєРё СѓС‡РµРЅРёРєРѕРІ СЃ СѓСЂРѕРІРЅРµРј РїРѕРґРіРѕС‚РѕРІРєРё В«РЈСЂРѕРІРµРЅСЊ 3 вЂ” РџСЂРѕРґРІРёРЅСѓС‚С‹Р№В».";
-  var ABOUT_POST_TEXT = "*****\nР‘РўРљРђ, СЌС‚Рѕ вЂ” СѓС‡РµР±РЅРѕ-С‚СЂРµРЅРёСЂРѕРІРѕС‡РЅС‹Р№ РїСЂРѕРіСЂР°РјРјРЅС‹Р№ РєРѕРјРїР»РµРєСЃ, РїСЂРµРґРЅР°Р·РЅР°С‡РµРЅРЅС‹Р№ РґР»СЏ РєРѕРјРїР»РµРєСЃРЅРѕРіРѕ РѕР±СѓС‡РµРЅРёСЏ РёРіСЂРµ РЅР° СЂСѓСЃСЃРєРѕРј Р±РёР»СЊСЏСЂРґРµ, РІС‹СЂР°Р±РѕС‚РєРё Рё Р·Р°РєСЂРµРїР»РµРЅРёСЏ РїСЂР°РєС‚РёС‡РµСЃРєРёС… РЅР°РІС‹РєРѕРІ РІРµРґРµРЅРёСЏ Р±РёР»СЊСЏСЂРґРЅРѕР№ РёРіСЂС‹ РІ РџРёСЂР°РјРёРґСѓ, РєР°Рє СЃР°РјРѕСЃС‚РѕСЏС‚РµР»СЊРЅРѕ, С‚Р°Рє Рё СЃ С‚СЂРµРЅРµСЂРѕРј, СЃ РїСЂРёРјРµРЅРµРЅРёРµРј СЃРѕРІСЂРµРјРµРЅРЅС‹С… РјРµС‚РѕРґРёРє Рё С‚РµС…РЅРѕР»РѕРіРёР№.\nРўСЂРµРЅРёСЂРѕРІРѕС‡РЅС‹Р№ РєРѕРјРїР»РµРєСЃ Р‘РўРљРђ РІ СЃРѕС‡РµС‚Р°РЅРёРё СЃ СѓРЅРёРєР°Р»СЊРЅРѕР№ РњРµС‚РѕРґРѕР»РѕРіРёРµР№ РѕР±СѓС‡РµРЅРёСЏ СЃРѕСЃС‚Р°РІР»СЏСЋС‚ РѕР±С‰СѓСЋ РЎРёСЃС‚РµРјСѓ С‚СЂРµРЅРёСЂРѕРІРѕРє Р‘РўРљРђ С€РєРѕР»С‹ СЂСѓСЃСЃРєРѕРіРѕ Р±РёР»СЊСЏСЂРґР° В«РђР±СЂРёРєРѕР»СЊВ» Рі. РљСЂР°СЃРЅРѕСЏСЂСЃРє.\n<a href=\"https://cloud.mail.ru/public/sujN/mpE8mr6aW\">РњРµС‚РѕРґРёРєР° РѕР±СѓС‡РµРЅРёСЏ</a>\n\nР’ С‚РµРєСѓС‰РµР№ РІРµСЂСЃРёРё РџСЂРёР»РѕР¶РµРЅРёСЏ Р‘РўРљРђ 10.1 РґРѕСЃС‚СѓРїРµРЅ СЂР°Р·РґРµР»:\nвЂў  *РЈСЂРѕРІРµРЅСЊ 3 вЂ” РџСЂРѕРґРІРёРЅСѓС‚С‹Р№* РЈРїСЂР°Р¶РЅРµРЅРёР№ вЂ“ 40, Р—Р°РґР°С‡ вЂ“ 263, РџРѕР»РµР·РЅРѕСЃС‚РµР№ вЂ“ 15.\n\nР’СЃРµ РџСЂРёР»РѕР¶РµРЅРёСЏ С„СѓРЅРєС†РёРѕРЅРёСЂСѓСЋС‚ Р±РµР· РёСЃРїРѕР»СЊР·РѕРІР°РЅРёСЏ СЃРµС‚Рё РРЅС‚РµСЂРЅРµС‚.\nРљР°Р¶РґРѕРµ РџСЂРёР»РѕР¶РµРЅРёРµ:\nвЂў  РЎРѕРґРµСЂР¶РёС‚ СЃРїРµС†РёС„РёС‡РµСЃРєРёР№ (СЃРѕРѕС‚РІРµС‚СЃС‚РІСѓСЋС‰РёР№ СѓСЂРѕРІРЅСЋ РїРѕРґРіРѕС‚РѕРІРєРё) РЅР°Р±РѕСЂ СѓРїСЂР°Р¶РЅРµРЅРёР№, Р·Р°РґР°С‡ Рё С‚РµСЃС‚РѕРІ (РІ РіСЂР°С„РёС‡РµСЃРєРѕРј РІРёРґРµ), СЂР°РЅР¶РёСЂРѕРІР°РЅРЅС‹С… РїРѕ РїСЂРёРЅС†РёРїСѓ - \"РѕС‚ РїСЂРѕСЃС‚РѕРіРѕ Рє СЃР»РѕР¶РЅРѕРјСѓ\", Рё СЃРіСЂСѓРїРїРёСЂРѕРІР°РЅРЅС‹С… РІ С‚РµРјР°С‚РёС‡РµСЃРєРёРµ СЂР°Р·РґРµР»С‹ РїРѕ РІРёРґР°Рј С‚СЂРµРЅРёСЂРѕРІРѕРє;\nвЂў  Р’РєР»СЋС‡Р°РµС‚ РЅРµРѕР±С…РѕРґРёРјС‹Рµ РёРЅСЃС‚СЂСѓРєС†РёРё, РјРµС‚РѕРґРёС‡РµСЃРєСѓСЋ Рё СЃРїСЂР°РІРѕС‡РЅСѓСЋ РёРЅС„РѕСЂРјР°С†РёСЋ;\nвЂў  РћР±РµСЃРїРµС‡РёРІР°РµС‚ РІРѕР·РјРѕР¶РЅРѕСЃС‚СЊ РІРІРѕРґР°, С…СЂР°РЅРµРЅРёСЏ Рё РѕР±СЂР°Р±РѕС‚РєРё СЂРµР·СѓР»СЊС‚Р°С‚РѕРІ РїСЂРѕРіСЂРµСЃСЃР° РІС‹РїРѕР»РЅРµРЅРёСЏ СѓС‡РµРЅРёРєРѕРј РїСЂР°РєС‚РёС‡РµСЃРєРёС… Р·Р°РґР°РЅРёР№ РґР»СЏ РїРѕСЃР»РµРґСѓСЋС‰РµРіРѕ СЃС‚Р°С‚РёСЃС‚РёС‡РµСЃРєРѕРіРѕ Р°РЅР°Р»РёР·Р° СЃ РёСЃРїРѕР»СЊР·РѕРІР°РЅРёРµРј Р»РѕРєР°Р»СЊРЅРѕР№ Р‘Р°Р·С‹ РґР°РЅРЅС‹С… (Р‘Р”);\nвЂў  РРјРµРµС‚ РІРµСЃСЊ РЅРµРѕР±С…РѕРґРёРјС‹Р№ С„СѓРЅРєС†РёРѕРЅР°Р» Рё Р°РІС‚РѕРјР°С‚РёР·Р°С†РёСЋ, Р° С‚Р°РєР¶Рµ РёРЅС‚СѓРёС‚РёРІРЅРѕ-РїРѕРЅСЏС‚РЅС‹Р№ РёРЅС‚РµСЂС„РµР№СЃ, С‡С‚Рѕ СЃРїРѕСЃРѕР±СЃС‚РІСѓРµС‚ РѕСЃСѓС‰РµСЃС‚РІР»РµРЅРёСЋ РїРѕР»РЅРѕС†РµРЅРЅРѕРіРѕ, СЌС„С„РµРєС‚РёРІРЅРѕРіРѕ С‚СЂРµРЅРёСЂРѕРІРѕС‡РЅРѕРіРѕ РїСЂРѕС†РµСЃСЃР° РІ РєРѕРјС„РѕСЂС‚РЅС‹С… СѓСЃР»РѕРІРёСЏС….\n\nРћРў РђР’РўРћР Рђ. РЎРёСЃС‚РµРјР° С‚СЂРµРЅРёСЂРѕРІРѕРє Р‘РўРљРђ СЂР°Р·СЂР°Р±РѕС‚Р°РЅР° РїРѕ СЂРµР·СѓР»СЊС‚Р°С‚Р°Рј СЃРёСЃС‚РµРјР°С‚РёР·Р°С†РёРё РјРµС‚РѕРґРёРє РѕР±СѓС‡РµРЅРёСЏ СЂСѓСЃСЃРєРѕРјСѓ Р±РёР»СЊСЏСЂРґСѓ РЅР° РѕСЃРЅРѕРІРµ: СЃРµРєСЂРµС‚РѕРІ РІРµРґСѓС‰РёС… С‚СЂРµРЅРµСЂРѕРІ Рё РёРіСЂРѕРєРѕРІ (РІ С‚.С‡. Р’. РЎРёРјРѕРЅРёС‡Р°, Р’. Р›Р°Р·Р°СЂРµРІР°, РЎ. Р‘Р°СѓСЂРѕРІР°, Р•. РЎС‚Р°Р»РµРІР° Рё РґСЂ.), РѕРїС‹С‚Р° В«СЃС‚Р°СЂРѕР№ С€РєРѕР»С‹В», Р° С‚Р°РєР¶Рµ СЃРѕРІСЂРµРјРµРЅРЅС‹С… РЅР°СѓС‡РЅС‹С… Рё СЌРєСЃРїРµСЂРёРјРµРЅС‚Р°Р»СЊРЅС‹С… РёСЃСЃР»РµРґРѕРІР°РЅРёР№ Рё IT-С‚РµС…РЅРѕР»РѕРіРёР№.\n<a href=\"https://cloud.mail.ru/public/Ye3r/ZYwpjB9uz\">РџРѕРґСЂРѕР±РЅРѕРµ РѕРїРёСЃР°РЅРёРµ РєРѕРјРїР»РµРєСЃР° Р‘РўРљРђ</a>\n\nCopyright В© Р®СЂРёР№ РђР»РёРЅС‚ (РђРЅРґСЂРµР№ Р®СЂСЊРµРІ) 2026";
+  var ABOUT_HEADING = "ПРОЕКТ BTCA 10.1";
+  var ABOUT_MAIN_TEXT = "Настоящее Приложение разработано для локальной установки (развёртывания) на смартфоне или планшете с операционными системами Android или iOS и рассчитано для обучения и тренировки учеников с уровнем подготовки «Уровень 3 — Продвинутый».";
+  var ABOUT_POST_TEXT = "*****\nБТКА, это — учебно-тренировочный программный комплекс, предназначенный для комплексного обучения игре на русском бильярде, выработки и закрепления практических навыков ведения бильярдной игры в Пирамиду, как самостоятельно, так и с тренером, с применением современных методик и технологий.\nТренировочный комплекс БТКА в сочетании с уникальной Методологией обучения составляют общую Систему тренировок БТКА школы русского бильярда «Абриколь» г. Красноярск.\n<a href=\"https://cloud.mail.ru/public/sujN/mpE8mr6aW\">Методика обучения</a>\n\nВ текущей версии Приложения БТКА 10.1 доступен раздел:\n•  *Уровень 3 — Продвинутый* Упражнений – 40, Задач – 263, Полезностей – 15.\n\nВсе Приложения функционируют без использования сети Интернет.\nКаждое Приложение:\n•  Содержит специфический (соответствующий уровню подготовки) набор упражнений, задач и тестов (в графическом виде), ранжированных по принципу - \"от простого к сложному\", и сгруппированных в тематические разделы по видам тренировок;\n•  Включает необходимые инструкции, методическую и справочную информацию;\n•  Обеспечивает возможность ввода, хранения и обработки результатов прогресса выполнения учеником практических заданий для последующего статистического анализа с использованием локальной Базы данных (БД);\n•  Имеет весь необходимый функционал и автоматизацию, а также интуитивно-понятный интерфейс, что способствует осуществлению полноценного, эффективного тренировочного процесса в комфортных условиях.\n\nОТ АВТОРА. Система тренировок БТКА разработана по результатам систематизации методик обучения русскому бильярду на основе: секретов ведущих тренеров и игроков (в т.ч. В. Симонича, В. Лазарева, С. Баурова, Е. Сталева и др.), опыта «старой школы», а также современных научных и экспериментальных исследований и IT-технологий.\n<a href=\"https://cloud.mail.ru/public/Ye3r/ZYwpjB9uz\">Подробное описание комплекса БТКА</a>\n\nCopyright © Юрий Алинт (Андрей Юрьев) 2026";
   var installedHomeSnapshot = "";
   var LEVEL1_MODULE_VERSION = "10.1.12";
   var LEVEL3_MODULE_VERSION = "10.1.12";
@@ -101,12 +101,12 @@
     if (num && panel.classList.contains("btca-home-splash-panel")) {
       num.textContent = String(disp);
       var wrap = panel.querySelector(".btca-ios-splash-panel");
-      if (wrap) wrap.setAttribute("aria-label", "РџСЂРѕРіСЂРµСЃСЃ " + disp + "%");
+      if (wrap) wrap.setAttribute("aria-label", "Прогресс " + disp + "%");
       return;
     }
     panel.className = "ios-panel ios-panel--open btca-home-splash-panel";
     panel.innerHTML =
-      '<div class="btca-ios-splash-panel" aria-label="РџСЂРѕРіСЂРµСЃСЃ ' + disp + '%">' +
+      '<div class="btca-ios-splash-panel" aria-label="Прогресс ' + disp + '%">' +
       buildSplashIndicatorHtml(disp) +
       "</div>";
   }
@@ -159,7 +159,7 @@
         { run: function () { return loadLevel1Script(assetPath("level1/level1-db.js?v=" + v1)); } },
         { run: function () { return loadLevel1Script(assetPath("level1/level1-app.js?v=" + v1)); } },
         { run: function () {
-          if (!level1ModuleReady()) throw new Error("РњРѕРґСѓР»СЊ РЈСЂРѕРІРЅСЏ 1 РЅРµ РёРЅРёС†РёР°Р»РёР·РёСЂРѕРІР°РЅ");
+          if (!level1ModuleReady()) throw new Error("Модуль Уровня 1 не инициализирован");
           return window.BTCA_LEVEL1.boot();
         } }
       );
@@ -176,7 +176,7 @@
         { run: function () { return loadLevel3Script(assetPath("level3/level3-baza.js?v=" + v2)); } },
         { run: function () { return loadLevel3Script(assetPath("level3/level3-app.js?v=" + v2)); } },
         { run: function () {
-          if (!level3ModuleReady()) throw new Error("РњРѕРґСѓР»СЊ РЈСЂРѕРІРЅСЏ 3 РЅРµ РёРЅРёС†РёР°Р»РёР·РёСЂРѕРІР°РЅ");
+          if (!level3ModuleReady()) throw new Error("Модуль Уровня 3 не инициализирован");
           return window.BTCA_LEVEL3.boot();
         } }
       );
@@ -199,7 +199,7 @@
         return withTimeout(
           step.run(),
           45000,
-          "РўР°Р№РјР°СѓС‚ Р·Р°РіСЂСѓР·РєРё РјРѕРґСѓР»РµР№ Р‘РўРљРђ"
+          "Таймаут загрузки модулей БТКА"
         );
       });
     }, Promise.resolve()).then(function () {
@@ -465,7 +465,7 @@
       return Promise.resolve();
     }
     if (!window.BTCA_DATA_GUARD || !window.BTCA_DATA_GUARD.trainingWipePermitted()) {
-      console.warn("BTCA: skipped training DB wipe вЂ” Safari prep token missing");
+      console.warn("BTCA: skipped training DB wipe — Safari prep token missing");
       return Promise.resolve();
     }
     return ensureLevel1Module().then(function () {
@@ -629,7 +629,7 @@
     var attemptKey = shellRefreshAttemptKey(target);
     try {
       if (sessionStorage.getItem(attemptKey) === "1") {
-        // One reload already attempted for this remote вЂ” stop Safari/iPad loops
+        // One reload already attempted for this remote — stop Safari/iPad loops
         // when app-shell.json lags behind the HTML/SW meta version.
         var metaNow = readMetaCacheVersion();
         if (metaNow) writeAppliedShellVersion(metaNow);
@@ -1083,10 +1083,10 @@
   }
 
   var DATE_PICKER_MONTHS = [
-    "РЇРЅРІР°СЂСЊ", "Р¤РµРІСЂР°Р»СЊ", "РњР°СЂС‚", "РђРїСЂРµР»СЊ", "РњР°Р№", "РСЋРЅСЊ",
-    "РСЋР»СЊ", "РђРІРіСѓСЃС‚", "РЎРµРЅС‚СЏР±СЂСЊ", "РћРєС‚СЏР±СЂСЊ", "РќРѕСЏР±СЂСЊ", "Р”РµРєР°Р±СЂСЊ",
+    "Январь", "Февраль", "Март", "Апрель", "Май", "Июнь",
+    "Июль", "Август", "Сентябрь", "Октябрь", "Ноябрь", "Декабрь",
   ];
-  var DATE_PICKER_WEEKDAYS = ["РџРЅ", "Р’С‚", "РЎСЂ", "Р§С‚", "РџС‚", "РЎР±", "Р’СЃ"];
+  var DATE_PICKER_WEEKDAYS = ["Пн", "Вт", "Ср", "Чт", "Пт", "Сб", "Вс"];
 
   function dateIsoParts(iso) {
     var match = String(iso || "").trim().match(/^(\d{4})-(\d{2})-(\d{2})$/);
@@ -1114,21 +1114,21 @@
     layer.className = "btca-date-picker-layer";
     layer.setAttribute("role", "dialog");
     layer.setAttribute("aria-modal", "true");
-    layer.setAttribute("aria-label", title || "Р’С‹Р±РѕСЂ РґР°С‚С‹");
+    layer.setAttribute("aria-label", title || "Выбор даты");
     layer.innerHTML =
-      '<button type="button" class="btca-date-picker-layer__backdrop" data-btca-date-close aria-label="Р—Р°РєСЂС‹С‚СЊ"></button>' +
+      '<button type="button" class="btca-date-picker-layer__backdrop" data-btca-date-close aria-label="Закрыть"></button>' +
       '<div class="btca-date-picker-panel">' +
-      '<div class="btca-date-picker-panel__title">' + escapeHtml(title || "Р”Р°С‚Р°") + "</div>" +
+      '<div class="btca-date-picker-panel__title">' + escapeHtml(title || "Дата") + "</div>" +
       '<div class="btca-date-picker-panel__nav">' +
-      '<button type="button" class="btca-date-picker-panel__nav-btn" data-btca-date-prev aria-label="РџСЂРµРґС‹РґСѓС‰РёР№ РјРµСЃСЏС†">вЂ№</button>' +
+      '<button type="button" class="btca-date-picker-panel__nav-btn" data-btca-date-prev aria-label="Предыдущий месяц">‹</button>' +
       '<div class="btca-date-picker-panel__month" data-btca-date-month></div>' +
-      '<button type="button" class="btca-date-picker-panel__nav-btn" data-btca-date-next aria-label="РЎР»РµРґСѓСЋС‰РёР№ РјРµСЃСЏС†">вЂє</button>' +
+      '<button type="button" class="btca-date-picker-panel__nav-btn" data-btca-date-next aria-label="Следующий месяц">›</button>' +
       "</div>" +
       '<div class="btca-date-picker-panel__week" aria-hidden="true">' +
       DATE_PICKER_WEEKDAYS.map(function (day) { return "<span>" + day + "</span>"; }).join("") +
       "</div>" +
       '<div class="btca-date-picker-panel__grid" data-btca-date-grid></div>' +
-      '<button type="button" class="btca-l1-picker-done btca-date-picker-panel__done" data-btca-date-done>Р“РѕС‚РѕРІРѕ</button>' +
+      '<button type="button" class="btca-l1-picker-done btca-date-picker-panel__done" data-btca-date-done>Готово</button>' +
       "</div>";
     document.body.appendChild(layer);
 
@@ -1204,10 +1204,10 @@
   function iosInstallGuidanceHtml() {
     var name = resolvePwaShortcutName();
     return (
-      '<p class="hint">Offline-РїР°РєРµС‚ РїРѕРґРіРѕС‚РѕРІР»РµРЅ, РґР°Р»РµРµ РЅСѓР¶РЅРѕ СѓСЃС‚Р°РЅРѕРІРёС‚СЊ СЏСЂР»С‹Рє РїСЂРёР»РѕР¶РµРЅРёСЏ ' +
+      '<p class="hint">Offline-пакет подготовлен, далее нужно установить ярлык приложения ' +
       escapeHtml(name) +
-      ' - РџРѕРґРµР»РёС‚СЊСЃСЏ в†’ Р”РѕР±Р°РІРёС‚СЊ РЅР° СЌРєСЂР°РЅ &quot;Р”РѕРјРѕР№&quot;.</p>' +
-      '<p class="prepare-status prepare-status--warning">Р’РќРРњРђРќРР•. Р•СЃР»Рё СЏСЂР»С‹Рє СѓР¶Рµ СѓСЃС‚Р°РЅРѕРІР»РµРЅ, С‚Рѕ РґР»СЏ РєРѕСЂСЂРµРєС‚РЅРѕР№ СЂР°Р±РѕС‚С‹ СЃР»РµРґСѓРµС‚ СѓРґР°Р»РёС‚СЊ СЏСЂР»С‹Рє, Р° Р·Р°С‚РµРј РїРµСЂРµР·Р°РіСЂСѓР·РёС‚СЊ СЃС‚СЂР°РЅРёС†Сѓ Рё РїРѕРІС‚РѕСЂРёС‚СЊ Р·Р°РіСЂСѓР·РєСѓ.</p>'
+      ' - Поделиться → Добавить на экран &quot;Домой&quot;.</p>' +
+      '<p class="prepare-status prepare-status--warning">ВНИМАНИЕ. Если ярлык уже установлен, то для корректной работы следует удалить ярлык, а затем перезагрузить страницу и повторить загрузку.</p>'
     );
   }
 
@@ -1219,7 +1219,7 @@
     }
     setPanel(
       '<div class="ios-panel__header"><span>' + escapeHtml(title) + "</span><span>" + pct + "%</span></div>" +
-      '<div class="progress" aria-label="РџСЂРѕРіСЂРµСЃСЃ offline-РїРѕРґРіРѕС‚РѕРІРєРё"><div class="progress__bar" style="width:' + pct + '%"></div></div>' +
+      '<div class="progress" aria-label="Прогресс offline-подготовки"><div class="progress__bar" style="width:' + pct + '%"></div></div>' +
       '<p class="prepare-status prepare-status--running">' + escapeHtml(message) + "</p>" +
       iosInstallGuidanceHtml()
     );
@@ -1240,8 +1240,8 @@
     }
     setPanel(
       '<div class="ios-panel__header"><span>iOS/iPadOS</span><span>100%</span></div>' +
-      '<div class="progress" aria-label="РџСЂРѕРіСЂРµСЃСЃ offline-РїРѕРґРіРѕС‚РѕРІРєРё"><div class="progress__bar" style="width:100%"></div></div>' +
-      '<p class="prepare-status prepare-status--ready">Р“РѕС‚РѕРІРѕ РґР»СЏ offline.</p>' +
+      '<div class="progress" aria-label="Прогресс offline-подготовки"><div class="progress__bar" style="width:100%"></div></div>' +
+      '<p class="prepare-status prepare-status--ready">Готово для offline.</p>' +
       iosInstallGuidanceHtml()
     );
   }
@@ -1255,8 +1255,8 @@
     root.innerHTML =
       '<main class="btca-about-screen">' +
       '<header class="btca-screen-header">' +
-      '<button class="btca-back-button" type="button" data-btca-back aria-label="РќР°Р·Р°Рґ">в†ђ</button>' +
-      '<strong>Рћ РїСЂРѕРµРєС‚Рµ</strong>' +
+      '<button class="btca-back-button" type="button" data-btca-back aria-label="Назад">←</button>' +
+      '<strong>О проекте</strong>' +
       '<span aria-hidden="true"></span>' +
       "</header>" +
       '<section class="btca-about-content">' +
@@ -1293,7 +1293,7 @@
     if (old && old.parentNode) old.parentNode.removeChild(old);
   }
 
-  /** РџСЂРѕРІРµСЂРєР°, С‡С‚Рѕ fetch РІРµСЂРЅСѓР» JS-РјРѕРґСѓР»СЊ, Р° РЅРµ HTML-СЃС‚СЂР°РЅРёС†Сѓ (404 Рё С‚.Рї.). */
+  /** Проверка, что fetch вернул JS-модуль, а не HTML-страницу (404 и т.п.). */
   function isInjectableModuleSource(code) {
     var text = String(code || "").trim();
     if (!text) return false;
@@ -1311,12 +1311,12 @@
       delete window.BTCA_DATA_GUARD;
       fetch(src, { cache: "no-store" })
         .then(function (response) {
-          if (!response.ok) throw new Error("РќРµ СѓРґР°Р»РѕСЃСЊ Р·Р°РіСЂСѓР·РёС‚СЊ " + src + ": " + response.status);
+          if (!response.ok) throw new Error("Не удалось загрузить " + src + ": " + response.status);
           return response.text();
         })
         .then(function (code) {
           if (!isInjectableModuleSource(code)) {
-            throw new Error("РќРµРІРµСЂРЅС‹Р№ РѕС‚РІРµС‚ РґР»СЏ " + src);
+            throw new Error("Неверный ответ для " + src);
           }
           removeInjectedScript("data-btca-data-guard-src", src);
           var script = document.createElement("script");
@@ -1324,7 +1324,7 @@
           script.textContent = code;
           document.head.appendChild(script);
           if (!window.BTCA_DATA_GUARD) {
-            throw new Error("btca-data-guard.js РІС‹РїРѕР»РЅРµРЅ, РЅРѕ BTCA_DATA_GUARD РЅРµ РЅР°Р№РґРµРЅ");
+            throw new Error("btca-data-guard.js выполнен, но BTCA_DATA_GUARD не найден");
           }
           resolve();
         })
@@ -1342,12 +1342,12 @@
       delete window.BTCA_BAZA_DIAGRAM;
       fetch(src, { cache: "no-store" })
         .then(function (response) {
-          if (!response.ok) throw new Error("РќРµ СѓРґР°Р»РѕСЃСЊ Р·Р°РіСЂСѓР·РёС‚СЊ " + src + ": " + response.status);
+          if (!response.ok) throw new Error("Не удалось загрузить " + src + ": " + response.status);
           return response.text();
         })
         .then(function (code) {
           if (!isInjectableModuleSource(code)) {
-            throw new Error("РќРµРІРµСЂРЅС‹Р№ РѕС‚РІРµС‚ РґР»СЏ " + src);
+            throw new Error("Неверный ответ для " + src);
           }
           removeInjectedScript("data-btca-baza-diagram-src", src);
           var script = document.createElement("script");
@@ -1355,7 +1355,7 @@
           script.textContent = code;
           document.head.appendChild(script);
           if (!window.BTCA_BAZA_DIAGRAM) {
-            throw new Error("btca-baza-diagram.js РІС‹РїРѕР»РЅРµРЅ, РЅРѕ BTCA_BAZA_DIAGRAM РЅРµ РЅР°Р№РґРµРЅ");
+            throw new Error("btca-baza-diagram.js выполнен, но BTCA_BAZA_DIAGRAM не найден");
           }
           resolve();
         })
@@ -1373,12 +1373,12 @@
       delete window.BTCA_BAZA_DIALOGS;
       fetch(src, { cache: "no-store" })
         .then(function (response) {
-          if (!response.ok) throw new Error("РќРµ СѓРґР°Р»РѕСЃСЊ Р·Р°РіСЂСѓР·РёС‚СЊ " + src + ": " + response.status);
+          if (!response.ok) throw new Error("Не удалось загрузить " + src + ": " + response.status);
           return response.text();
         })
         .then(function (code) {
           if (!isInjectableModuleSource(code)) {
-            throw new Error("РќРµРІРµСЂРЅС‹Р№ РѕС‚РІРµС‚ РґР»СЏ " + src);
+            throw new Error("Неверный ответ для " + src);
           }
           removeInjectedScript("data-btca-baza-dialogs-src", src);
           var script = document.createElement("script");
@@ -1386,7 +1386,7 @@
           script.textContent = code;
           document.head.appendChild(script);
           if (!window.BTCA_BAZA_DIALOGS) {
-            throw new Error("btca-baza-dialogs.js РІС‹РїРѕР»РЅРµРЅ, РЅРѕ BTCA_BAZA_DIALOGS РЅРµ РЅР°Р№РґРµРЅ");
+            throw new Error("btca-baza-dialogs.js выполнен, но BTCA_BAZA_DIALOGS не найден");
           }
           resolve();
         })
@@ -1404,12 +1404,12 @@
       delete window.BTCA_BAZA_SCREENSHOT;
       fetch(src, { cache: "no-store" })
         .then(function (response) {
-          if (!response.ok) throw new Error("РќРµ СѓРґР°Р»РѕСЃСЊ Р·Р°РіСЂСѓР·РёС‚СЊ " + src + ": " + response.status);
+          if (!response.ok) throw new Error("Не удалось загрузить " + src + ": " + response.status);
           return response.text();
         })
         .then(function (code) {
           if (!isInjectableModuleSource(code)) {
-            throw new Error("РќРµРІРµСЂРЅС‹Р№ РѕС‚РІРµС‚ РґР»СЏ " + src);
+            throw new Error("Неверный ответ для " + src);
           }
           removeInjectedScript("data-btca-baza-screenshot-src", src);
           var script = document.createElement("script");
@@ -1417,7 +1417,7 @@
           script.textContent = code;
           document.head.appendChild(script);
           if (!window.BTCA_BAZA_SCREENSHOT) {
-            throw new Error("btca-baza-screenshot.js РІС‹РїРѕР»РЅРµРЅ, РЅРѕ BTCA_BAZA_SCREENSHOT РЅРµ РЅР°Р№РґРµРЅ");
+            throw new Error("btca-baza-screenshot.js выполнен, но BTCA_BAZA_SCREENSHOT не найден");
           }
           resolve();
         })
@@ -1437,12 +1437,12 @@
       delete window.BTCA_BAZA_SQLITE;
       fetch(src, { cache: "no-store" })
         .then(function (response) {
-          if (!response.ok) throw new Error("РќРµ СѓРґР°Р»РѕСЃСЊ Р·Р°РіСЂСѓР·РёС‚СЊ " + src + ": " + response.status);
+          if (!response.ok) throw new Error("Не удалось загрузить " + src + ": " + response.status);
           return response.text();
         })
         .then(function (code) {
           if (!isInjectableModuleSource(code)) {
-            throw new Error("РќРµРІРµСЂРЅС‹Р№ РѕС‚РІРµС‚ РґР»СЏ " + src);
+            throw new Error("Неверный ответ для " + src);
           }
           removeInjectedScript("data-btca-baza-sqlite-src", src);
           var script = document.createElement("script");
@@ -1450,7 +1450,7 @@
           script.textContent = code;
           document.head.appendChild(script);
           if (!window.BTCA_BAZA_SQLITE) {
-            throw new Error("btca-baza-sqlite.js РІС‹РїРѕР»РЅРµРЅ, РЅРѕ BTCA_BAZA_SQLITE РЅРµ РЅР°Р№РґРµРЅ");
+            throw new Error("btca-baza-sqlite.js выполнен, но BTCA_BAZA_SQLITE не найден");
           }
           return window.BTCA_BAZA_SQLITE.ensureSqlJs();
         })
@@ -1470,12 +1470,12 @@
       delete window.BTCA_SLIDE_MENU;
       fetch(src, { cache: "no-store" })
         .then(function (response) {
-          if (!response.ok) throw new Error("РќРµ СѓРґР°Р»РѕСЃСЊ Р·Р°РіСЂСѓР·РёС‚СЊ " + src + ": " + response.status);
+          if (!response.ok) throw new Error("Не удалось загрузить " + src + ": " + response.status);
           return response.text();
         })
         .then(function (code) {
           if (!isInjectableModuleSource(code)) {
-            throw new Error("РќРµРІРµСЂРЅС‹Р№ РѕС‚РІРµС‚ РґР»СЏ " + src);
+            throw new Error("Неверный ответ для " + src);
           }
           removeInjectedScript("data-btca-slide-menu-src", src);
           var script = document.createElement("script");
@@ -1483,7 +1483,7 @@
           script.textContent = code;
           document.head.appendChild(script);
           if (!window.BTCA_SLIDE_MENU) {
-            throw new Error("btca-slide-menu.js РІС‹РїРѕР»РЅРµРЅ, РЅРѕ BTCA_SLIDE_MENU РЅРµ РЅР°Р№РґРµРЅ");
+            throw new Error("btca-slide-menu.js выполнен, но BTCA_SLIDE_MENU не найден");
           }
           resolve();
         })
@@ -1511,12 +1511,12 @@
 
       fetch(src, { cache: "no-store" })
         .then(function (response) {
-          if (!response.ok) throw new Error("РќРµ СѓРґР°Р»РѕСЃСЊ Р·Р°РіСЂСѓР·РёС‚СЊ " + src + ": " + response.status);
+          if (!response.ok) throw new Error("Не удалось загрузить " + src + ": " + response.status);
           return response.text();
         })
         .then(function (code) {
           if (!isInjectableModuleSource(code)) {
-            throw new Error("РќРµРІРµСЂРЅС‹Р№ РѕС‚РІРµС‚ РґР»СЏ " + src);
+            throw new Error("Неверный ответ для " + src);
           }
           removeInjectedScript("data-btca-level1-src", src);
           var script = document.createElement("script");
@@ -1524,10 +1524,10 @@
           script.textContent = code;
           document.head.appendChild(script);
           if (isDb && !window.BTCA_LEVEL1_DB) {
-            throw new Error("level1-db.js РІС‹РїРѕР»РЅРµРЅ, РЅРѕ BTCA_LEVEL1_DB РЅРµ РЅР°Р№РґРµРЅ");
+            throw new Error("level1-db.js выполнен, но BTCA_LEVEL1_DB не найден");
           }
           if (isApp && (!window.BTCA_LEVEL1 || !window.BTCA_LEVEL1.boot)) {
-            throw new Error("level1-app.js РІС‹РїРѕР»РЅРµРЅ, РЅРѕ BTCA_LEVEL1.boot РЅРµ РЅР°Р№РґРµРЅ");
+            throw new Error("level1-app.js выполнен, но BTCA_LEVEL1.boot не найден");
           }
           resolve();
         })
@@ -1558,7 +1558,7 @@
       return loadLevel1Script(assetPath("level1/level1-app.js?v=" + v));
     }).then(function () {
       if (!level1ModuleReady()) {
-        throw new Error("РњРѕРґСѓР»СЊ РЈСЂРѕРІРЅСЏ 1 РЅРµ РёРЅРёС†РёР°Р»РёР·РёСЂРѕРІР°РЅ");
+        throw new Error("Модуль Уровня 1 не инициализирован");
       }
     });
   }
@@ -1616,12 +1616,12 @@
 
       fetch(src, { cache: "no-store" })
         .then(function (response) {
-          if (!response.ok) throw new Error("РќРµ СѓРґР°Р»РѕСЃСЊ Р·Р°РіСЂСѓР·РёС‚СЊ " + src + ": " + response.status);
+          if (!response.ok) throw new Error("Не удалось загрузить " + src + ": " + response.status);
           return response.text();
         })
         .then(function (code) {
           if (!isInjectableModuleSource(code)) {
-            throw new Error("РќРµРІРµСЂРЅС‹Р№ РѕС‚РІРµС‚ РґР»СЏ " + src);
+            throw new Error("Неверный ответ для " + src);
           }
           removeInjectedScript("data-btca-level3-src", src);
           var script = document.createElement("script");
@@ -1629,13 +1629,13 @@
           script.textContent = code;
           document.head.appendChild(script);
           if (isDb && !window.BTCA_LEVEL3_DB) {
-            throw new Error("level2-db.js РІС‹РїРѕР»РЅРµРЅ, РЅРѕ BTCA_LEVEL3_DB РЅРµ РЅР°Р№РґРµРЅ");
+            throw new Error("level2-db.js выполнен, но BTCA_LEVEL3_DB не найден");
           }
           if (isBaza && !window.BTCA_LEVEL3_BAZA) {
-            throw new Error("level2-baza.js РІС‹РїРѕР»РЅРµРЅ, РЅРѕ BTCA_LEVEL3_BAZA РЅРµ РЅР°Р№РґРµРЅ");
+            throw new Error("level2-baza.js выполнен, но BTCA_LEVEL3_BAZA не найден");
           }
           if (isApp && (!window.BTCA_LEVEL3 || !window.BTCA_LEVEL3.boot)) {
-            throw new Error("level2-app.js РІС‹РїРѕР»РЅРµРЅ, РЅРѕ BTCA_LEVEL3.boot РЅРµ РЅР°Р№РґРµРЅ");
+            throw new Error("level2-app.js выполнен, но BTCA_LEVEL3.boot не найден");
           }
           resolve();
         })
@@ -1670,7 +1670,7 @@
       return loadLevel3Script(assetPath("level3/level3-app.js?v=" + v));
     }).then(function () {
       if (!level3ModuleReady()) {
-        throw new Error("РњРѕРґСѓР»СЊ РЈСЂРѕРІРЅСЏ 3 РЅРµ РёРЅРёС†РёР°Р»РёР·РёСЂРѕРІР°РЅ");
+        throw new Error("Модуль Уровня 3 не инициализирован");
       }
     });
   }
@@ -1700,9 +1700,9 @@
       root.innerHTML =
         '<main class="btca-level1-screen">' +
         '<header class="btca-level1-nav">' +
-        '<button class="btca-back-button" type="button" data-btca-level1-back aria-label="РќР°Р·Р°Рґ">в†ђ</button>' +
-        '<strong class="btca-level1-nav__title">РЈСЂРѕРІРµРЅСЊ 1 вЂ” РќР°С‡Р°Р»СЊРЅС‹Р№</strong>' +
-        '<button class="btca-level1-menu-button" type="button" data-btca-level1-menu aria-label="РњРµРЅСЋ Р»РёСЃС‚РѕРІ"><span></span><span></span><span></span></button>' +
+        '<button class="btca-back-button" type="button" data-btca-level1-back aria-label="Назад">←</button>' +
+        '<strong class="btca-level1-nav__title">Уровень 1 — Начальный</strong>' +
+        '<button class="btca-level1-menu-button" type="button" data-btca-level1-menu aria-label="Меню листов"><span></span><span></span><span></span></button>' +
         "</header>" +
         '<section class="btca-level1-titlebar" data-btca-level1-titlebar></section>' +
         '<section class="btca-level1-content" data-btca-level1-content></section>' +
@@ -1730,7 +1730,7 @@
 
       var content = root.querySelector("[data-btca-level1-content]");
       if (content) {
-        content.innerHTML = '<p class="prepare-status prepare-status--running">Р—Р°РіСЂСѓР·РєР° РЈСЂРѕРІРЅСЏ 1вЂ¦</p>';
+        content.innerHTML = '<p class="prepare-status prepare-status--running">Загрузка Уровня 1…</p>';
       }
 
       bootLevel1Module().then(function () {
@@ -1768,9 +1768,9 @@
       root.innerHTML =
         '<main class="btca-level1-screen">' +
         '<header class="btca-level1-nav">' +
-        '<button class="btca-back-button" type="button" data-btca-level3-back aria-label="РќР°Р·Р°Рґ">в†ђ</button>' +
-        '<strong class="btca-level1-nav__title">РЈСЂРѕРІРµРЅСЊ 3 вЂ” РџСЂРѕРґРІРёРЅСѓС‚С‹Р№</strong>' +
-        '<button class="btca-level1-menu-button" type="button" data-btca-level3-menu aria-label="РњРµРЅСЋ Р»РёСЃС‚РѕРІ"><span></span><span></span><span></span></button>' +
+        '<button class="btca-back-button" type="button" data-btca-level3-back aria-label="Назад">←</button>' +
+        '<strong class="btca-level1-nav__title">Уровень 3 — Продвинутый</strong>' +
+        '<button class="btca-level1-menu-button" type="button" data-btca-level3-menu aria-label="Меню листов"><span></span><span></span><span></span></button>' +
         "</header>" +
         '<section class="btca-level1-titlebar" data-btca-level3-titlebar></section>' +
         '<section class="btca-level1-content" data-btca-level3-content></section>' +
@@ -1798,7 +1798,7 @@
 
       var content = root.querySelector("[data-btca-level3-content]");
       if (content) {
-        content.innerHTML = '<p class="prepare-status prepare-status--running">Р—Р°РіСЂСѓР·РєР° РЈСЂРѕРІРЅСЏ 2вЂ¦</p>';
+        content.innerHTML = '<p class="prepare-status prepare-status--running">Загрузка Уровня 2…</p>';
       }
 
       bootLevel3Module().then(function () {
@@ -1850,12 +1850,12 @@
   }
 
   var PHRASE_ONE_TABLET_HTML =
-    '<span class="home__phrase1-line1">  Р‘РёР»СЊСЏСЂРґРЅС‹Р№</span>' +
-    '<span class="home__phrase1-line2"> РўСЂРµРЅРёСЂРѕРІРѕС‡РЅС‹Р№</span>';
-  var PHRASE_TWO_LINE2_BASE = "            РђР±СЂРёРєРѕР»СЊ";
-  var PHRASE_TWO_LINE2_TABLET = "              РђР±СЂРёРєРѕР»СЊ";
+    '<span class="home__phrase1-line1">  Бильярдный</span>' +
+    '<span class="home__phrase1-line2"> Тренировочный</span>';
+  var PHRASE_TWO_LINE2_BASE = "            Абриколь";
+  var PHRASE_TWO_LINE2_TABLET = "              Абриколь";
   var PHRASE_TWO_TABLET_HTML =
-    '<span class="home__phrase2-line1">РљРѕРјРїР»РµРєСЃ</span>' +
+    '<span class="home__phrase2-line1">Комплекс</span>' +
     '<span class="home__phrase2-line2">' + PHRASE_TWO_LINE2_TABLET + '</span>';
 
   function cleanupOrphanHomePhraseMarkup() {
@@ -1995,13 +1995,13 @@
         function (data) {
           if (!response.ok) {
             var detail = data && data.detail;
-            var message = typeof detail === "string" ? detail : "РћС€РёР±РєР° " + response.status;
+            var message = typeof detail === "string" ? detail : "Ошибка " + response.status;
             throw new Error(message);
           }
           return data;
         },
         function () {
-          throw new Error("РЎРµСЂРІРµСЂ Р»РёС†РµРЅР·РёР№ РЅРµРґРѕСЃС‚СѓРїРµРЅ (" + response.status + ")");
+          throw new Error("Сервер лицензий недоступен (" + response.status + ")");
         }
       );
     });
@@ -2015,7 +2015,7 @@
     gate = document.createElement("section");
     gate.id = "btca-auth-gate";
     gate.className = "auth-gate";
-    gate.setAttribute("aria-label", "Р’С…РѕРґ РІ Р‘РўРљРђ");
+    gate.setAttribute("aria-label", "Вход в БТКА");
     var intro = document.querySelector(".home__intro");
     if (intro && intro.parentNode === home) {
       home.insertBefore(gate, intro.nextSibling);
@@ -2029,14 +2029,14 @@
     var title = document.getElementById("app-title");
     var intro = document.querySelector(".home__intro");
     if (title) {
-      title.textContent = locked ? "Р’С…РѕРґ РІ СЃРёСЃС‚РµРјСѓ" : "Р’С‹Р±РµСЂРёС‚Рµ РІР°СЂРёР°РЅС‚ Р·Р°РіСЂСѓР·РєРё";
+      title.textContent = locked ? "Вход в систему" : "Выберите вариант загрузки";
     }
     if (!intro) return;
     var paragraphs = intro.querySelectorAll("p:not(.eyebrow)");
     if (paragraphs.length) {
       paragraphs[paragraphs.length - 1].textContent = locked
-        ? "Р’РѕР№РґРёС‚Рµ РёР»Рё Р·Р°СЂРµРіРёСЃС‚СЂРёСЂСѓР№С‚РµСЃСЊ. РџРѕСЃР»Рµ РїРѕРґС‚РІРµСЂР¶РґРµРЅРёСЏ РєРѕРґР° СЃС‚Р°РЅСѓС‚ РґРѕСЃС‚СѓРїРЅС‹ РІР°СЂРёР°РЅС‚С‹ Р·Р°РіСЂСѓР·РєРё."
-        : "Р”Р»СЏ Android Рё Windows Р±СѓРґРµС‚ СЃРєР°С‡Р°РЅ РґРёСЃС‚СЂРёР±СѓС‚РёРІ. Р”Р»СЏ iPhone Рё iPad РїСЂРёР»РѕР¶РµРЅРёРµ РїРѕРґРіРѕС‚РѕРІРёС‚ РґР°РЅРЅС‹Рµ РЅР° СѓСЃС‚СЂРѕР№СЃС‚РІРµ, С‡С‚РѕР±С‹ РґР°Р»СЊС€Рµ СЂР°Р±РѕС‚Р°С‚СЊ Р±РµР· СЃРµС‚Рё.";
+        ? "Войдите или зарегистрируйтесь. После подтверждения кода станут доступны варианты загрузки."
+        : "Для Android и Windows будет скачан дистрибутив. Для iPhone и iPad приложение подготовит данные на устройстве, чтобы дальше работать без сети.";
     }
   }
 
@@ -2049,16 +2049,16 @@
     if (menu) {
       menu.removeAttribute("hidden");
       menu.className = "platform-menu";
-      menu.setAttribute("aria-label", "Р’С‹Р±РѕСЂ РїР»Р°С‚С„РѕСЂРјС‹");
+      menu.setAttribute("aria-label", "Выбор платформы");
     }
     if (panel) panel.removeAttribute("hidden");
   }
 
   var SUBSCRIPTION_INACTIVE_MSG =
-    "РџРѕРґРїРёСЃРєР° РЅРµ Р°РєС‚РёРІРЅР°. Р”Р»СЏ РѕС„РѕСЂРјР»РµРЅРёСЏ РёР»Рё РїСЂРѕРґР»РµРЅРёСЏ РґРѕСЃС‚СѓРїР° РѕР±СЂР°С‚РёС‚РµСЃСЊ Рє Р°РІС‚РѕСЂСѓ РїРѕ С‚РµР»РµС„РѕРЅСѓ +7 983 205 2230";
+    "Подписка не активна. Для оформления или продления доступа обратитесь к автору по телефону +7 983 205 2230";
 
   function isSubscriptionInactiveError(message) {
-    return /РїРѕРґРїРёСЃРєР° РЅРµ Р°РєС‚РёРІРЅР°/i.test(String(message || ""));
+    return /подписка не активна/i.test(String(message || ""));
   }
 
   function renderAuthGate(onUnlocked) {
@@ -2080,45 +2080,45 @@
 
     function paint() {
       var title =
-        mode === "register" ? "Р РµРіРёСЃС‚СЂР°С†РёСЏ" : mode === "otp" ? "РљРѕРґ РїРѕРґС‚РІРµСЂР¶РґРµРЅРёСЏ" : "Р’С…РѕРґ";
+        mode === "register" ? "Регистрация" : mode === "otp" ? "Код подтверждения" : "Вход";
       var showSubmit = !(mode === "login" && subscriptionBlocked);
       gate.innerHTML =
         '<div class="auth-gate__tabs" role="tablist">' +
         '<button type="button" class="auth-gate__tab' +
         (mode !== "register" ? " auth-gate__tab--active" : "") +
-        '" data-auth-mode="login">Р’С…РѕРґ</button>' +
+        '" data-auth-mode="login">Вход</button>' +
         '<button type="button" class="auth-gate__tab' +
         (mode === "register" ? " auth-gate__tab--active" : "") +
-        '" data-auth-mode="register">Р РµРіРёСЃС‚СЂР°С†РёСЏ</button>' +
+        '" data-auth-mode="register">Регистрация</button>' +
         "</div>" +
         '<p class="auth-gate__title">' +
         escapeHtml(title) +
         "</p>" +
         '<form class="auth-gate__form">' +
         (mode === "register"
-          ? '<label class="auth-gate__field"><span>РРјСЏ</span><input name="name" required minlength="2" maxlength="120" value="' +
+          ? '<label class="auth-gate__field"><span>Имя</span><input name="name" required minlength="2" maxlength="120" value="' +
             escapeHtml(savedName) +
             '"/></label>'
           : "") +
         (mode !== "otp"
-          ? '<label class="auth-gate__field"><span>РўРµР»РµС„РѕРЅ</span><input name="phone" required minlength="10" maxlength="20" value="' +
+          ? '<label class="auth-gate__field"><span>Телефон</span><input name="phone" required minlength="10" maxlength="20" value="' +
             escapeHtml(savedPhone) +
             '" placeholder="+7..."/></label>'
           : "") +
         (mode === "otp"
-          ? '<label class="auth-gate__field"><span>РљРѕРґ (6 С†РёС„СЂ)</span><input name="otp" inputmode="numeric" maxlength="6" pattern="[0-9]{6}" required value="' +
+          ? '<label class="auth-gate__field"><span>Код (6 цифр)</span><input name="otp" inputmode="numeric" maxlength="6" pattern="[0-9]{6}" required value="' +
             escapeHtml(debugCode) +
             '"/></label>'
           : "") +
         (debugCode && mode === "otp"
-          ? '<p class="auth-gate__debug">РўРµСЃС‚РѕРІС‹Р№ РєРѕРґ: ' + escapeHtml(debugCode) + "</p>"
+          ? '<p class="auth-gate__debug">Тестовый код: ' + escapeHtml(debugCode) + "</p>"
           : "") +
         '<p class="auth-gate__error" data-auth-error' +
         (subscriptionBlocked ? ">" + escapeHtml(SUBSCRIPTION_INACTIVE_MSG) : " hidden>") +
         "</p>" +
         (showSubmit
           ? '<button class="platform-button auth-gate__submit" type="submit"><span>' +
-            (mode === "register" ? "Р—Р°СЂРµРіРёСЃС‚СЂРёСЂРѕРІР°С‚СЊСЃСЏ" : mode === "otp" ? "РџРѕРґС‚РІРµСЂРґРёС‚СЊ РєРѕРґ" : "РџРѕР»СѓС‡РёС‚СЊ РєРѕРґ") +
+            (mode === "register" ? "Зарегистрироваться" : mode === "otp" ? "Подтвердить код" : "Получить код") +
             "</span></button>"
           : "") +
         "</form>";
@@ -2235,7 +2235,7 @@
           paint();
         })
         .catch(function (err) {
-          var message = (err && err.message) || "РћС€РёР±РєР° Р·Р°РїСЂРѕСЃР°";
+          var message = (err && err.message) || "Ошибка запроса";
           if (mode !== "otp" && isSubscriptionInactiveError(message)) {
             markInactive();
             return;
@@ -2255,7 +2255,7 @@
 
   function gateLoadingHome() {
     if (isStandalone()) return;
-    // РџРµСЂРµР·Р°РіСЂСѓР·РєР° Р·Р°РіСЂСѓР·РѕС‡РЅРѕР№ = РЅРѕРІС‹Р№ С†РёРєР» OTP (СЃС‚Р°СЂС‹Р№ unlock/РєРѕРґ РЅРµ РґРµР№СЃС‚РІСѓСЋС‚).
+    // Перезагрузка загрузочной = новый цикл OTP (старый unlock/код не действуют).
     clearLaunchUnlock();
     var menu = document.querySelector(".platform-menu");
     var panel = getEls().panel;
@@ -2310,13 +2310,13 @@
     if (menu) {
       menu.removeAttribute("hidden");
       menu.className = "platform-menu btca-work-menu";
-      menu.setAttribute("aria-label", "Р“Р»Р°РІРЅРѕРµ РјРµРЅСЋ Р‘РўРљРђ");
+      menu.setAttribute("aria-label", "Главное меню БТКА");
       menu.innerHTML =
-        '<button class="platform-button btca-work-menu__item btca-work-menu__item--level3" type="button" data-btca-route="level3"><span>РЈСЂРѕРІРµРЅСЊ 3 вЂ” РџСЂРѕРґРІРёРЅСѓС‚С‹Р№</span></button>' +
-        '<button class="platform-button btca-work-menu__item btca-work-menu__item--about" type="button" data-btca-route="about"><span>Рћ РїСЂРѕРµРєС‚Рµ</span></button>';
+        '<button class="platform-button btca-work-menu__item btca-work-menu__item--level3" type="button" data-btca-route="level3"><span>Уровень 3 — Продвинутый</span></button>' +
+        '<button class="platform-button btca-work-menu__item btca-work-menu__item--about" type="button" data-btca-route="about"><span>О проекте</span></button>';
     }
     if (footer) {
-      footer.innerHTML = "<span>BTCA 10.1 В© 2026 Alint&apos;s R.lab</span>";
+      footer.innerHTML = "<span>BTCA 10.1 © 2026 Alint&apos;s R.lab</span>";
     }
     ensurePhraseOneTabletMarkup();
     ensurePhraseTwoTabletMarkup();
@@ -2328,7 +2328,7 @@
 
   function renderError(error) {
     setPanel(
-      '<div class="ios-panel__header"><span>РћС€РёР±РєР° iOS/iPadOS</span></div>' +
+      '<div class="ios-panel__header"><span>Ошибка iOS/iPadOS</span></div>' +
       '<p class="prepare-status prepare-status--error">' + escapeHtml(error && (error.message || error)) + "</p>"
     );
   }
@@ -2373,10 +2373,10 @@
           if (window.zip.configure) window.zip.configure({ useWebWorkers: false });
           resolve();
         }
-        else reject(new Error("zip.js Р·Р°РіСЂСѓР·РёР»СЃСЏ, РЅРѕ API РЅРµРґРѕСЃС‚СѓРїРµРЅ"));
+        else reject(new Error("zip.js загрузился, но API недоступен"));
       };
       script.onerror = function () {
-        reject(new Error("РќРµ СѓРґР°Р»РѕСЃСЊ Р·Р°РіСЂСѓР·РёС‚СЊ zip.js"));
+        reject(new Error("Не удалось загрузить zip.js"));
       };
       document.head.appendChild(script);
     });
@@ -2385,7 +2385,7 @@
   function resolveProgressCallback(onProgress) {
     if (typeof onProgress === "function") return onProgress;
     return function (percent, message) {
-      renderProgress("РџРѕРґРіРѕС‚РѕРІРєР° iOS/iPadOS", percent, message);
+      renderProgress("Подготовка iOS/iPadOS", percent, message);
     };
   }
 
@@ -2393,7 +2393,7 @@
     return withTimeout(
       navigator.serviceWorker.register(assetPath("sw.js"), { scope: BTCA_BASE }),
       12000,
-      "Safari РЅРµ Р·Р°РІРµСЂС€РёР» СЂРµРіРёСЃС‚СЂР°С†РёСЋ offline-СЃР»СѓР¶Р±С‹. РћР±РЅРѕРІРёС‚Рµ СЃС‚СЂР°РЅРёС†Сѓ Рё РїРѕРїСЂРѕР±СѓР№С‚Рµ РµС‰С‘ СЂР°Р·."
+      "Safari не завершил регистрацию offline-службы. Обновите страницу и попробуйте ещё раз."
     );
   }
 
@@ -2421,7 +2421,7 @@
       return allAssets.reduce(function (promise, asset, index) {
         return promise.then(function () {
           var pct = start + ((index + 1) / allAssets.length) * (end - start);
-          emitProgress(pct, "Р—Р°РіСЂСѓР·РєР° РѕР±РѕР»РѕС‡РєРё: " + asset);
+          emitProgress(pct, "Загрузка оболочки: " + asset);
           return cachePutAsset(cache, asset);
         });
       }, Promise.resolve());
@@ -2467,7 +2467,7 @@
                 imageCount += 1;
                 emitProgress(
                   progressBase + Math.min(0.95, imageCount / Math.max(1, images.length)) * progressShare,
-                  "Р Р°СЃРїР°РєРѕРІРєР° " + pack.id + ": " + imageCount + "/" + images.length
+                  "Распаковка " + pack.id + ": " + imageCount + "/" + images.length
                 );
               }
             });
@@ -2491,7 +2491,7 @@
     var emitProgress = resolveProgressCallback(onProgress);
     return fetch(assetPath("offline/media/manifest.json"), { cache: "no-store" })
       .then(function (response) {
-        if (!response.ok) throw new Error("РќРµ РЅР°Р№РґРµРЅ media manifest: " + response.status);
+        if (!response.ok) throw new Error("Не найден media manifest: " + response.status);
         return response.json();
       })
       .then(function (manifest) {
@@ -2506,9 +2506,9 @@
               return promise.then(function () {
                 var zipUrl = resolvePackZipUrl(pack);
                 var base = start + index * packShare;
-                emitProgress(base, "Р—Р°РіСЂСѓР·РєР° " + pack.id + "/media.btca.zip");
+                emitProgress(base, "Загрузка " + pack.id + "/media.btca.zip");
                 return fetch(zipUrl, { cache: "no-store" }).then(function (response) {
-                  if (!response.ok) throw new Error("РќРµ СѓРґР°Р»РѕСЃСЊ Р·Р°РіСЂСѓР·РёС‚СЊ " + zipUrl + ": " + response.status);
+                  if (!response.ok) throw new Error("Не удалось загрузить " + zipUrl + ": " + response.status);
                   return response.blob();
                 }).then(function (blob) {
                   return cache.put(zipUrl, new Response(blob.slice(0, blob.size), {
@@ -2539,17 +2539,17 @@
       return;
     }
     if (!isAppleMobile() && !isDebugAppleMode()) {
-      renderInfo("iOS/iPadOS", "Р’С‹ РѕС‚РєСЂС‹Р»Рё СЃС‚СЂР°РЅРёС†Сѓ РЅРµ РЅР° СѓСЃС‚СЂРѕР№СЃС‚РІРµ Apple. Р”Р»СЏ iOS/iPadOS РѕС‚РєСЂРѕР№С‚Рµ СЌС‚Сѓ СЃСЃС‹Р»РєСѓ РІ Safari РЅР° iPhone РёР»Рё iPad.");
+      renderInfo("iOS/iPadOS", "Вы открыли страницу не на устройстве Apple. Для iOS/iPadOS откройте эту ссылку в Safari на iPhone или iPad.");
       return;
     }
 
     if (!window.isSecureContext) {
-      renderInfo("iOS/iPadOS", "Р”Р»СЏ РїРѕРґРіРѕС‚РѕРІРєРё offline-РїР°РєРµС‚Р° РѕС‚РєСЂРѕР№С‚Рµ СЃС‚СЂР°РЅРёС†Сѓ С‡РµСЂРµР· HTTPS.");
+      renderInfo("iOS/iPadOS", "Для подготовки offline-пакета откройте страницу через HTTPS.");
       return;
     }
 
     if (!("serviceWorker" in navigator) || !("caches" in window)) {
-      renderInfo("iOS/iPadOS", "Р­С‚РѕС‚ Р±СЂР°СѓР·РµСЂ РЅРµ РїРѕРґРґРµСЂР¶РёРІР°РµС‚ PWA offline-РєСЌС€.");
+      renderInfo("iOS/iPadOS", "Этот браузер не поддерживает PWA offline-кэш.");
       return;
     }
 
@@ -2558,7 +2558,7 @@
       return;
     }
 
-    setButtonState(true, "РџРѕРґРіРѕС‚РѕРІРєР° offline...");
+    setButtonState(true, "Подготовка offline...");
     beginOfflinePreparation();
   }
 
@@ -2570,17 +2570,17 @@
 
     setOfflinePreparationActive(true);
     var report = function (pct, msg) {
-      renderProgress("РћР±РЅРѕРІР»РµРЅРёРµ offline", pct, msg);
+      renderProgress("Обновление offline", pct, msg);
     };
 
-    report(0, "РџСЂРѕРІРµСЂРєР° offline-РєСЌС€Р°...");
+    report(0, "Проверка offline-кэша...");
     return migrateMediaCacheFromPreviousGeneration()
       .then(function () {
-        report(6, "Р РµРіРёСЃС‚СЂР°С†РёСЏ offline-СЃР»СѓР¶Р±С‹...");
+        report(6, "Регистрация offline-службы...");
         return registerOfflineServiceWorker();
       })
       .then(function () {
-        report(10, "РћР±РЅРѕРІР»РµРЅРёРµ РѕР±РѕР»РѕС‡РєРё...");
+        report(10, "Обновление оболочки...");
         return cacheCoreAssets(report, 10, 22);
       })
       .then(function () {
@@ -2588,12 +2588,12 @@
       })
       .then(function (ready) {
         if (ready) {
-          report(100, "Р“РѕС‚РѕРІРѕ");
+          report(100, "Готово");
           markAppPrepared();
           migratePreparedClientMarkers();
           return activateRegisteredServiceWorker();
         }
-        report(22, "Р’РѕСЃСЃС‚Р°РЅРѕРІР»РµРЅРёРµ РјРµРґРёР°...");
+        report(22, "Восстановление медиа...");
         return prepareMediaArchives(report, 22, 95).then(function () {
           return activateRegisteredServiceWorker();
         }).then(function () {
@@ -2619,10 +2619,10 @@
     }
 
     setOfflinePreparationActive(true);
-    setButtonState(true, "РџРѕРґРіРѕС‚РѕРІРєР° offline...");
+    setButtonState(true, "Подготовка offline...");
 
     var report = function (pct, msg) {
-      renderProgress("РџРѕРґРіРѕС‚РѕРІРєР° iOS/iPadOS", pct, msg);
+      renderProgress("Подготовка iOS/iPadOS", pct, msg);
     };
 
     function revokePrepToken() {
@@ -2634,35 +2634,35 @@
       var prepGuard = window.BTCA_DATA_GUARD;
       if (prepGuard && prepGuard.grantSafariPrepWipeToken) prepGuard.grantSafariPrepWipeToken();
 
-      report(0, "РћС‡РёСЃС‚РєР° РґР°РЅРЅС‹С… РїСЂРµРґС‹РґСѓС‰РµР№ СѓСЃС‚Р°РЅРѕРІРєРё РІ Safari...");
+      report(0, "Очистка данных предыдущей установки в Safari...");
       return resetSafariInstallEnvironment()
         .then(function () {
-          report(3, "РћС‡РёСЃС‚РєР° Р±Р°Р· С‚СЂРµРЅРёСЂРѕРІРѕРє...");
+          report(3, "Очистка баз тренировок...");
           return wipeTrainingDatabasesInBrowser();
         })
         .then(function () {
-          report(6, "Р РµРіРёСЃС‚СЂР°С†РёСЏ offline-СЃР»СѓР¶Р±С‹...");
+          report(6, "Регистрация offline-службы...");
           return registerOfflineServiceWorker();
         })
         .then(function () {
-          report(8, "РћС‡РёСЃС‚РєР° СѓСЃС‚Р°СЂРµРІС€РµР№ РѕР±РѕР»РѕС‡РєРё...");
+          report(8, "Очистка устаревшей оболочки...");
           return purgeShellInstallCache().then(function () {
             return purgeGenerationRuntimeCache();
           });
         })
         .then(function () {
-          report(10, "Р—Р°РіСЂСѓР·РєР° РѕР±РѕР»РѕС‡РєРё РїСЂРёР»РѕР¶РµРЅРёСЏ...");
+          report(10, "Загрузка оболочки приложения...");
           return cacheCoreAssets(report, 10, 22);
         })
         .then(function () {
-          report(22, "Р—Р°РіСЂСѓР·РєР° Рё СЂР°СЃРїР°РєРѕРІРєР° ZIP-Р°СЂС…РёРІРѕРІ...");
+          report(22, "Загрузка и распаковка ZIP-архивов...");
           return prepareMediaArchives(report, 22, 95);
         })
         .then(function () {
           return activateRegisteredServiceWorker();
         })
         .then(function () {
-          report(100, "Р“РѕС‚РѕРІРѕ");
+          report(100, "Готово");
           renderReady();
           preloadLevel1ModuleSilently();
           preloadLevel3ModuleSilently();
@@ -2671,7 +2671,7 @@
       .catch(renderError)
       .then(function () {
         setOfflinePreparationActive(false);
-        setButtonState(false, "Р—Р°РіСЂСѓР·РёС‚СЊ РІСЃРµ РґР°РЅРЅС‹Рµ РґР»СЏ offline");
+        setButtonState(false, "Загрузить все данные для offline");
         revokePrepToken();
       });
   }
