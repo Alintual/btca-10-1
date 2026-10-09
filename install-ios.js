@@ -2,8 +2,8 @@
   "use strict";
 
   var BTCA_BASE = "/btca-10-1/";
-  var INSTALL_CACHE = "btca10-web-10.1.1:static-install";
-  var MEDIA_CACHE = "btca10-web-10.1.1:static-media";
+  var INSTALL_CACHE = "btca10-web-10.1.3:static-install";
+  var MEDIA_CACHE = "btca10-web-10.1.3:static-media";
   var MEDIA_PROBE_RE = /offline-unpacked\/level3\/exercises\/[^/]+\.(jpe?g|png|webp|gif)$/i;
   var MEDIA_STATE_KEY = "btca10-web:static-media-state";
   var APP_READY_KEY = "btca10-web:app-ready";
@@ -25,8 +25,8 @@
   var ABOUT_MAIN_TEXT = "Настоящее Приложение разработано для локальной установки (развёртывания) на смартфоне или планшете с операционными системами Android или iOS и рассчитано для обучения и тренировки учеников с уровнем подготовки «Уровень 3 — Продвинутый».";
   var ABOUT_POST_TEXT = "*****\nБТКА, это — учебно-тренировочный программный комплекс, предназначенный для комплексного обучения игре на русском бильярде, выработки и закрепления практических навыков ведения бильярдной игры в Пирамиду, как самостоятельно, так и с тренером, с применением современных методик и технологий.\nТренировочный комплекс БТКА в сочетании с уникальной Методологией обучения составляют общую Систему тренировок БТКА школы русского бильярда «Абриколь» г. Красноярск.\n<a href=\"https://cloud.mail.ru/public/sujN/mpE8mr6aW\">Методика обучения</a>\n\nВ текущей версии Приложения БТКА 10.1 доступен раздел:\n•  *Уровень 3 — Продвинутый* Упражнений – 40, Задач – 263, Полезностей – 15.\n\nВсе Приложения функционируют без использования сети Интернет.\nКаждое Приложение:\n•  Содержит специфический (соответствующий уровню подготовки) набор упражнений, задач и тестов (в графическом виде), ранжированных по принципу - \"от простого к сложному\", и сгруппированных в тематические разделы по видам тренировок;\n•  Включает необходимые инструкции, методическую и справочную информацию;\n•  Обеспечивает возможность ввода, хранения и обработки результатов прогресса выполнения учеником практических заданий для последующего статистического анализа с использованием локальной Базы данных (БД);\n•  Имеет весь необходимый функционал и автоматизацию, а также интуитивно-понятный интерфейс, что способствует осуществлению полноценного, эффективного тренировочного процесса в комфортных условиях.\n\nОТ АВТОРА. Система тренировок БТКА разработана по результатам систематизации методик обучения русскому бильярду на основе: секретов ведущих тренеров и игроков (в т.ч. В. Симонича, В. Лазарева, С. Баурова, Е. Сталева и др.), опыта «старой школы», а также современных научных и экспериментальных исследований и IT-технологий.\n<a href=\"https://cloud.mail.ru/public/Ye3r/ZYwpjB9uz\">Подробное описание комплекса БТКА</a>\n\nCopyright © Юрий Алинт (Андрей Юрьев) 2026";
   var installedHomeSnapshot = "";
-  var LEVEL1_MODULE_VERSION = "10.1";
-  var LEVEL3_MODULE_VERSION = "10.1";
+  var LEVEL1_MODULE_VERSION = "10.1.2";
+  var LEVEL3_MODULE_VERSION = "10.1.2";
 
   var CORE_REL_PATHS = [
     "",
@@ -1923,6 +1923,284 @@
     }
   }
 
+  var LICENSE_API_BASE = "https://185-212-129-18.sslip.io";
+  var LICENSE_PHONE_KEY = "btca101.phone";
+  var LICENSE_NAME_KEY = "btca101.name";
+  var LICENSE_DEVICE_KEY = "btca101.deviceId";
+  var LICENSE_SESSION_KEY = "btca101.sessionToken";
+  var LICENSE_LAUNCH_KEY = "btca101.launchUnlocked";
+
+  function isLaunchUnlocked() {
+    try {
+      return sessionStorage.getItem(LICENSE_LAUNCH_KEY) === "1";
+    } catch (e) {
+      return false;
+    }
+  }
+
+  function markLaunchUnlocked(token) {
+    try {
+      if (token) localStorage.setItem(LICENSE_SESSION_KEY, token);
+      sessionStorage.setItem(LICENSE_LAUNCH_KEY, "1");
+    } catch (e) {}
+  }
+
+  function getLicenseDeviceId() {
+    try {
+      var existing = localStorage.getItem(LICENSE_DEVICE_KEY);
+      if (existing && existing.length >= 8) return existing;
+      var id =
+        typeof crypto !== "undefined" && crypto.randomUUID
+          ? crypto.randomUUID()
+          : "d-" + Date.now().toString(36) + "-" + Math.random().toString(36).slice(2, 10);
+      localStorage.setItem(LICENSE_DEVICE_KEY, id);
+      return id;
+    } catch (e) {
+      return "d-fallback-" + String(Date.now());
+    }
+  }
+
+  function licensePost(path, body) {
+    return fetch(LICENSE_API_BASE + path, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Accept: "application/json" },
+      body: JSON.stringify(body),
+    }).then(function (response) {
+      return response.json().then(
+        function (data) {
+          if (!response.ok) {
+            var detail = data && data.detail;
+            var message = typeof detail === "string" ? detail : "Ошибка " + response.status;
+            throw new Error(message);
+          }
+          return data;
+        },
+        function () {
+          throw new Error("Сервер лицензий недоступен (" + response.status + ")");
+        }
+      );
+    });
+  }
+
+  function ensureAuthGateMount() {
+    var home = document.querySelector(".home");
+    if (!home) return null;
+    var gate = document.getElementById("btca-auth-gate");
+    if (gate) return gate;
+    gate = document.createElement("section");
+    gate.id = "btca-auth-gate";
+    gate.className = "auth-gate";
+    gate.setAttribute("aria-label", "Вход в БТКА");
+    var intro = document.querySelector(".home__intro");
+    if (intro && intro.parentNode === home) {
+      home.insertBefore(gate, intro.nextSibling);
+    } else {
+      home.appendChild(gate);
+    }
+    return gate;
+  }
+
+  function setLoadingIntroLocked(locked) {
+    var title = document.getElementById("app-title");
+    var intro = document.querySelector(".home__intro");
+    if (title) {
+      title.textContent = locked ? "Вход в Систему тренировок БТКА" : "Выберите вариант загрузки";
+    }
+    if (!intro) return;
+    var paragraphs = intro.querySelectorAll("p:not(.eyebrow)");
+    if (paragraphs.length) {
+      paragraphs[paragraphs.length - 1].textContent = locked
+        ? "Войдите или зарегистрируйтесь. После подтверждения кода станут доступны варианты загрузки."
+        : "Для Android и Windows будет скачан дистрибутив. Для iPhone и iPad приложение подготовит данные на устройстве, чтобы дальше работать без сети.";
+    }
+  }
+
+  function showPlatformMenuUnlocked() {
+    var menu = document.querySelector(".platform-menu");
+    var panel = getEls().panel;
+    var gate = document.getElementById("btca-auth-gate");
+    if (gate) gate.setAttribute("hidden", "hidden");
+    setLoadingIntroLocked(false);
+    if (menu) {
+      menu.removeAttribute("hidden");
+      menu.className = "platform-menu";
+      menu.setAttribute("aria-label", "Выбор платформы");
+    }
+    if (panel) panel.removeAttribute("hidden");
+  }
+
+  function renderAuthGate(onUnlocked) {
+    var gate = ensureAuthGateMount();
+    if (!gate) {
+      onUnlocked();
+      return;
+    }
+    gate.removeAttribute("hidden");
+    var savedPhone = "";
+    var savedName = "";
+    try {
+      savedPhone = localStorage.getItem(LICENSE_PHONE_KEY) || "";
+      savedName = localStorage.getItem(LICENSE_NAME_KEY) || "";
+    } catch (e) {}
+    var mode = savedPhone ? "login" : "register";
+    var debugCode = "";
+
+    function paint() {
+      var title =
+        mode === "register" ? "Регистрация" : mode === "otp" ? "Код подтверждения" : "Вход";
+      gate.innerHTML =
+        '<div class="auth-gate__tabs" role="tablist">' +
+        '<button type="button" class="auth-gate__tab' +
+        (mode !== "register" ? " auth-gate__tab--active" : "") +
+        '" data-auth-mode="login">Вход</button>' +
+        '<button type="button" class="auth-gate__tab' +
+        (mode === "register" ? " auth-gate__tab--active" : "") +
+        '" data-auth-mode="register">Регистрация</button>' +
+        "</div>" +
+        '<form class="auth-gate__form">' +
+        '<p class="auth-gate__info">' +
+        escapeHtml(title) +
+        "</p>" +
+        (mode === "register"
+          ? '<label class="auth-gate__field"><span>Имя</span><input name="name" required minlength="2" maxlength="120" value="' +
+            escapeHtml(savedName) +
+            '"/></label>'
+          : "") +
+        (mode !== "otp"
+          ? '<label class="auth-gate__field"><span>Телефон</span><input name="phone" required minlength="10" maxlength="20" value="' +
+            escapeHtml(savedPhone) +
+            '" placeholder="+7..."/></label>'
+          : "") +
+        (mode === "otp"
+          ? '<label class="auth-gate__field"><span>Код (6 цифр)</span><input name="otp" inputmode="numeric" maxlength="6" pattern="[0-9]{6}" required value="' +
+            escapeHtml(debugCode) +
+            '"/></label>'
+          : "") +
+        (debugCode && mode === "otp"
+          ? '<p class="auth-gate__debug">Тестовый код: ' + escapeHtml(debugCode) + "</p>"
+          : "") +
+        '<p class="auth-gate__error" data-auth-error hidden></p>' +
+        '<button class="platform-button auth-gate__submit" type="submit"><span>' +
+        (mode === "register" ? "Зарегистрироваться" : mode === "otp" ? "Подтвердить код" : "Получить код") +
+        "</span></button>" +
+        "</form>";
+    }
+
+    function setError(message) {
+      var el = gate.querySelector("[data-auth-error]");
+      if (!el) return;
+      if (!message) {
+        el.setAttribute("hidden", "hidden");
+        el.textContent = "";
+        return;
+      }
+      el.removeAttribute("hidden");
+      el.textContent = message;
+    }
+
+    paint();
+    gate.onclick = function (event) {
+      var tab = event.target && event.target.closest ? event.target.closest("[data-auth-mode]") : null;
+      if (!tab) return;
+      mode = tab.getAttribute("data-auth-mode") === "register" ? "register" : "login";
+      debugCode = "";
+      paint();
+    };
+    gate.onsubmit = function (event) {
+      event.preventDefault();
+      setError("");
+      var form = event.target;
+      if (!form || form.tagName !== "FORM") return;
+      var submitBtn = form.querySelector('button[type="submit"]');
+      if (submitBtn) submitBtn.disabled = true;
+      var phoneInput = form.querySelector('input[name="phone"]');
+      var nameInput = form.querySelector('input[name="name"]');
+      var otpInput = form.querySelector('input[name="otp"]');
+      var phone = phoneInput ? String(phoneInput.value || "").trim() : savedPhone;
+      var name = nameInput ? String(nameInput.value || "").trim() : savedName;
+      var deviceId = getLicenseDeviceId();
+
+      var chain = Promise.resolve();
+      if (mode === "register") {
+        chain = licensePost("/v1/register", { name: name, phone: phone }).then(function (data) {
+          savedName = name;
+          savedPhone = data.phone || phone;
+          try {
+            localStorage.setItem(LICENSE_NAME_KEY, savedName);
+            localStorage.setItem(LICENSE_PHONE_KEY, savedPhone);
+          } catch (e) {}
+          return licensePost("/v1/otp/request", {
+            phone: savedPhone,
+            device_id: deviceId,
+            platform: "pwa",
+            app_version: "10.1",
+            device_label: "PWA",
+          });
+        });
+      } else if (mode === "login") {
+        savedPhone = phone;
+        try {
+          localStorage.setItem(LICENSE_PHONE_KEY, savedPhone);
+        } catch (e) {}
+        chain = licensePost("/v1/otp/request", {
+          phone: savedPhone,
+          device_id: deviceId,
+          platform: "pwa",
+          app_version: "10.1",
+          device_label: "PWA",
+        });
+      } else {
+        chain = licensePost("/v1/otp/verify", {
+          phone: savedPhone,
+          device_id: deviceId,
+          code: otpInput ? String(otpInput.value || "").trim() : "",
+        }).then(function (data) {
+          markLaunchUnlocked(data.session_token);
+          gate.setAttribute("hidden", "hidden");
+          onUnlocked();
+        });
+      }
+
+      chain
+        .then(function (data) {
+          if (mode === "otp") return;
+          debugCode = (data && data.debug_code) || "";
+          mode = "otp";
+          paint();
+        })
+        .catch(function (err) {
+          setError((err && err.message) || "Ошибка запроса");
+          if (mode === "register") {
+            mode = "login";
+            paint();
+            setError((err && err.message) || "Ошибка запроса");
+          }
+        })
+        .then(function () {
+          if (submitBtn) submitBtn.disabled = false;
+        });
+    };
+  }
+
+  function gateLoadingHome() {
+    if (isStandalone()) return;
+    var menu = document.querySelector(".platform-menu");
+    var panel = getEls().panel;
+    if (isLaunchUnlocked()) {
+      showPlatformMenuUnlocked();
+      return;
+    }
+    setLoadingIntroLocked(true);
+    if (menu) {
+      menu.setAttribute("hidden", "hidden");
+      menu.innerHTML = menu.innerHTML;
+    }
+    if (panel) panel.setAttribute("hidden", "hidden");
+    renderAuthGate(function () {
+      showPlatformMenuUnlocked();
+    });
+  }
+
   function renderInstalledHome(options) {
     options = options || {};
     var preserveSplash = Boolean(options.preserveSplash);
@@ -1930,6 +2208,7 @@
     var menu = document.querySelector(".platform-menu");
     var panel = getEls().panel;
     var footer = document.querySelector(".footer");
+    var gate = document.getElementById("btca-auth-gate");
 
     document.body.classList.add("btca-installed-mode");
     document.body.classList.remove("btca-screen-mode", "btca-level1-mode", "btca-level3-mode");
@@ -1939,12 +2218,34 @@
       panel.className = "ios-panel";
       panel.innerHTML = "";
     }
+
+    if (!isLaunchUnlocked()) {
+      if (menu) {
+        menu.className = "platform-menu";
+        menu.innerHTML = "";
+        menu.setAttribute("hidden", "hidden");
+      }
+      if (gate) gate.removeAttribute("hidden");
+      renderAuthGate(function () {
+        renderInstalledHome(options);
+      });
+      ensurePhraseOneTabletMarkup();
+      ensurePhraseTwoTabletMarkup();
+      cleanupOrphanHomePhraseMarkup();
+      installedHomeSnapshot = "";
+      syncPortraitMode();
+      markStandaloneShellReady();
+      return;
+    }
+
+    if (gate) gate.setAttribute("hidden", "hidden");
     if (menu) {
+      menu.removeAttribute("hidden");
       menu.className = "platform-menu btca-work-menu";
       menu.setAttribute("aria-label", "Главное меню БТКА");
       menu.innerHTML =
         '<button class="platform-button btca-work-menu__item btca-work-menu__item--level3" type="button" data-btca-route="level3"><span>Уровень 3 — Продвинутый</span></button>' +
-        '<button class="platform-button btca-work-menu__item btca-work-menu__item--about" type="button" data-btca-route="about"><span>О проекте</span></button>'
+        '<button class="platform-button btca-work-menu__item btca-work-menu__item--about" type="button" data-btca-route="about"><span>О проекте</span></button>';
     }
     if (footer) {
       footer.innerHTML = "<span>BTCA 10.1 © 2026 Alint&apos;s R.lab</span>";
@@ -2165,6 +2466,10 @@
   }
 
   function prepareOffline() {
+    if (!isLaunchUnlocked()) {
+      gateLoadingHome();
+      return;
+    }
     if (!isAppleMobile() && !isDebugAppleMode()) {
       renderInfo("iOS/iPadOS", "Вы открыли страницу не на устройстве Apple. Для iOS/iPadOS откройте эту ссылку в Safari на iPhone или iPad.");
       return;
@@ -2351,6 +2656,8 @@
         if (ctx.reloading) return;
         if (isStandalone()) {
           renderInstalledHome();
+        } else {
+          gateLoadingHome();
         }
         ensureFreshShellAfterDeploy();
         if (!isStandalone()) {
@@ -2381,7 +2688,7 @@
           recordInstallSession();
           return bootstrapStandaloneShell(ctx.mediaReady);
         }
-        if (isOfflinePreparationActive() && !isAppPreparedSync()) {
+        if (isOfflinePreparationActive() && !isAppPreparedSync() && isLaunchUnlocked()) {
           window.setTimeout(function () {
             prepareOffline();
           }, 0);
@@ -2393,6 +2700,7 @@
         if (!isStandalone()) {
           cleanupOrphanHomePhraseMarkup();
           syncPortraitModeImmediate();
+          gateLoadingHome();
         } else {
           cleanupOrphanHomePhraseMarkup();
           syncPortraitMode();
