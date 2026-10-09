@@ -33,7 +33,7 @@
     "icons/btca-apple-touch-icon.png",
     "icons/btca-icon-192.png",
     "icons/btca-icon-512.png",
-    "branding/logo10.png",
+    "branding/logo3.png",
     "branding/up.png",
     "branding/baza.png",
     "branding/cross.png",
