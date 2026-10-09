@@ -2,15 +2,16 @@
 <html lang="ru">
   <head>
     <meta charset="UTF-8" />
-    <meta name="btca-cache-version" content="btca10-web-10.1.13" />
+    <meta name="btca-cache-version" content="btca10-web-10.1.14" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <meta name="theme-color" content="#1a4854" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-title" content="BTCA 10.1" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <link rel="manifest" href="/btca-10-1/manifest.webmanifest" />
-    <link rel="apple-touch-icon" href="/btca-10-1/icons/btca-apple-touch-icon.png" />
-    <link rel="icon" type="image/png" sizes="192x192" href="/btca-10-1/icons/btca-icon-192.png" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/btca-10-1/icons/btca-apple-touch-icon-v101.png?v=btca10-web-10.1.14" />
+    <link rel="icon" type="image/png" sizes="32x32" href="/btca-10-1/icons/btca-favicon-32.png?v=btca10-web-10.1.14" />
+    <link rel="icon" type="image/png" sizes="192x192" href="/btca-10-1/icons/btca-favicon.png?v=btca10-web-10.1.14" />
     <style>
 :root {
   color: #ffffff;
@@ -3936,8 +3937,8 @@ body.btca-apple-comfort.btca-landscape-mode #root {
   "use strict";
 
   var BTCA_BASE = "/btca-10-1/";
-  var INSTALL_CACHE = "btca10-web-10.1.13:static-install";
-  var MEDIA_CACHE = "btca10-web-10.1.13:static-media";
+  var INSTALL_CACHE = "btca10-web-10.1.14:static-install";
+  var MEDIA_CACHE = "btca10-web-10.1.14:static-media";
   var MEDIA_PROBE_RE = /offline-unpacked\/level3\/exercises\/[^/]+\.(jpe?g|png|webp|gif)$/i;
   var MEDIA_STATE_KEY = "btca10-web:static-media-state";
   var APP_READY_KEY = "btca10-web:app-ready";
@@ -3965,6 +3966,9 @@ body.btca-apple-comfort.btca-landscape-mode #root {
   var CORE_REL_PATHS = [
     "",
     "icons/btca-apple-touch-icon.png",
+    "icons/btca-apple-touch-icon-v101.png",
+    "icons/btca-favicon.png",
+    "icons/btca-favicon-32.png",
     "icons/btca-icon-192.png",
     "icons/btca-icon-512.png",
     "branding/logo3.png",
