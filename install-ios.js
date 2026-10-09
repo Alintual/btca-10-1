@@ -620,6 +620,19 @@
   }
 
   function reloadShellForRemoteVersion(remote) {
+    var target = String(remote || "").trim() || readMetaCacheVersion() || "unknown";
+    var attemptKey = shellRefreshAttemptKey(target);
+    try {
+      if (sessionStorage.getItem(attemptKey) === "1") {
+        // One reload already attempted for this remote — stop Safari/iPad loops
+        // when app-shell.json lags behind the HTML/SW meta version.
+        var metaNow = readMetaCacheVersion();
+        if (metaNow) writeAppliedShellVersion(metaNow);
+        return Promise.resolve(false);
+      }
+      sessionStorage.setItem(attemptKey, "1");
+    } catch (_) {}
+
     discardStaleRuntimeModules();
     return purgeAllShellCachesExceptMedia()
       .then(function () {
@@ -637,7 +650,7 @@
       })
       .then(function () {
         var url = new URL(window.location.href);
-        url.searchParams.set("btca-shell", remote);
+        url.searchParams.set("btca-shell", target);
         url.searchParams.set("btca-refresh", String(Date.now()));
         window.location.replace(url.toString());
         return true;
