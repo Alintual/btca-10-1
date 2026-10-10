@@ -2,8 +2,8 @@
   "use strict";
 
   var BTCA_BASE = "/btca-10-1/";
-  var INSTALL_CACHE = "btca10-web-10.1.17:static-install";
-  var MEDIA_CACHE = "btca10-web-10.1.17:static-media";
+  var INSTALL_CACHE = "btca10-web-10.1.36:static-install";
+  var MEDIA_CACHE = "btca10-web-10.1.36:static-media";
   var MEDIA_PROBE_RE = /offline-unpacked\/level3\/exercises\/[^/]+\.(jpe?g|png|webp|gif)$/i;
   var MEDIA_STATE_KEY = "btca10-web:static-media-state";
   var APP_READY_KEY = "btca10-web:app-ready";
@@ -30,14 +30,14 @@
 
   var CORE_REL_PATHS = [
     "",
-    "favicon-10-1-17.ico",
-    "icons/favicon-10-1-17.png",
-    "icons/btca-apple-touch-icon.png",
-    "icons/touch-10-1-17.png",
-    "icons/tab-10-1-17.png",
-    "icons/tab-10-1-17-32.png",
-    "icons/btca-icon-192.png",
-    "icons/btca-icon-512.png",
+    "manifest.webmanifest",
+    "apple-touch-icon.png",
+    "favicon.ico",
+    "favicon.png",
+    "branding/favicon.png",
+    "icons/apple-touch-icon.png",
+    "icons/icon-192.png",
+    "icons/icon-512.png",
     "branding/logo3.png",
     "branding/up.png",
     "branding/baza.png",
@@ -235,7 +235,41 @@
   }
 
   function isStandalone() {
-    return window.matchMedia("(display-mode: standalone)").matches || Boolean(navigator.standalone);
+    try {
+      if (window.matchMedia("(display-mode: standalone)").matches) return true;
+      if (window.matchMedia("(display-mode: fullscreen)").matches) return true;
+      if (window.matchMedia("(display-mode: minimal-ui)").matches) return true;
+    } catch (_) {}
+    return Boolean(navigator.standalone);
+  }
+
+  function hasIosPwaQuery() {
+    try {
+      return new URLSearchParams(window.location.search).get("ios-pwa") === "1";
+    } catch (_) {
+      return false;
+    }
+  }
+
+  function persistIosPwaLaunchUrl() {
+    if (!isAppleMobile()) return;
+    try {
+      var url = new URL(window.location.href);
+      if (url.searchParams.get("ios-pwa") === "1") return;
+      url.searchParams.set("ios-pwa", "1");
+      window.history.replaceState(null, "", url.pathname + url.search + url.hash);
+    } catch (_) {}
+  }
+
+  function isPersistedLaunchUnlocked() {
+    try {
+      if (localStorage.getItem(LICENSE_LAUNCH_KEY) === "1") return true;
+    } catch (_) {}
+    return isAppPreparedSync();
+  }
+
+  function isAppShellMode() {
+    return isStandalone() || hasIosPwaQuery() || isAppPreparedSync();
   }
 
   function getCacheGeneration() {
@@ -284,8 +318,113 @@
 
   function shouldRunShellUpdateCheck() {
     if (isOfflinePreparationActive()) return false;
-    if (isStandalone()) return true;
-    return isAppPreparedSync();
+    // Загрузочная в Safari/браузере: не гонять SW/reload — иначе после установки
+    // страница «зависает», если cookie пакета истекла.
+    if (!isStandalone()) return false;
+    return true;
+  }
+
+  function probePackageAccess() {
+    return fetch(assetPath("offline/media/manifest.json"), {
+      credentials: "include",
+      cache: "no-store",
+    })
+      .then(function (response) {
+        return Boolean(response && response.ok);
+      })
+      .catch(function () {
+        return false;
+      });
+  }
+
+  /** Активирует cookie пакета через /d/{token} без ухода со страницы (один клик iOS). */
+  function activatePwaDownloadCookie(pwaLink) {
+    if (!pwaLink) return Promise.resolve(false);
+    return fetch(pwaLink, {
+      credentials: "include",
+      cache: "no-store",
+      redirect: "follow",
+    })
+      .then(function () {
+        return probePackageAccess();
+      })
+      .catch(function () {
+        return false;
+      });
+  }
+
+  function ensureIosPrepareButton(iosEl) {
+    var ios = replaceWithPlatformButton(iosEl || document.getElementById("btca-static-ios"));
+    if (!ios) return null;
+    var iosSmall = ios.querySelector("small");
+    if (iosSmall) iosSmall.textContent = "Загрузить все данные для offline";
+    ios.onclick = function (event) {
+      if (event) event.preventDefault();
+      startIosOfflinePreparation();
+    };
+    return ios;
+  }
+
+  function startIosOfflinePreparation() {
+    var ios = document.getElementById("btca-static-ios");
+    if (ios) {
+      ios.disabled = true;
+      var small = ios.querySelector("small");
+      if (small) small.textContent = "Открываю доступ к пакету...";
+    }
+    var links = readStoredDownloadLinks();
+    probePackageAccess()
+      .then(function (hasAccess) {
+        if (hasAccess) return true;
+        return activatePwaDownloadCookie(links.pwa);
+      })
+      .then(function (ready) {
+        if (ios) ios.disabled = false;
+        if (!ready) {
+          renderInfo(
+            "iOS/iPadOS",
+            "Не удалось открыть доступ к пакету. Обновите страницу, снова введите код и сразу нажмите iOS."
+          );
+          ensureIosPrepareButton(ios);
+          return;
+        }
+        prepareOffline();
+      })
+      .catch(function () {
+        if (ios) ios.disabled = false;
+        prepareOffline();
+      });
+  }
+
+  function releaseStaleServiceWorkerForLoadingPage() {
+    if (!("serviceWorker" in navigator)) return Promise.resolve();
+    try {
+      if (new URLSearchParams(window.location.search).get("btca-reset") === "1") {
+        return unregisterOfflineServiceWorker()
+          .then(deleteAllBtcaCaches)
+          .then(function () {
+            var url = new URL(window.location.href);
+            url.searchParams.delete("btca-reset");
+            url.searchParams.set("nocache", String(Date.now()));
+            window.location.replace(url.pathname + url.search);
+          });
+      }
+    } catch (e) {}
+    if (isAppShellMode()) {
+      return registerOfflineServiceWorker().catch(function () {});
+    }
+    // Загрузочная: снять SW со всего /btca-10-1/, иначе старый cacheFirst
+    // вешает Safari и страница «не открывается». Offline — только /offline/.
+    if (!("serviceWorker" in navigator)) return Promise.resolve();
+    return navigator.serviceWorker.getRegistrations().then(function (regs) {
+      return Promise.all(
+        (regs || []).map(function (reg) {
+          var scope = String(reg.scope || "");
+          if (scope.indexOf("/offline/") !== -1) return null;
+          return reg.unregister();
+        })
+      );
+    }).catch(function () {});
   }
 
   function readPreparedModuleVersions(state) {
@@ -439,7 +578,7 @@
       var manifestName = String(manifestLink.getAttribute("data-short-name") || "").trim();
       if (manifestName) return manifestName;
     }
-    return "BTCA 10.1";
+    return "BTCA-iOS 10.1";
   }
 
   function clearBrowserPrepMarkers() {
@@ -626,11 +765,16 @@
 
   function reloadShellForRemoteVersion(remote) {
     var target = String(remote || "").trim() || readMetaCacheVersion() || "unknown";
+    // iPad standalone: location.replace после ярлыка роняет Safari. Кэш подтянем тихо.
+    if (isStandalone()) {
+      writeAppliedShellVersion(target);
+      return refreshShellCacheQuietly().then(function () {
+        return false;
+      });
+    }
     var attemptKey = shellRefreshAttemptKey(target);
     try {
       if (sessionStorage.getItem(attemptKey) === "1") {
-        // One reload already attempted for this remote — stop Safari/iPad loops
-        // when app-shell.json lags behind the HTML/SW meta version.
         var metaNow = readMetaCacheVersion();
         if (metaNow) writeAppliedShellVersion(metaNow);
         return Promise.resolve(false);
@@ -671,8 +815,8 @@
     var generation = getCacheGeneration();
     var metaGen = readMetaCacheVersion();
     if (metaGen && metaGen !== generation) {
-      reloadShellForRemoteVersion(generation);
-      return false;
+      // Не abort init: на iPad return false оставляет пустой ярлык.
+      if (isStandalone()) writeAppliedShellVersion(generation);
     }
 
     try {
@@ -718,9 +862,10 @@
 
   function unregisterOfflineServiceWorker() {
     if (!("serviceWorker" in navigator)) return Promise.resolve();
-    return navigator.serviceWorker.getRegistration(BTCA_BASE).then(function (registration) {
-      if (!registration) return;
-      return registration.unregister();
+    return navigator.serviceWorker.getRegistrations().then(function (regs) {
+      return Promise.all((regs || []).map(function (registration) {
+        return registration.unregister();
+      }));
     }).catch(function () {});
   }
 
@@ -744,10 +889,13 @@
   }
 
   function cachePutAsset(cache, assetUrl) {
-    return fetch(assetUrl, { cache: "no-store" })
+    return fetch(assetUrl, { cache: "no-store", credentials: "include" })
       .then(function (response) {
         if (!response || !response.ok) return;
-        return cache.put(assetUrl, response);
+        return cache.put(assetUrl, response.clone()).then(function () {
+          // Дублируем оболочку в APP-совместимые URL для SW navigate fallback.
+          return response;
+        });
       })
       .catch(function () {});
   }
@@ -762,14 +910,7 @@
       if (registration.waiting) {
         registration.waiting.postMessage({ type: "SKIP_WAITING" });
       }
-      navigator.serviceWorker.addEventListener("controllerchange", function () {
-        if (window.__BTCA_SHELL_RELOADED__) return;
-        if (isOfflinePreparationActive()) return;
-        window.__BTCA_SHELL_RELOADED__ = true;
-        flushClientDataBeforeReload().then(function () {
-          window.location.reload();
-        });
-      });
+      // Не reload на controllerchange: на iPad это роняет Safari после ярлыка.
     }).catch(function () {});
   }
 
@@ -1942,19 +2083,28 @@
     }
   }
 
-  var LICENSE_API_BASE = "https://185-212-129-18.sslip.io";
+  // Same-origin на ProHoster; fallback если страница ещё с GitHub Pages.
+  // OTP/админка на ProHoster; загрузочная и PWA — на GitHub Pages.
+  var LICENSE_API_BASE =
+    window.location.hostname.indexOf("sslip.io") >= 0 || window.location.hostname.indexOf("185.212.129.18") >= 0
+      ? ""
+      : "https://185-212-129-18.sslip.io";
   var LICENSE_PHONE_KEY = "btca101.phone";
   var LICENSE_NAME_KEY = "btca101.name";
   var LICENSE_DEVICE_KEY = "btca101.deviceId";
   var LICENSE_SESSION_KEY = "btca101.sessionToken";
   var LICENSE_LAUNCH_KEY = "btca101.launchUnlocked";
+  var LICENSE_DOWNLOAD_LINKS_KEY = "btca101.downloadLinks";
 
   function isLaunchUnlocked() {
     try {
-      return sessionStorage.getItem(LICENSE_LAUNCH_KEY) === "1";
-    } catch (e) {
-      return false;
-    }
+      if (sessionStorage.getItem(LICENSE_LAUNCH_KEY) === "1") return true;
+    } catch (e) {}
+    try {
+      if (localStorage.getItem(LICENSE_LAUNCH_KEY) === "1") return true;
+    } catch (e2) {}
+    if (hasIosPwaQuery() || isStandalone()) return true;
+    return isAppPreparedSync();
   }
 
   function clearLaunchUnlock() {
@@ -1967,7 +2117,9 @@
     try {
       if (token) localStorage.setItem(LICENSE_SESSION_KEY, token);
       sessionStorage.setItem(LICENSE_LAUNCH_KEY, "1");
+      localStorage.setItem(LICENSE_LAUNCH_KEY, "1");
     } catch (e) {}
+    persistIosPwaLaunchUrl();
   }
 
   function getLicenseDeviceId() {
@@ -1986,25 +2138,59 @@
   }
 
   function licensePost(path, body) {
+    var ctrl = typeof AbortController !== "undefined" ? new AbortController() : null;
+    var timer = window.setTimeout(function () {
+      try {
+        if (ctrl) ctrl.abort();
+      } catch (e) {}
+    }, 20000);
     return fetch(LICENSE_API_BASE + path, {
       method: "POST",
+      credentials: "include",
       headers: { "Content-Type": "application/json", Accept: "application/json" },
       body: JSON.stringify(body),
-    }).then(function (response) {
-      return response.json().then(
-        function (data) {
+      signal: ctrl ? ctrl.signal : undefined,
+    })
+      .then(function (response) {
+        return response.text().then(function (raw) {
+          var data = null;
+          try {
+            data = raw ? JSON.parse(raw) : null;
+          } catch (e) {
+            data = null;
+          }
           if (!response.ok) {
             var detail = data && data.detail;
-            var message = typeof detail === "string" ? detail : "Ошибка " + response.status;
+            var message =
+              typeof detail === "string"
+                ? detail
+                : detail && typeof detail === "object"
+                  ? JSON.stringify(detail)
+                  : "Ошибка " + response.status;
             throw new Error(message);
           }
+          if (!data || typeof data !== "object") {
+            throw new Error("Сервер лицензий недоступен (" + response.status + ")");
+          }
+          return data;
+        });
+      })
+      .catch(function (err) {
+        if (err && err.name === "AbortError") {
+          throw new Error("Сервер не ответил. Проверьте сеть и нажмите ещё раз.");
+        }
+        throw err;
+      })
+      .then(
+        function (data) {
+          window.clearTimeout(timer);
           return data;
         },
-        function () {
-          throw new Error("Сервер лицензий недоступен (" + response.status + ")");
+        function (err) {
+          window.clearTimeout(timer);
+          throw err;
         }
       );
-    });
   }
 
   function ensureAuthGateMount() {
@@ -2040,6 +2226,96 @@
     }
   }
 
+  function readStoredDownloadLinks() {
+    try {
+      var raw = sessionStorage.getItem(LICENSE_DOWNLOAD_LINKS_KEY);
+      if (!raw) return {};
+      return JSON.parse(raw) || {};
+    } catch (e) {
+      return {};
+    }
+  }
+
+  var PLATFORM_LINKS_HINT =
+    "Ссылки для загрузки действительны в течение 1 часа";
+
+  function ensurePlatformDownloadHint(show) {
+    var menu = document.querySelector(".platform-menu");
+    if (!menu) return;
+    var hint = document.getElementById("btca-download-links-hint");
+    if (!hint) {
+      hint = document.createElement("p");
+      hint.id = "btca-download-links-hint";
+      hint.className = "platform-menu__links-hint";
+      hint.textContent = PLATFORM_LINKS_HINT;
+      menu.insertAdjacentElement("afterend", hint);
+    }
+    if (show) hint.removeAttribute("hidden");
+    else hint.setAttribute("hidden", "hidden");
+  }
+
+  function replaceWithPlatformAnchor(el, href) {
+    if (!el || !href) return el;
+    if (el.tagName === "A") {
+      el.href = href;
+      el.removeAttribute("aria-disabled");
+      return el;
+    }
+    var anchor = document.createElement("a");
+    anchor.id = el.id;
+    anchor.className = el.className;
+    anchor.href = href;
+    anchor.innerHTML = el.innerHTML;
+    el.parentNode.replaceChild(anchor, el);
+    return anchor;
+  }
+
+  function replaceWithPlatformButton(el) {
+    if (!el || el.tagName === "BUTTON") return el;
+    var button = document.createElement("button");
+    button.type = "button";
+    button.id = el.id;
+    button.className = el.className;
+    button.innerHTML = el.innerHTML;
+    el.parentNode.replaceChild(button, el);
+    return button;
+  }
+
+  function wirePlatformMenuWithDownloadLinks(links) {
+    links = links || readStoredDownloadLinks();
+    var hasAny = Boolean(links.pwa || links.android || links.windows);
+    if (!hasAny) {
+      ensurePlatformDownloadHint(false);
+      return;
+    }
+    ensurePlatformDownloadHint(true);
+
+    var menu = document.querySelector(".platform-menu");
+    if (!menu) return;
+
+    var android = menu.querySelector(".platform-button--android");
+    var windows = menu.querySelector(".platform-button--windows");
+
+    if (android && links.android) {
+      replaceWithPlatformAnchor(android, links.android);
+      var androidSmall = menu.querySelector(".platform-button--android small");
+      if (androidSmall) androidSmall.textContent = "Скачать дистрибутив APK";
+    }
+    if (windows && links.windows) {
+      replaceWithPlatformAnchor(windows, links.windows);
+      var winSmall = menu.querySelector(".platform-button--windows small");
+      if (winSmall) winSmall.textContent = "Скачать дистрибутив EXE";
+    }
+
+    // iOS всегда кнопка: cookie активируем fetch'ем, без ухода на /d/ (иначе «второй клик»).
+    ensureIosPrepareButton(document.getElementById("btca-static-ios"));
+    if (links.pwa) {
+      activatePwaDownloadCookie(links.pwa).then(function () {
+        ensureIosPrepareButton(document.getElementById("btca-static-ios"));
+      });
+    }
+  }
+
   function showPlatformMenuUnlocked() {
     var menu = document.querySelector(".platform-menu");
     var panel = getEls().panel;
@@ -2052,6 +2328,7 @@
       menu.setAttribute("aria-label", "Выбор платформы");
     }
     if (panel) panel.removeAttribute("hidden");
+    wirePlatformMenuWithDownloadLinks();
   }
 
   var SUBSCRIPTION_INACTIVE_MSG =
@@ -2083,6 +2360,11 @@
 
     function paint() {
       if (loginOnly && mode === "register") mode = "login";
+      // Safari iOS: смена innerHTML при открытой клавиатуре роняет вкладку.
+      try {
+        var active = document.activeElement;
+        if (active && active.blur) active.blur();
+      } catch (e) {}
       var title =
         mode === "register" ? "Регистрация" : mode === "otp" ? "Код подтверждения" : "Вход";
       var showSubmit = !(mode === "login" && subscriptionBlocked);
@@ -2101,19 +2383,19 @@
         '<p class="auth-gate__title">' +
         escapeHtml(title) +
         "</p>" +
-        '<form class="auth-gate__form">' +
+        '<form class="auth-gate__form" action="#" method="post" novalidate>' +
         (mode === "register"
-          ? '<label class="auth-gate__field"><span>Имя</span><input name="name" required minlength="2" maxlength="120" value="' +
+          ? '<label class="auth-gate__field"><span>Имя</span><input name="name" autocomplete="name" required minlength="2" maxlength="120" value="' +
             escapeHtml(savedName) +
             '"/></label>'
           : "") +
         (mode !== "otp"
-          ? '<label class="auth-gate__field"><span>Телефон</span><input name="phone" required minlength="10" maxlength="20" value="' +
+          ? '<label class="auth-gate__field"><span>Телефон</span><input name="phone" type="tel" autocomplete="tel" required minlength="10" maxlength="20" value="' +
             escapeHtml(savedPhone) +
             '" placeholder="+7..."/></label>'
           : "") +
         (mode === "otp"
-          ? '<label class="auth-gate__field"><span>Код (6 цифр)</span><input name="otp" inputmode="numeric" maxlength="6" pattern="[0-9]{6}" required value="' +
+          ? '<label class="auth-gate__field"><span>Код (6 цифр)</span><input name="otp" type="text" inputmode="numeric" autocomplete="one-time-code" maxlength="6" pattern="[0-9]{6}" required value="' +
             escapeHtml(debugCode) +
             '"/></label>'
           : "") +
@@ -2129,6 +2411,16 @@
             "</span></button>"
           : "") +
         "</form>";
+    }
+
+    function paintSafe() {
+      window.setTimeout(function () {
+        try {
+          paint();
+        } catch (err) {
+          console.warn("BTCA auth paint failed", err);
+        }
+      }, 30);
     }
 
     function setError(message) {
@@ -2147,8 +2439,10 @@
       subscriptionBlocked = true;
       mode = "login";
       debugCode = "";
-      paint();
-      setError(SUBSCRIPTION_INACTIVE_MSG);
+      paintSafe();
+      window.setTimeout(function () {
+        setError(SUBSCRIPTION_INACTIVE_MSG);
+      }, 40);
     }
 
     paint();
@@ -2159,7 +2453,7 @@
       mode = tab.getAttribute("data-auth-mode") === "register" ? "register" : "login";
       debugCode = "";
       subscriptionBlocked = false;
-      paint();
+      paintSafe();
     };
     gate.oninput = function (event) {
       if (!subscriptionBlocked) return;
@@ -2167,34 +2461,41 @@
         subscriptionBlocked = false;
         setError("");
         savedPhone = String(event.target.value || "");
-        paint();
-        var phoneEl = gate.querySelector('input[name="phone"]');
-        if (phoneEl) {
-          phoneEl.focus();
-          try {
-            var len = phoneEl.value.length;
-            phoneEl.setSelectionRange(len, len);
-          } catch (e) {}
-        }
+        paintSafe();
+        window.setTimeout(function () {
+          var phoneEl = gate.querySelector('input[name="phone"]');
+          if (phoneEl) {
+            phoneEl.focus();
+            try {
+              var len = phoneEl.value.length;
+              phoneEl.setSelectionRange(len, len);
+            } catch (e) {}
+          }
+        }, 40);
       }
     };
     gate.onsubmit = function (event) {
       event.preventDefault();
-      if (mode === "login" && subscriptionBlocked) return;
+      event.stopPropagation();
+      if (mode === "login" && subscriptionBlocked) return false;
       setError("");
       var form = event.target;
-      if (!form || form.tagName !== "FORM") return;
+      if (!form || form.tagName !== "FORM") return false;
       var submitBtn = form.querySelector('button[type="submit"]');
       if (submitBtn) submitBtn.disabled = true;
+      try {
+        if (document.activeElement && document.activeElement.blur) document.activeElement.blur();
+      } catch (e) {}
       var phoneInput = form.querySelector('input[name="phone"]');
       var nameInput = form.querySelector('input[name="name"]');
       var otpInput = form.querySelector('input[name="otp"]');
       var phone = phoneInput ? String(phoneInput.value || "").trim() : savedPhone;
       var name = nameInput ? String(nameInput.value || "").trim() : savedName;
       var deviceId = getLicenseDeviceId();
+      var requestMode = mode;
 
       var chain = Promise.resolve();
-      if (mode === "register") {
+      if (requestMode === "register") {
         chain = licensePost("/v1/register", { name: name, phone: phone }).then(function (data) {
           savedName = name;
           savedPhone = data.phone || phone;
@@ -2210,7 +2511,7 @@
             device_label: "PWA",
           });
         });
-      } else if (mode === "login") {
+      } else if (requestMode === "login") {
         savedPhone = phone;
         try {
           localStorage.setItem(LICENSE_PHONE_KEY, savedPhone);
@@ -2229,52 +2530,104 @@
           code: otpInput ? String(otpInput.value || "").trim() : "",
         }).then(function (data) {
           markLaunchUnlocked(data.session_token);
-          gate.setAttribute("hidden", "hidden");
-          onUnlocked();
+          var links = (data && data.download_links) || {};
+          try {
+            sessionStorage.setItem(LICENSE_DOWNLOAD_LINKS_KEY, JSON.stringify(links));
+          } catch (e) {}
+          // Сразу гасим одноразовую PWA-ссылку в cookie — до нажатия iOS.
+          return activatePwaDownloadCookie(links.pwa).then(function () {
+            gate.setAttribute("hidden", "hidden");
+            onUnlocked();
+          });
         });
       }
 
       chain
         .then(function (data) {
-          if (mode === "otp") return;
+          if (requestMode === "otp") return;
           subscriptionBlocked = false;
           debugCode = (data && data.debug_code) || "";
           mode = "otp";
-          paint();
+          paintSafe();
         })
         .catch(function (err) {
           var message = (err && err.message) || "Ошибка запроса";
-          if (mode !== "otp" && isSubscriptionInactiveError(message)) {
+          if (requestMode !== "otp" && isSubscriptionInactiveError(message)) {
             markInactive();
             return;
           }
-          setError(message);
-          if (mode === "register") {
+          if (requestMode === "register") {
             mode = "login";
-            paint();
-            setError(message);
+            paintSafe();
+            window.setTimeout(function () {
+              setError(message);
+            }, 40);
+            return;
           }
+          setError(message);
         })
         .then(function () {
-          if (submitBtn) submitBtn.disabled = false;
+          window.setTimeout(function () {
+            var btn = gate.querySelector('button[type="submit"]');
+            if (btn) btn.disabled = false;
+          }, 40);
         });
+      return false;
     };
   }
 
   function gateLoadingHome() {
-    if (isStandalone()) return;
-    // Перезагрузка загрузочной = новый цикл OTP (старый unlock/код не действуют).
-    clearLaunchUnlock();
-    var menu = document.querySelector(".platform-menu");
-    var panel = getEls().panel;
-    setLoadingIntroLocked(true);
-    if (menu) {
-      menu.setAttribute("hidden", "hidden");
-    }
-    if (panel) panel.setAttribute("hidden", "hidden");
-    renderAuthGate(function () {
+    if (isAppShellMode()) return;
+    if (isPersistedLaunchUnlocked()) {
       showPlatformMenuUnlocked();
-    });
+      return;
+    }
+    var pendingAccess = false;
+    try {
+      pendingAccess = sessionStorage.getItem("btca101.pendingPwaAccess") === "1";
+      if (pendingAccess) sessionStorage.removeItem("btca101.pendingPwaAccess");
+    } catch (e) {}
+
+    function showAuthGateFresh() {
+      try {
+        sessionStorage.removeItem(LICENSE_DOWNLOAD_LINKS_KEY);
+      } catch (e) {}
+      ensurePlatformDownloadHint(false);
+      // Перезагрузка загрузочной = новый цикл OTP (старый unlock/код не действуют).
+      clearLaunchUnlock();
+      var menu = document.querySelector(".platform-menu");
+      var panel = getEls().panel;
+      setLoadingIntroLocked(true);
+      if (menu) {
+        menu.setAttribute("hidden", "hidden");
+      }
+      if (panel) panel.setAttribute("hidden", "hidden");
+      renderAuthGate(function () {
+        showPlatformMenuUnlocked();
+      });
+      try {
+        window.scrollTo(0, 0);
+      } catch (e) {}
+    }
+
+    // Персональная /d/… → /recover: cookie уже есть, OTP на этом устройстве мог быть сброшен.
+    if (pendingAccess) {
+      probePackageAccess()
+        .then(function (ok) {
+          if (!ok) {
+            showAuthGateFresh();
+            return;
+          }
+          markLaunchUnlocked();
+          showPlatformMenuUnlocked();
+        })
+        .catch(function () {
+          showAuthGateFresh();
+        });
+      return;
+    }
+
+    showAuthGateFresh();
   }
 
   function renderInstalledHome(options) {
@@ -2419,7 +2772,7 @@
 
   function registerOfflineServiceWorker() {
     return withTimeout(
-      navigator.serviceWorker.register(assetPath("sw.js"), { scope: BTCA_BASE }),
+      navigator.serviceWorker.register(assetPath("sw.js"), { scope: BTCA_BASE + "offline/" }),
       12000,
       "Safari не завершил регистрацию offline-службы. Обновите страницу и попробуйте ещё раз."
     );
@@ -2517,7 +2870,10 @@
     var start = pctStart == null ? 15 : pctStart;
     var end = pctEnd == null ? 92 : pctEnd;
     var emitProgress = resolveProgressCallback(onProgress);
-    return fetch(assetPath("offline/media/manifest.json"), { cache: "no-store" })
+    return fetch(assetPath("offline/media/manifest.json"), {
+      cache: "no-store",
+      credentials: "include",
+    })
       .then(function (response) {
         if (!response.ok) throw new Error("Не найден media manifest: " + response.status);
         return response.json();
@@ -2535,7 +2891,7 @@
                 var zipUrl = resolvePackZipUrl(pack);
                 var base = start + index * packShare;
                 emitProgress(base, "Загрузка " + pack.id + "/media.btca.zip");
-                return fetch(zipUrl, { cache: "no-store" }).then(function (response) {
+                return fetch(zipUrl, { cache: "no-store", credentials: "include" }).then(function (response) {
                   if (!response.ok) throw new Error("Не удалось загрузить " + zipUrl + ": " + response.status);
                   return response.blob();
                 }).then(function (blob) {
@@ -2727,85 +3083,91 @@
     });
   }
 
-  function init() {
+  function bindShellUi() {
     var els = getEls();
+    window.addEventListener("orientationchange", syncPortraitMode);
+    window.addEventListener("resize", syncPortraitMode);
+    if (window.visualViewport) {
+      window.visualViewport.addEventListener("resize", syncPortraitMode);
+    }
+    document.addEventListener("click", handleAppNavigation, true);
+    if (els.button) {
+      els.button.onclick = function (event) {
+        if (event) event.preventDefault();
+        startIosOfflinePreparation();
+      };
+    }
+    if (isAppShellMode()) {
+      document.addEventListener("visibilitychange", function () {
+        if (document.visibilityState !== "visible") return;
+        ensureShellUpToDate();
+      });
+    }
+  }
+
+  function paintBootUi() {
+    cleanupOrphanHomePhraseMarkup();
+    if (isAppShellMode()) {
+      renderInstalledHome();
+      syncPortraitMode();
+      return;
+    }
+    if (isPersistedLaunchUnlocked()) {
+      showPlatformMenuUnlocked();
+      syncPortraitModeImmediate();
+      return;
+    }
+    gateLoadingHome();
+    syncPortraitModeImmediate();
+  }
+
+  function init() {
     window.__BTCA_IOS_INSTALLER_READY__ = true;
     window.__BTCA_OPEN_DATE_INPUT__ = openCenteredDatePicker;
-    if (!clearStaleClientState()) return;
+    clearStaleClientState();
+    // iPad: Cache/SW могут не resolve — UI сразу, иначе «зависает».
+    paintBootUi();
+    bindShellUi();
 
-    cleanupOrphanHomePhraseMarkup();
-    syncPortraitModeImmediate();
-
-    ensureMediaCacheReady()
-      .then(function (mediaReady) {
-        return purgeObsoleteInstallCaches().then(function () {
-          if (!mediaReady) return false;
-          return purgeObsoleteMediaCaches().then(function () { return true; });
-        });
-      })
-      .then(function (mediaReady) {
-        return ensureShellUpToDate().then(function (reloading) {
-          return { mediaReady: mediaReady, reloading: reloading };
-        });
-      })
-      .then(function (ctx) {
-        if (ctx.reloading) return;
-        if (isStandalone()) {
-          renderInstalledHome();
-        } else {
-          gateLoadingHome();
-        }
-        ensureFreshShellAfterDeploy();
-        if (!isStandalone()) {
-          cleanupOrphanHomePhraseMarkup();
-          syncPortraitModeImmediate();
-        } else {
-          syncPortraitMode();
-        }
-        window.addEventListener("orientationchange", syncPortraitMode);
-        window.addEventListener("resize", syncPortraitMode);
-        window.addEventListener("pageshow", function (event) {
-          if (event.persisted) window.location.reload();
-        });
-        if (window.visualViewport) {
-          window.visualViewport.addEventListener("resize", syncPortraitMode);
-        }
-        document.addEventListener("click", handleAppNavigation, true);
-        if (els.button) {
-          els.button.addEventListener("click", prepareOffline);
-        }
-        if (isStandalone()) {
-          document.addEventListener("visibilitychange", function () {
-            if (document.visibilityState !== "visible") return;
-            ensureShellUpToDate();
+    var boot = withTimeout(
+      releaseStaleServiceWorkerForLoadingPage()
+        .then(function () {
+          return ensureMediaCacheReady();
+        })
+        .then(function (mediaReady) {
+          return purgeObsoleteInstallCaches().then(function () {
+            if (!mediaReady) return false;
+            return purgeObsoleteMediaCaches().then(function () {
+              return true;
+            });
           });
-        }
-        if (isStandalone()) {
+        })
+        .then(function (mediaReady) {
+          return ensureShellUpToDate().then(function (reloading) {
+            return { mediaReady: mediaReady, reloading: reloading };
+          });
+        }),
+      2000,
+      "boot-timeout"
+    );
+
+    boot
+      .then(function (ctx) {
+        if (!ctx || ctx.reloading) return;
+        if (isAppShellMode()) {
+          ensureFreshShellAfterDeploy();
           recordInstallSession();
           return bootstrapStandaloneShell(ctx.mediaReady);
         }
         if (isOfflinePreparationActive() && !isAppPreparedSync() && isLaunchUnlocked()) {
           window.setTimeout(function () {
-            prepareOffline();
+            startIosOfflinePreparation();
           }, 0);
         }
       })
       .catch(function (error) {
         console.warn("BTCA bootstrap failed", error);
-        ensureFreshShellAfterDeploy();
-        if (!isStandalone()) {
-          cleanupOrphanHomePhraseMarkup();
-          syncPortraitModeImmediate();
-          gateLoadingHome();
-        } else {
-          cleanupOrphanHomePhraseMarkup();
-          syncPortraitMode();
-        }
-        document.addEventListener("click", handleAppNavigation, true);
-        if (els.button) {
-          els.button.addEventListener("click", prepareOffline);
-        }
-        if (isStandalone()) {
+        if (isAppShellMode()) {
           recordInstallSession();
           return repairStandaloneShell().then(function () {
             return preloadAppModulesForHome();

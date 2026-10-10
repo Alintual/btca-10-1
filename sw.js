@@ -1,64 +1,51 @@
-const CACHE_VERSION = "btca10-web-10.1.17";
+const CACHE_VERSION = "btca10-web-10.1.36";
 const APP_CACHE = `${CACHE_VERSION}:app`;
 const RUNTIME_CACHE = `${CACHE_VERSION}:runtime`;
 const BASE_PATH = "/btca-10-1";
 const SW_PATH = BASE_PATH + "/sw.js";
 const SHELL_PATHS = new Set([
-  BASE_PATH + "/",
-  BASE_PATH + "/index.html",
   BASE_PATH + "/install-ios.js",
+  BASE_PATH + "/manifest.webmanifest",
   SW_PATH,
 ]);
 
 const CORE_ASSETS = [
   "/btca-10-1/",
-  "/btca-10-1/favicon-10-1-17.ico",
-  "/btca-10-1/icons/favicon-10-1-17.png",
-  "/btca-10-1/icons/touch-10-1-17.png",
-  "/btca-10-1/icons/tab-10-1-17.png",
-  "/btca-10-1/icons/tab-10-1-17-32.png",
-  "/btca-10-1/icons/btca-apple-touch-icon.png",
-  "/btca-10-1/icons/btca-icon-192.png",
-  "/btca-10-1/icons/btca-icon-512.png",
+  "/btca-10-1/index.html",
+  "/btca-10-1/manifest.webmanifest",
+  "/btca-10-1/apple-touch-icon.png",
+  "/btca-10-1/favicon.ico",
+  "/btca-10-1/favicon.png",
+  "/btca-10-1/branding/favicon.png",
+  "/btca-10-1/icons/apple-touch-icon.png",
+  "/btca-10-1/icons/icon-192.png",
+  "/btca-10-1/icons/icon-512.png",
   "/btca-10-1/offline/app-shell.json",
-  "/btca-10-1/offline/media/manifest.json",
-  "/btca-10-1/install-ios.js",
-  "/btca-10-1/vendor/zip.min.js",
-  "/btca-10-1/btca-data-guard.js",
-  "/btca-10-1/btca-baza-diagram.js",
-  "/btca-10-1/btca-baza-dialogs.js",
-  "/btca-10-1/btca-baza-screenshot.js",
-  "/btca-10-1/btca-baza-sqlite.js",
-  "/btca-10-1/vendor/sql-wasm.js",
-  "/btca-10-1/vendor/sql-wasm.wasm",
-  "/btca-10-1/btca-slide-menu.js",
-  "/btca-10-1/level1/level1-db.js",
-  "/btca-10-1/level1/level1-app.js",
-  "/btca-10-1/level1/data/forma_exercise_list.json",
-  "/btca-10-1/level1/data/polezCatalog.json",
-  "/btca-10-1/level1/data/polezLinks.json",
-  "/btca-10-1/level1/data/polezDescriptions.json",
-  "/btca-10-1/level3/level3-db.js",
-  "/btca-10-1/level3/level3-baza.js",
-  "/btca-10-1/level3/level3-app.js",
-  "/btca-10-1/level3/data/forma_exercise_list.json",
-  "/btca-10-1/level3/data/polezCatalog.json",
-  "/btca-10-1/level3/data/polezLinks.json",
-  "/btca-10-1/level3/data/polezDescriptions.json"
+  "/btca-10-1/install-ios.js"
 ];
+
+function matchShell(request) {
+  const url = typeof request === "string" ? request : request.url;
+  return caches.match(request).then(function (hit) {
+    if (hit) return hit;
+    return caches.match(BASE_PATH + "/").then(function (shell) {
+      if (shell) return shell;
+      return caches.match(BASE_PATH + "/index.html");
+    });
+  });
+}
 
 function offlineFallback(request) {
   const accept = (request.headers && request.headers.get("accept")) || "";
   if (request.mode === "navigate" || accept.indexOf("text/html") !== -1) {
-    return caches.match(BASE_PATH + "/").then((shell) => {
-      if (shell) return shell;
-      return caches.match(BASE_PATH + "/index.html").then((page) => {
-        if (page) return page;
-        return new Response("<!doctype html><title>Offline</title><p>Offline</p>", {
-          status: 503,
-          headers: { "Content-Type": "text/html; charset=utf-8" },
-        });
-      });
+    return matchShell(request).then(function (page) {
+      if (page) return page;
+      return new Response(
+        "<!doctype html><meta charset=utf-8><title>BTCA-iOS 10.1</title>" +
+          "<body style='font-family:system-ui;background:#1a4854;color:#fff;padding:2rem'>" +
+          "<h1>BTCA-iOS 10.1</h1><p>Нет сети и offline-кэш ещё не готов. Откройте загрузочную в Safari, войдите и загрузите пакет.</p></body>",
+        { status: 200, headers: { "Content-Type": "text/html; charset=utf-8" } }
+      );
     });
   }
   return Promise.resolve(
@@ -72,9 +59,9 @@ function offlineFallback(request) {
 
 function safeFetch(request) {
   try {
-    return fetch(new Request(request, { cache: "no-store" }));
+    return fetch(new Request(request, { cache: "no-store", credentials: "same-origin" }));
   } catch (_err) {
-    return fetch(request);
+    return fetch(request, { credentials: "same-origin" });
   }
 }
 
@@ -90,76 +77,116 @@ function putInCache(cacheName, request, response) {
 }
 
 function networkFirst(request, cacheName) {
-  return safeFetch(request)
-    .then((response) => {
-      putInCache(cacheName, request, response);
-      return response;
-    })
-    .catch(() =>
-      caches.match(request).then((cached) => {
-        if (cached) return cached;
-        return offlineFallback(request);
+  // Safari: fetch через SW может «зависнуть» навсегда → страница не перезагружается.
+  // Всегда ограничиваем ожидание сети и гарантируем resolve.
+  return new Promise(function (resolve) {
+    var settled = false;
+    function finish(response) {
+      if (settled) return;
+      settled = true;
+      resolve(response);
+    }
+    var timer = setTimeout(function () {
+      matchShell(request).then(function (cached) {
+        if (cached) finish(cached);
+        else offlineFallback(request).then(finish);
+      });
+    }, 2800);
+    var isHtmlNav =
+      request.mode === "navigate" ||
+      ((request.headers && request.headers.get("accept")) || "").indexOf("text/html") !== -1;
+    safeFetch(request)
+      .then(function (response) {
+        if (response && response.ok) {
+          clearTimeout(timer);
+          putInCache(cacheName, request, response);
+          finish(response);
+          return;
+        }
+        return matchShell(request).then(function (cached) {
+          clearTimeout(timer);
+          if (cached) {
+            finish(cached);
+            return;
+          }
+          // Никогда не отдаём 404/401 HTML в лицо пользователю после сброса кэша.
+          if (isHtmlNav) {
+            offlineFallback(request).then(finish);
+            return;
+          }
+          finish(response || new Response("", { status: 503 }));
+        });
       })
-    );
+      .catch(function () {
+        matchShell(request).then(function (cached) {
+          clearTimeout(timer);
+          if (cached) finish(cached);
+          else offlineFallback(request).then(finish);
+        });
+      });
+  });
 }
 
-function cacheFirst(request, cacheName) {
-  return caches
-    .match(request)
-    .then((cached) => {
-      if (cached) return cached;
-      return safeFetch(request)
-        .then((response) => {
-          putInCache(cacheName, request, response);
-          return response;
-        })
-        .catch(() => offlineFallback(request));
-    })
-    .catch(() => offlineFallback(request));
+function shouldKeepCache(key) {
+  if (key.startsWith(CACHE_VERSION)) return true;
+  // Offline media/shell из прошлой сборки нельзя сносить — иначе ярлык PWA умирает.
+  if (/:static-media$/.test(key)) return true;
+  if (/:static-install$/.test(key)) return true;
+  return false;
 }
 
 self.addEventListener("message", (event) => {
   if (event.data && event.data.type === "SKIP_WAITING") {
-    self.skipWaiting();
+    event.waitUntil(self.skipWaiting());
   }
 });
 
-self.addEventListener("install", (event) => {
-  event.waitUntil(
-    caches.open(APP_CACHE)
-      .then((cache) => cache.addAll(CORE_ASSETS))
-  );
+self.addEventListener("install", function () {
+  // Без precache: на iPad waitUntil(addAll/fetch) вешает установку SW и загрузочную.
+  self.skipWaiting();
 });
 
 self.addEventListener("activate", (event) => {
+  // Не вызываем clients.claim() здесь: иначе Safari-вкладка загрузочной
+  // внезапно перехватывается SW и «перестаёт перезагружаться».
   event.waitUntil(
     caches.keys()
       .then((keys) => Promise.all(
         keys
-          .filter((key) => !key.startsWith(CACHE_VERSION))
+          .filter((key) => !shouldKeepCache(key))
           .map((key) => caches.delete(key))
       ))
-      .then(() => self.clients.claim())
   );
 });
 
 self.addEventListener("fetch", (event) => {
   if (event.request.method !== "GET") return;
-  // Safari/iPad: Range и спец. режимы часто роняют respondWith.
   if (event.request.headers && event.request.headers.get("range")) return;
-  const requestUrl = new URL(event.request.url);
-  if (requestUrl.origin !== self.location.origin) return;
-
-  const isLevelModule =
-    /\/level[12]\/.*\.js$/i.test(requestUrl.pathname) ||
-    /\/level[12]\/data\/.*\.json$/i.test(requestUrl.pathname);
-  const isBtcaModule = /\/btca-[^/]+\.js$/i.test(requestUrl.pathname);
-  const isShellProbe = requestUrl.pathname.endsWith("/offline/app-shell.json");
-
-  if (requestUrl.pathname === SW_PATH || event.request.mode === "navigate" || SHELL_PATHS.has(requestUrl.pathname) || isLevelModule || isBtcaModule || isShellProbe) {
-    event.respondWith(networkFirst(event.request, RUNTIME_CACHE));
+  var requestUrl;
+  try {
+    requestUrl = new URL(event.request.url);
+  } catch (_err) {
     return;
   }
+  if (requestUrl.origin !== self.location.origin) return;
+  if (!requestUrl.pathname.startsWith(BASE_PATH + "/") && requestUrl.pathname !== BASE_PATH) return;
 
-  event.respondWith(cacheFirst(event.request, RUNTIME_CACHE));
+  var path = requestUrl.pathname;
+  var isNavigate = event.request.mode === "navigate";
+  var accept = (event.request.headers && event.request.headers.get("accept")) || "";
+  var isHtml = accept.indexOf("text/html") !== -1;
+  var isDocument =
+    isNavigate ||
+    isHtml ||
+    path === BASE_PATH ||
+    path === BASE_PATH + "/" ||
+    path.endsWith("/index.html");
+
+  // Документ/HTML никогда не через SW — иначе Safari на iPad «роняет» загрузочную.
+  if (isDocument) return;
+
+  // iPad: cacheFirst без таймаута вешает вкладку. Перехватываем только offline-медиа.
+  if (path.indexOf(BASE_PATH + "/offline/") !== 0) return;
+
+  event.respondWith(networkFirst(event.request, RUNTIME_CACHE));
 });
