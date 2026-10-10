@@ -30,12 +30,12 @@
 
   var CORE_REL_PATHS = [
     "",
-    "favicon-10-1-16.ico",
-    "icons/favicon-10-1-16.png",
+    "favicon-10-1-17.ico",
+    "icons/favicon-10-1-17.png",
     "icons/btca-apple-touch-icon.png",
-    "icons/touch-10-1-16.png",
-    "icons/tab-10-1-16.png",
-    "icons/tab-10-1-16-32.png",
+    "icons/touch-10-1-17.png",
+    "icons/tab-10-1-17.png",
+    "icons/tab-10-1-17-32.png",
     "icons/btca-icon-192.png",
     "icons/btca-icon-512.png",
     "branding/logo3.png",
@@ -2061,21 +2061,22 @@
     return /подписка не активна/i.test(String(message || ""));
   }
 
-  function renderAuthGate(onUnlocked) {
+  function renderAuthGate(onUnlocked, options) {
+    options = options || {};
+    var loginOnly = Boolean(options.loginOnly);
     var gate = ensureAuthGateMount();
     if (!gate) {
       onUnlocked();
       return;
     }
     gate.removeAttribute("hidden");
-    var loginOnly = isStandalone();
     var savedPhone = "";
     var savedName = "";
     try {
       savedPhone = localStorage.getItem(LICENSE_PHONE_KEY) || "";
       savedName = localStorage.getItem(LICENSE_NAME_KEY) || "";
     } catch (e) {}
-    // В установленном PWA регистрации нет — только вход (клиент уже получил доступ на загрузке).
+    // В установленном PWA регистрация недоступна: клиент уже получил доступ на скачивание.
     var mode = loginOnly ? "login" : savedPhone ? "login" : "register";
     var debugCode = "";
     var subscriptionBlocked = false;
@@ -2194,11 +2195,6 @@
 
       var chain = Promise.resolve();
       if (mode === "register") {
-        if (loginOnly) {
-          setError("В приложении доступен только вход");
-          if (submitBtn) submitBtn.disabled = false;
-          return;
-        }
         chain = licensePost("/v1/register", { name: name, phone: phone }).then(function (data) {
           savedName = name;
           savedPhone = data.phone || phone;
@@ -2281,22 +2277,6 @@
     });
   }
 
-  function ensureInstalledHomeTitle() {
-    var home = document.querySelector(".home");
-    var title = document.querySelector(".home__app-title");
-    var release = document.querySelector(".home__app-release");
-    if (!home || !title) return;
-    if (home.firstElementChild !== title) {
-      home.insertBefore(title, home.firstElementChild);
-    }
-    if (release && title.nextElementSibling !== release) {
-      home.insertBefore(release, title.nextSibling);
-    }
-    title.removeAttribute("hidden");
-    if (release) release.removeAttribute("hidden");
-    home.setAttribute("aria-labelledby", "btca-installed-header");
-  }
-
   function renderInstalledHome(options) {
     options = options || {};
     var preserveSplash = Boolean(options.preserveSplash);
@@ -2309,8 +2289,24 @@
     document.body.classList.add("btca-installed-mode");
     document.body.classList.remove("btca-screen-mode", "btca-level1-mode", "btca-level3-mode");
 
-    ensureInstalledHomeTitle();
-    if (intro) intro.setAttribute("hidden", "hidden");
+    // Стартовый экран PWA: заголовок + дата версии с загрузочной страницы (без текста про загрузку).
+    if (intro) {
+      intro.removeAttribute("hidden");
+      var titleEl = intro.querySelector(".eyebrow:not(.eyebrow--release):not(.eyebrow--levels)");
+      if (titleEl) {
+        titleEl.textContent = "СИСТЕМА ТРЕНИРОВОК БТКА 10.1";
+        titleEl.removeAttribute("hidden");
+      }
+      var releaseEl = intro.querySelector(".eyebrow--release");
+      if (releaseEl) releaseEl.removeAttribute("hidden");
+      var levelsEl = intro.querySelector(".eyebrow--levels");
+      if (levelsEl) levelsEl.setAttribute("hidden", "hidden");
+      var appTitle = intro.querySelector("#app-title");
+      if (appTitle) appTitle.setAttribute("hidden", "hidden");
+      Array.prototype.forEach.call(intro.querySelectorAll("p:not(.eyebrow)"), function (p) {
+        p.setAttribute("hidden", "hidden");
+      });
+    }
     if (panel && !preserveSplash) {
       panel.className = "ios-panel";
       panel.innerHTML = "";
@@ -2323,9 +2319,12 @@
         menu.setAttribute("hidden", "hidden");
       }
       if (gate) gate.removeAttribute("hidden");
-      renderAuthGate(function () {
-        renderInstalledHome(options);
-      });
+      renderAuthGate(
+        function () {
+          renderInstalledHome(options);
+        },
+        { loginOnly: true }
+      );
       ensurePhraseOneTabletMarkup();
       ensurePhraseTwoTabletMarkup();
       cleanupOrphanHomePhraseMarkup();
