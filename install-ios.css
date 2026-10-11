@@ -682,6 +682,122 @@ code {
   display: none !important;
 }
 
+.platform-menu__limit-warn {
+  margin: 10px auto 0;
+  padding: 8px 12px;
+  width: 95%;
+  max-width: 420px;
+  color: #fff;
+  background: rgba(180, 40, 40, 0.55);
+  border: 1px solid #ff8a8a;
+  border-radius: 12px;
+  font-size: 0.92rem;
+  line-height: 1.4;
+  text-align: center;
+}
+
+.platform-menu__limit-warn[hidden] {
+  display: none !important;
+}
+
+.platform-button--account {
+  width: 47.5%;
+  min-height: 48px;
+  margin: 12px auto 0;
+  border-color: #ffe08a;
+}
+
+.platform-button--account[hidden] {
+  display: none !important;
+}
+
+.btca-work-menu__item--account {
+  border-color: #ffe08a;
+}
+
+.account-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 1200;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  background: rgba(8, 24, 30, 0.72);
+}
+
+.account-modal[hidden] {
+  display: none !important;
+}
+
+.account-modal__card {
+  position: relative;
+  width: min(420px, 100%);
+  padding: 20px 16px 16px;
+  border-radius: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: #1a4854;
+  color: #fff;
+}
+
+.account-modal__close {
+  position: absolute;
+  top: 8px;
+  right: 10px;
+  border: 0;
+  background: transparent;
+  color: #fff;
+  font-size: 1.6rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.account-modal__title {
+  margin: 0 0 14px;
+  font-size: 1.25rem;
+  text-align: center;
+}
+
+.account-modal__form {
+  display: grid;
+  gap: 10px;
+}
+
+.account-modal__field {
+  display: grid;
+  gap: 4px;
+  font-size: 0.92rem;
+}
+
+.account-modal__field input {
+  min-height: 44px;
+  padding: 8px 12px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.28);
+  background: rgba(12, 36, 45, 0.7);
+  color: #fff;
+  font-size: 1rem;
+}
+
+.account-modal__field input[readonly] {
+  opacity: 0.85;
+  border-style: dashed;
+}
+
+.account-modal__error {
+  margin: 0;
+  color: #ffb4b4;
+  font-size: 0.9rem;
+}
+
+.account-modal__error[hidden] {
+  display: none !important;
+}
+
+.account-modal__save {
+  margin-top: 4px;
+}
+
 .platform-menu[hidden],
 .ios-panel[hidden] {
   display: none !important;

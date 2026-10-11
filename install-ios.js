@@ -2,8 +2,8 @@
   "use strict";
 
   var BTCA_BASE = "/btca-10-1/";
-  var INSTALL_CACHE = "btca10-web-10.1.39:static-install";
-  var MEDIA_CACHE = "btca10-web-10.1.39:static-media";
+  var INSTALL_CACHE = "btca10-web-10.1.40:static-install";
+  var MEDIA_CACHE = "btca10-web-10.1.40:static-media";
   var MEDIA_PROBE_RE = /offline-unpacked\/level3\/exercises\/[^/]+\.(jpe?g|png|webp|gif)$/i;
   var MEDIA_STATE_KEY = "btca10-web:static-media-state";
   var APP_READY_KEY = "btca10-web:app-ready";
@@ -380,13 +380,20 @@
     if (ios) {
       ios.disabled = true;
       var small = ios.querySelector("small");
-      if (small) small.textContent = "Открываю доступ к пакету...";
+      if (small) small.textContent = "Проверка лимита скачивания...";
     }
+    clearDownloadLimitWarning();
     var links = readStoredDownloadLinks();
-    probePackageAccess()
-      .then(function (hasAccess) {
-        if (hasAccess) return true;
-        return activatePwaDownloadCookie(links.pwa);
+    claimPlatformDownload("pwa", "iOS/PWA")
+      .then(function () {
+        if (ios) {
+          var smallReady = ios.querySelector("small");
+          if (smallReady) smallReady.textContent = "Открываю доступ к пакету...";
+        }
+        return probePackageAccess().then(function (hasAccess) {
+          if (hasAccess) return true;
+          return activatePwaDownloadCookie(links.pwa);
+        });
       })
       .then(function (ready) {
         if (ios) ios.disabled = false;
@@ -400,9 +407,10 @@
         }
         prepareOffline();
       })
-      .catch(function () {
+      .catch(function (error) {
         if (ios) ios.disabled = false;
-        prepareOffline();
+        ensureIosPrepareButton(ios);
+        showDownloadLimitWarning((error && error.message) || "Превышен лимит скачиваний");
       });
   }
 
@@ -1997,7 +2005,13 @@
       }
       return;
     }
-    if (route === "about") renderAboutScreen();
+    if (route === "about") {
+      renderAboutScreen();
+      return;
+    }
+    if (route === "account") {
+      window.location.href = LOADING_PAGE_URL;
+    }
   }
 
   var PHRASE_ONE_TABLET_HTML =
@@ -2255,6 +2269,16 @@
 
   var PLATFORM_LINKS_HINT =
     "Ссылки для загрузки действительны в течение 1 часа";
+  var LOADING_PAGE_URL = "https://alintual.github.io/btca-10-1/";
+  var PACKAGE_APP_VERSION = "10.1";
+
+  function readSessionToken() {
+    try {
+      return String(localStorage.getItem(LICENSE_SESSION_KEY) || "").trim();
+    } catch (e) {
+      return "";
+    }
+  }
 
   function ensurePlatformDownloadHint(show) {
     var menu = document.querySelector(".platform-menu");
@@ -2267,8 +2291,163 @@
       hint.textContent = PLATFORM_LINKS_HINT;
       menu.insertAdjacentElement("afterend", hint);
     }
-    if (show) hint.removeAttribute("hidden");
-    else hint.setAttribute("hidden", "hidden");
+    var accountBtn = document.getElementById("btca-account-btn");
+    if (!accountBtn) {
+      accountBtn = document.createElement("button");
+      accountBtn.type = "button";
+      accountBtn.id = "btca-account-btn";
+      accountBtn.className = "platform-button platform-button--account";
+      accountBtn.innerHTML = "<span>Аккаунт</span>";
+      accountBtn.onclick = function (event) {
+        if (event) event.preventDefault();
+        openAccountModal();
+      };
+      hint.insertAdjacentElement("afterend", accountBtn);
+    }
+    if (show) {
+      hint.removeAttribute("hidden");
+      accountBtn.removeAttribute("hidden");
+    } else {
+      hint.setAttribute("hidden", "hidden");
+      accountBtn.setAttribute("hidden", "hidden");
+    }
+  }
+
+  function claimPlatformDownload(platform, label) {
+    var token = readSessionToken();
+    if (!token) {
+      return Promise.reject(new Error("Сессия не найдена. Войдите по коду ещё раз."));
+    }
+    return licensePost("/v1/downloads/claim", {
+      session_token: token,
+      device_id: getLicenseDeviceId(),
+      platform: platform,
+      app_version: PACKAGE_APP_VERSION,
+      device_label: label || platform,
+    });
+  }
+
+  function showDownloadLimitWarning(message) {
+    var existing = document.getElementById("btca-download-limit-warn");
+    if (!existing) {
+      existing = document.createElement("p");
+      existing.id = "btca-download-limit-warn";
+      existing.className = "platform-menu__limit-warn";
+      var hint = document.getElementById("btca-download-links-hint");
+      if (hint && hint.parentNode) hint.parentNode.insertBefore(existing, hint.nextSibling);
+      else {
+        var menu = document.querySelector(".platform-menu");
+        if (menu) menu.insertAdjacentElement("afterend", existing);
+      }
+    }
+    existing.textContent = message || "Превышен лимит скачиваний.";
+    existing.removeAttribute("hidden");
+  }
+
+  function clearDownloadLimitWarning() {
+    var existing = document.getElementById("btca-download-limit-warn");
+    if (existing) existing.setAttribute("hidden", "hidden");
+  }
+
+  function ensureAccountModalMount() {
+    var modal = document.getElementById("btca-account-modal");
+    if (modal) return modal;
+    modal = document.createElement("div");
+    modal.id = "btca-account-modal";
+    modal.className = "account-modal";
+    modal.setAttribute("hidden", "hidden");
+    modal.innerHTML =
+      '<div class="account-modal__card" role="dialog" aria-labelledby="btca-account-title">' +
+      '<button type="button" class="account-modal__close" data-account-close aria-label="Закрыть">×</button>' +
+      '<h2 id="btca-account-title" class="account-modal__title">Аккаунт</h2>' +
+      '<form class="account-modal__form" novalidate>' +
+      '<label class="account-modal__field"><span>Имя</span><input name="name" autocomplete="name" required minlength="2" maxlength="120"/></label>' +
+      '<label class="account-modal__field"><span>Телефон</span><input name="phone" type="tel" autocomplete="tel" required minlength="10" maxlength="20"/></label>' +
+      '<label class="account-modal__field"><span>E-mail</span><input name="email" type="email" autocomplete="email" maxlength="255"/></label>' +
+      '<label class="account-modal__field"><span>Подписка</span><input name="subscription" readonly tabindex="-1"/></label>' +
+      '<p class="account-modal__error" data-account-error hidden></p>' +
+      '<button class="platform-button account-modal__save" type="submit"><span>Сохранить</span></button>' +
+      "</form></div>";
+    document.body.appendChild(modal);
+    modal.addEventListener("click", function (event) {
+      if (event.target === modal || (event.target && event.target.getAttribute("data-account-close") != null)) {
+        modal.setAttribute("hidden", "hidden");
+      }
+    });
+    var form = modal.querySelector("form");
+    if (form) {
+      form.onsubmit = function (event) {
+        event.preventDefault();
+        var err = modal.querySelector("[data-account-error]");
+        if (err) {
+          err.setAttribute("hidden", "hidden");
+          err.textContent = "";
+        }
+        var token = readSessionToken();
+        var nameInput = form.querySelector('input[name="name"]');
+        var phoneInput = form.querySelector('input[name="phone"]');
+        var emailInput = form.querySelector('input[name="email"]');
+        licensePost("/v1/account/update", {
+          session_token: token,
+          name: nameInput ? nameInput.value.trim() : "",
+          phone: phoneInput ? phoneInput.value.trim() : "",
+          email: emailInput ? emailInput.value.trim() : "",
+        })
+          .then(function (data) {
+            try {
+              if (data.phone) localStorage.setItem(LICENSE_PHONE_KEY, data.phone);
+              if (data.name) localStorage.setItem(LICENSE_NAME_KEY, data.name);
+            } catch (e) {}
+            modal.setAttribute("hidden", "hidden");
+          })
+          .catch(function (error) {
+            if (err) {
+              err.removeAttribute("hidden");
+              err.textContent = (error && error.message) || "Не удалось сохранить";
+            }
+          });
+        return false;
+      };
+    }
+    return modal;
+  }
+
+  function openAccountModal() {
+    var modal = ensureAccountModalMount();
+    var err = modal.querySelector("[data-account-error]");
+    if (err) {
+      err.setAttribute("hidden", "hidden");
+      err.textContent = "";
+    }
+    var token = readSessionToken();
+    if (!token) {
+      if (err) {
+        err.removeAttribute("hidden");
+        err.textContent = "Сначала войдите по коду на загрузочной.";
+      }
+      modal.removeAttribute("hidden");
+      return;
+    }
+    licensePost("/v1/account", { session_token: token })
+      .then(function (data) {
+        var form = modal.querySelector("form");
+        if (!form) return;
+        form.name.value = data.name || "";
+        form.phone.value = data.phone || "";
+        form.email.value = data.email || "";
+        form.subscription.value =
+          (data.subscription && data.subscription.label) ||
+          (data.subscription && data.subscription.status) ||
+          "";
+        modal.removeAttribute("hidden");
+      })
+      .catch(function (error) {
+        if (err) {
+          err.removeAttribute("hidden");
+          err.textContent = (error && error.message) || "Не удалось загрузить аккаунт";
+        }
+        modal.removeAttribute("hidden");
+      });
   }
 
   function replaceWithPlatformAnchor(el, href) {
@@ -2306,6 +2485,7 @@
       return;
     }
     ensurePlatformDownloadHint(true);
+    clearDownloadLimitWarning();
 
     var menu = document.querySelector(".platform-menu");
     if (!menu) return;
@@ -2313,24 +2493,36 @@
     var android = menu.querySelector(".platform-button--android");
     var windows = menu.querySelector(".platform-button--windows");
 
-    if (android && links.android) {
-      replaceWithPlatformAnchor(android, links.android);
-      var androidSmall = menu.querySelector(".platform-button--android small");
-      if (androidSmall) androidSmall.textContent = "Скачать дистрибутив APK";
-    }
-    if (windows && links.windows) {
-      replaceWithPlatformAnchor(windows, links.windows);
-      var winSmall = menu.querySelector(".platform-button--windows small");
-      if (winSmall) winSmall.textContent = "Скачать дистрибутив EXE";
+    function bindClaimThenOpen(el, platform, href, label) {
+      if (!el || !href) return;
+      var btn = replaceWithPlatformButton(el);
+      if (!btn) return;
+      var small = btn.querySelector("small");
+      if (small && label) small.textContent = label;
+      btn.onclick = function (event) {
+        if (event) event.preventDefault();
+        clearDownloadLimitWarning();
+        btn.disabled = true;
+        claimPlatformDownload(platform, platform.toUpperCase())
+          .then(function () {
+            window.location.href = href;
+          })
+          .catch(function (error) {
+            btn.disabled = false;
+            showDownloadLimitWarning((error && error.message) || "Не удалось начать скачивание");
+          });
+      };
     }
 
-    // iOS всегда кнопка: cookie активируем fetch'ем, без ухода на /d/ (иначе «второй клик»).
-    ensureIosPrepareButton(document.getElementById("btca-static-ios"));
-    if (links.pwa) {
-      activatePwaDownloadCookie(links.pwa).then(function () {
-        ensureIosPrepareButton(document.getElementById("btca-static-ios"));
-      });
+    if (android && links.android) {
+      bindClaimThenOpen(android, "android", links.android, "Скачать дистрибутив APK");
     }
+    if (windows && links.windows) {
+      bindClaimThenOpen(windows, "windows", links.windows, "Скачать дистрибутив EXE");
+    }
+
+    // iOS: слот устройства при нажатии, без авто-claim при показе меню.
+    ensureIosPrepareButton(document.getElementById("btca-static-ios"));
   }
 
   function showPlatformMenuUnlocked() {
@@ -2707,7 +2899,8 @@
       menu.setAttribute("aria-label", "Главное меню БТКА");
       menu.innerHTML =
         '<button class="platform-button btca-work-menu__item btca-work-menu__item--level3" type="button" data-btca-route="level3"><span>Уровень 3 — Продвинутый</span></button>' +
-        '<button class="platform-button btca-work-menu__item btca-work-menu__item--about" type="button" data-btca-route="about"><span>О проекте</span></button>';
+        '<button class="platform-button btca-work-menu__item btca-work-menu__item--about" type="button" data-btca-route="about"><span>О проекте</span></button>' +
+        '<button class="platform-button btca-work-menu__item btca-work-menu__item--account" type="button" data-btca-route="account"><span>Аккаунт</span></button>';
     }
     if (footer) {
       footer.innerHTML = "<span>BTCA 10.1 © 2026 Alint&apos;s R.lab</span>";
