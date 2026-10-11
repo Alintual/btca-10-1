@@ -2,8 +2,8 @@
   "use strict";
 
   var BTCA_BASE = "/btca-10-1/";
-  var INSTALL_CACHE = "btca10-web-10.1.41:static-install";
-  var MEDIA_CACHE = "btca10-web-10.1.41:static-media";
+  var INSTALL_CACHE = "btca10-web-10.1.42:static-install";
+  var MEDIA_CACHE = "btca10-web-10.1.42:static-media";
   var MEDIA_PROBE_RE = /offline-unpacked\/level3\/exercises\/[^/]+\.(jpe?g|png|webp|gif)$/i;
   var MEDIA_STATE_KEY = "btca10-web:static-media-state";
   var APP_READY_KEY = "btca10-web:app-ready";
@@ -2141,6 +2141,7 @@
   function clearLaunchUnlock() {
     try {
       sessionStorage.removeItem(LICENSE_LAUNCH_KEY);
+      localStorage.removeItem(LICENSE_LAUNCH_KEY);
     } catch (e) {}
   }
 
@@ -2149,6 +2150,12 @@
       if (token) localStorage.setItem(LICENSE_SESSION_KEY, token);
       sessionStorage.setItem(LICENSE_LAUNCH_KEY, "1");
       localStorage.setItem(LICENSE_LAUNCH_KEY, "1");
+    } catch (e) {}
+  }
+
+  function storePaidUntil(value) {
+    try {
+      if (value) localStorage.setItem(PAID_UNTIL_KEY, String(value));
     } catch (e) {}
   }
 
@@ -2271,10 +2278,43 @@
     "Ссылки для загрузки действительны в течение 1 часа";
   var LOADING_PAGE_URL = "https://alintual.github.io/btca-10-1/";
   var PACKAGE_APP_VERSION = "10.1";
+  var DOWNLOAD_MENU_SHOWN_KEY = "btca101.downloadMenuShownAt";
+  var PAID_UNTIL_KEY = "btca101.paidUntil";
+  var downloadMenuExpireTimer = null;
 
   function readSessionToken() {
     try {
       return String(localStorage.getItem(LICENSE_SESSION_KEY) || "").trim();
+    } catch (e) {
+      return "";
+    }
+  }
+
+  function formatDateRu(value) {
+    if (!value) return "";
+    var raw = String(value).trim();
+    if (/^\d{2}\.\d{2}\.\d{4}$/.test(raw)) return raw;
+    var d = new Date(raw);
+    if (isNaN(d.getTime())) return raw.slice(0, 10);
+    try {
+      return new Intl.DateTimeFormat("ru-RU", {
+        timeZone: "Asia/Krasnoyarsk",
+        day: "2-digit",
+        month: "2-digit",
+        year: "numeric",
+      }).format(d);
+    } catch (e) {
+      var dd = String(d.getDate()).padStart(2, "0");
+      var mm = String(d.getMonth() + 1).padStart(2, "0");
+      return dd + "." + mm + "." + d.getFullYear();
+    }
+  }
+
+  function readPaidUntilLabel() {
+    try {
+      var paid = localStorage.getItem(PAID_UNTIL_KEY) || "";
+      var date = formatDateRu(paid);
+      return date ? "Подписка активна по " + date : "";
     } catch (e) {
       return "";
     }
@@ -2304,47 +2344,65 @@
       };
       hint.insertAdjacentElement("afterend", accountBtn);
     }
-    var accountSub = document.getElementById("btca-account-sub");
-    if (!accountSub) {
-      accountSub = document.createElement("p");
-      accountSub.id = "btca-account-sub";
-      accountSub.className = "platform-menu__account-sub";
-      accountSub.setAttribute("hidden", "hidden");
-      accountBtn.insertAdjacentElement("afterend", accountSub);
+    var subLine = document.getElementById("btca-subscription-line");
+    if (!subLine) {
+      subLine = document.createElement("p");
+      subLine.id = "btca-subscription-line";
+      subLine.className = "platform-menu__account-sub";
+      accountBtn.insertAdjacentElement("afterend", subLine);
     }
+    var subText = readPaidUntilLabel();
+    subLine.textContent = subText;
     if (show) {
       hint.removeAttribute("hidden");
       accountBtn.removeAttribute("hidden");
-      refreshAccountSubscriptionLine();
+      if (subText) subLine.removeAttribute("hidden");
+      else subLine.setAttribute("hidden", "hidden");
     } else {
       hint.setAttribute("hidden", "hidden");
       accountBtn.setAttribute("hidden", "hidden");
-      accountSub.setAttribute("hidden", "hidden");
-      accountSub.textContent = "";
+      subLine.setAttribute("hidden", "hidden");
     }
   }
 
-  function refreshAccountSubscriptionLine() {
-    var accountSub = document.getElementById("btca-account-sub");
-    var accountBtn = document.getElementById("btca-account-btn");
-    if (!accountSub || !accountBtn || accountBtn.hasAttribute("hidden")) return;
-    var token = readSessionToken();
-    if (!token) {
-      accountSub.setAttribute("hidden", "hidden");
-      accountSub.textContent = "";
+  function expireDownloadMenuToLogin() {
+    try {
+      sessionStorage.removeItem(DOWNLOAD_MENU_SHOWN_KEY);
+      sessionStorage.removeItem(LICENSE_DOWNLOAD_LINKS_KEY);
+      sessionStorage.removeItem(LICENSE_LAUNCH_KEY);
+      localStorage.removeItem(LICENSE_SESSION_KEY);
+    } catch (e) {}
+    clearLaunchUnlock();
+    ensurePlatformDownloadHint(false);
+    clearDownloadLimitWarning();
+    var menu = document.querySelector(".platform-menu");
+    var panel = getEls().panel;
+    if (menu) menu.setAttribute("hidden", "hidden");
+    if (panel) panel.setAttribute("hidden", "hidden");
+    setLoadingIntroLocked(true);
+    renderAuthGate(function () {
+      showPlatformMenuUnlocked();
+    });
+  }
+
+  function scheduleDownloadMenuExpiry() {
+    if (downloadMenuExpireTimer) {
+      window.clearTimeout(downloadMenuExpireTimer);
+      downloadMenuExpireTimer = null;
+    }
+    var shownAt = 0;
+    try {
+      shownAt = Number(sessionStorage.getItem(DOWNLOAD_MENU_SHOWN_KEY) || 0);
+    } catch (e) {}
+    if (!shownAt) return;
+    var left = shownAt + 3600000 - Date.now();
+    if (left <= 0) {
+      expireDownloadMenuToLogin();
       return;
     }
-    licensePost("/v1/account", { session_token: token })
-      .then(function (data) {
-        var label =
-          (data.subscription && data.subscription.label) ||
-          "Подписка не активна";
-        accountSub.textContent = label;
-        accountSub.removeAttribute("hidden");
-      })
-      .catch(function () {
-        accountSub.setAttribute("hidden", "hidden");
-      });
+    downloadMenuExpireTimer = window.setTimeout(function () {
+      expireDownloadMenuToLogin();
+    }, left);
   }
 
   function claimPlatformDownload(platform, label) {
@@ -2432,7 +2490,13 @@
               if (data.phone) localStorage.setItem(LICENSE_PHONE_KEY, data.phone);
               if (data.name) localStorage.setItem(LICENSE_NAME_KEY, data.name);
             } catch (e) {}
-            refreshAccountSubscriptionLine();
+            if (data.subscription && data.subscription.paid_until) {
+              storePaidUntil(data.subscription.paid_until);
+            }
+            var menuVisible = document.querySelector(".platform-menu");
+            if (menuVisible && !menuVisible.hasAttribute("hidden")) {
+              ensurePlatformDownloadHint(true);
+            }
             modal.setAttribute("hidden", "hidden");
           })
           .catch(function (error) {
@@ -2470,11 +2534,17 @@
         form.name.value = data.name || "";
         form.phone.value = data.phone || "";
         form.email.value = data.email || "";
+        if (data.subscription && data.subscription.paid_until) {
+          storePaidUntil(data.subscription.paid_until);
+        }
         form.subscription.value =
           (data.subscription && data.subscription.label) ||
           (data.subscription && data.subscription.status) ||
           "";
-        refreshAccountSubscriptionLine();
+        var menuVisible = document.querySelector(".platform-menu");
+        if (menuVisible && !menuVisible.hasAttribute("hidden")) {
+          ensurePlatformDownloadHint(true);
+        }
         modal.removeAttribute("hidden");
       })
       .catch(function (error) {
@@ -2573,7 +2643,13 @@
       menu.setAttribute("aria-label", "Выбор платформы");
     }
     if (panel) panel.removeAttribute("hidden");
+    try {
+      if (!sessionStorage.getItem(DOWNLOAD_MENU_SHOWN_KEY)) {
+        sessionStorage.setItem(DOWNLOAD_MENU_SHOWN_KEY, String(Date.now()));
+      }
+    } catch (e) {}
     wirePlatformMenuWithDownloadLinks();
+    scheduleDownloadMenuExpiry();
   }
 
   var SUBSCRIPTION_INACTIVE_MSG =
@@ -2642,7 +2718,7 @@
             '" placeholder="+7..."/></label>'
           : "") +
         (mode === "register"
-          ? '<label class="auth-gate__field"><span>E-mail</span><input name="email" type="email" autocomplete="email" maxlength="255"/></label>'
+          ? '<label class="auth-gate__field"><span>E-mail</span><input name="email" type="email" autocomplete="email" maxlength="255" value=""/></label>'
           : "") +
         (mode === "otp"
           ? '<label class="auth-gate__field"><span>Код (6 цифр)</span><input name="otp" type="text" inputmode="numeric" autocomplete="one-time-code" maxlength="6" pattern="[0-9]{6}" required value="' +
@@ -2749,13 +2825,13 @@
       var chain = Promise.resolve();
       if (requestMode === "register") {
         if (!name || name.length < 2) {
-          if (submitBtn) submitBtn.disabled = false;
           setError("Укажите имя");
+          if (submitBtn) submitBtn.disabled = false;
           return false;
         }
         if (!phone) {
-          if (submitBtn) submitBtn.disabled = false;
           setError("Укажите телефон");
+          if (submitBtn) submitBtn.disabled = false;
           return false;
         }
         chain = licensePost("/v1/register", { name: name, phone: phone, email: email }).then(function (data) {
@@ -2792,6 +2868,11 @@
           code: otpInput ? String(otpInput.value || "").trim() : "",
         }).then(function (data) {
           markLaunchUnlocked(data.session_token);
+          storePaidUntil(data && data.paid_until);
+          try {
+            sessionStorage.removeItem(DOWNLOAD_MENU_SHOWN_KEY);
+            sessionStorage.setItem(DOWNLOAD_MENU_SHOWN_KEY, String(Date.now()));
+          } catch (e) {}
           var links = (data && data.download_links) || {};
           try {
             sessionStorage.setItem(LICENSE_DOWNLOAD_LINKS_KEY, JSON.stringify(links));
@@ -2849,7 +2930,12 @@
     function showAuthGateFresh() {
       try {
         sessionStorage.removeItem(LICENSE_DOWNLOAD_LINKS_KEY);
+        sessionStorage.removeItem(DOWNLOAD_MENU_SHOWN_KEY);
       } catch (e) {}
+      if (downloadMenuExpireTimer) {
+        window.clearTimeout(downloadMenuExpireTimer);
+        downloadMenuExpireTimer = null;
+      }
       ensurePlatformDownloadHint(false);
       // Перезагрузка загрузочной = новый цикл OTP (старый unlock/код не действуют).
       clearLaunchUnlock();
