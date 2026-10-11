@@ -2,8 +2,8 @@
   "use strict";
 
   var BTCA_BASE = "/btca-10-1/";
-  var INSTALL_CACHE = "btca10-web-10.1.37:static-install";
-  var MEDIA_CACHE = "btca10-web-10.1.37:static-media";
+  var INSTALL_CACHE = "btca10-web-10.1.38:static-install";
+  var MEDIA_CACHE = "btca10-web-10.1.38:static-media";
   var MEDIA_PROBE_RE = /offline-unpacked\/level3\/exercises\/[^/]+\.(jpe?g|png|webp|gif)$/i;
   var MEDIA_STATE_KEY = "btca10-web:static-media-state";
   var APP_READY_KEY = "btca10-web:app-ready";
@@ -325,6 +325,7 @@
   }
 
   function probePackageAccess() {
+    // На GitHub Pages медиа публичны — cookie ProHoster не нужна.
     return fetch(assetPath("offline/media/manifest.json"), {
       credentials: isGitHubPagesHost() ? "omit" : "include",
       cache: "no-store",
@@ -339,6 +340,12 @@
 
   /** Активирует cookie пакета через /d/{token} без ухода со страницы (один клик iOS). */
   function activatePwaDownloadCookie(pwaLink) {
+    // GitHub Pages: пакет уже на Pages — после OTP достаточно доступа к manifest.
+    if (isGitHubPagesHost()) {
+      return probePackageAccess().then(function (ok) {
+        return ok || true;
+      });
+    }
     if (!pwaLink) return Promise.resolve(false);
     return fetch(pwaLink, {
       credentials: "include",
@@ -2083,8 +2090,8 @@
     }
   }
 
-  // GitHub Pages — публичный пакет; OTP/License API на ProHoster больше не используем.
-  var LICENSE_API_BASE = "";
+  // Загрузочная на GitHub Pages; OTP/подписка — License API на ProHoster.
+  var LICENSE_API_BASE = "https://185-212-129-18.sslip.io";
   var LICENSE_PHONE_KEY = "btca101.phone";
   var LICENSE_NAME_KEY = "btca101.name";
   var LICENSE_DEVICE_KEY = "btca101.deviceId";
@@ -2101,15 +2108,17 @@
   }
 
   function isLaunchUnlocked() {
-    if (isGitHubPagesHost()) return true;
     try {
       if (sessionStorage.getItem(LICENSE_LAUNCH_KEY) === "1") return true;
     } catch (e) {}
-    try {
-      if (localStorage.getItem(LICENSE_LAUNCH_KEY) === "1") return true;
-    } catch (e2) {}
-    if (hasIosPwaQuery() || isStandalone()) return true;
-    return isAppPreparedSync();
+    // Ярлык «Домой» — отдельный контекст: sessionStorage пустой.
+    if (isStandalone() || hasIosPwaQuery()) {
+      try {
+        if (localStorage.getItem(LICENSE_LAUNCH_KEY) === "1") return true;
+      } catch (e2) {}
+      return isAppPreparedSync();
+    }
+    return false;
   }
 
   function clearLaunchUnlock() {
@@ -2149,9 +2158,10 @@
         if (ctrl) ctrl.abort();
       } catch (e) {}
     }, 20000);
+    // Cross-origin с github.io: без cookies (иначе Safari режет CORS * + credentials).
     return fetch(LICENSE_API_BASE + path, {
       method: "POST",
-      credentials: "include",
+      credentials: "omit",
       headers: { "Content-Type": "application/json", Accept: "application/json" },
       body: JSON.stringify(body),
       signal: ctrl ? ctrl.signal : undefined,
@@ -2583,12 +2593,6 @@
 
   function gateLoadingHome() {
     if (isAppShellMode()) return;
-    // На GitHub Pages пакет публичный — сразу меню платформ, без OTP/ProHoster.
-    if (isGitHubPagesHost() || isPersistedLaunchUnlocked()) {
-      markLaunchUnlocked();
-      showPlatformMenuUnlocked();
-      return;
-    }
     var pendingAccess = false;
     try {
       pendingAccess = sessionStorage.getItem("btca101.pendingPwaAccess") === "1";
@@ -3119,12 +3123,7 @@
       syncPortraitMode();
       return;
     }
-    if (isGitHubPagesHost() || isPersistedLaunchUnlocked()) {
-      markLaunchUnlocked();
-      showPlatformMenuUnlocked();
-      syncPortraitModeImmediate();
-      return;
-    }
+    // Загрузочная в браузере: всегда OTP/проверки, потом варианты загрузки.
     gateLoadingHome();
     syncPortraitModeImmediate();
   }
