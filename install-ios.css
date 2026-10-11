@@ -126,33 +126,6 @@ body.btca-apple-comfort:not(.btca-installed-mode) {
   overflow: visible;
 }
 
-/* Загрузочная: логотип + пирамида, без длинных фраз — форма телефона должна быть на экране */
-body:not(.btca-installed-mode) .home__hero {
-  height: 150px;
-}
-
-body:not(.btca-installed-mode) .home__tagline-outer,
-body:not(.btca-installed-mode) .home__logo-pyramid {
-  display: none;
-}
-
-body:not(.btca-installed-mode) .home__logo {
-  margin-bottom: 8px;
-}
-
-body:not(.btca-installed-mode) .home__intro {
-  margin-top: -8px;
-}
-
-body:not(.btca-installed-mode) .home__intro > p:not(.eyebrow) {
-  display: none;
-}
-
-body:not(.btca-installed-mode) #app-title {
-  margin-bottom: 6px;
-  font-size: clamp(1.45rem, 6vw, 1.9rem);
-}
-
 .home__hero-block {
   position: relative;
   width: min(520px, 100%);
