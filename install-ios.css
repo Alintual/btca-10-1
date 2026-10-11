@@ -700,17 +700,6 @@ code {
   display: none !important;
 }
 
-.platform-button--account {
-  width: 47.5%;
-  min-height: 64px;
-  margin: 22px auto 0;
-  border-color: #ffe08a;
-}
-
-.platform-button--account[hidden] {
-  display: none !important;
-}
-
 .platform-menu__account-sub {
   margin: 10px 0 0;
   padding: 0 8px;
@@ -839,6 +828,18 @@ code {
     border-color 160ms ease,
     background-color 160ms ease,
     transform 120ms ease;
+}
+
+/* После .platform-button — иначе width: 95% перекрывает половину. */
+.platform-button.platform-button--account {
+  width: calc(95% / 2);
+  min-height: 64px;
+  margin: 28px auto 0;
+  border-color: #0ab10a;
+}
+
+.platform-button--account[hidden] {
+  display: none !important;
 }
 
 .platform-button span {
