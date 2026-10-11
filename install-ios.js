@@ -2,8 +2,8 @@
   "use strict";
 
   var BTCA_BASE = "/btca-10-1/";
-  var INSTALL_CACHE = "btca10-web-10.1.40:static-install";
-  var MEDIA_CACHE = "btca10-web-10.1.40:static-media";
+  var INSTALL_CACHE = "btca10-web-10.1.41:static-install";
+  var MEDIA_CACHE = "btca10-web-10.1.41:static-media";
   var MEDIA_PROBE_RE = /offline-unpacked\/level3\/exercises\/[^/]+\.(jpe?g|png|webp|gif)$/i;
   var MEDIA_STATE_KEY = "btca10-web:static-media-state";
   var APP_READY_KEY = "btca10-web:app-ready";
@@ -25,8 +25,8 @@
   var ABOUT_MAIN_TEXT = "Настоящее Приложение разработано для локальной установки (развёртывания) на смартфоне или планшете с операционными системами Android или iOS и рассчитано для обучения и тренировки учеников с уровнем подготовки «Уровень 3 — Продвинутый».";
   var ABOUT_POST_TEXT = "*****\nБТКА, это — учебно-тренировочный программный комплекс, предназначенный для комплексного обучения игре на русском бильярде, выработки и закрепления практических навыков ведения бильярдной игры в Пирамиду, как самостоятельно, так и с тренером, с применением современных методик и технологий.\nТренировочный комплекс БТКА в сочетании с уникальной Методологией обучения составляют общую Систему тренировок БТКА школы русского бильярда «Абриколь» г. Красноярск.\n<a href=\"https://cloud.mail.ru/public/sujN/mpE8mr6aW\">Методика обучения</a>\n\nВ текущей версии Приложения БТКА 10.1 доступен раздел:\n•  *Уровень 3 — Продвинутый* Упражнений – 40, Задач – 263, Полезностей – 15.\n\nВсе Приложения функционируют без использования сети Интернет.\nКаждое Приложение:\n•  Содержит специфический (соответствующий уровню подготовки) набор упражнений, задач и тестов (в графическом виде), ранжированных по принципу - \"от простого к сложному\", и сгруппированных в тематические разделы по видам тренировок;\n•  Включает необходимые инструкции, методическую и справочную информацию;\n•  Обеспечивает возможность ввода, хранения и обработки результатов прогресса выполнения учеником практических заданий для последующего статистического анализа с использованием локальной Базы данных (БД);\n•  Имеет весь необходимый функционал и автоматизацию, а также интуитивно-понятный интерфейс, что способствует осуществлению полноценного, эффективного тренировочного процесса в комфортных условиях.\n\nОТ АВТОРА. Система тренировок БТКА разработана по результатам систематизации методик обучения русскому бильярду на основе: секретов ведущих тренеров и игроков (в т.ч. В. Симонича, В. Лазарева, С. Баурова, Е. Сталева и др.), опыта «старой школы», а также современных научных и экспериментальных исследований и IT-технологий.\n<a href=\"https://cloud.mail.ru/public/Ye3r/ZYwpjB9uz\">Подробное описание комплекса БТКА</a>\n\nCopyright © Юрий Алинт (Андрей Юрьев) 2026";
   var installedHomeSnapshot = "";
-  var LEVEL1_MODULE_VERSION = "10.1.12";
-  var LEVEL3_MODULE_VERSION = "10.1.12";
+  var LEVEL1_MODULE_VERSION = "10.1.13";
+  var LEVEL3_MODULE_VERSION = "10.1.13";
 
   var CORE_REL_PATHS = [
     "",
@@ -2304,13 +2304,47 @@
       };
       hint.insertAdjacentElement("afterend", accountBtn);
     }
+    var accountSub = document.getElementById("btca-account-sub");
+    if (!accountSub) {
+      accountSub = document.createElement("p");
+      accountSub.id = "btca-account-sub";
+      accountSub.className = "platform-menu__account-sub";
+      accountSub.setAttribute("hidden", "hidden");
+      accountBtn.insertAdjacentElement("afterend", accountSub);
+    }
     if (show) {
       hint.removeAttribute("hidden");
       accountBtn.removeAttribute("hidden");
+      refreshAccountSubscriptionLine();
     } else {
       hint.setAttribute("hidden", "hidden");
       accountBtn.setAttribute("hidden", "hidden");
+      accountSub.setAttribute("hidden", "hidden");
+      accountSub.textContent = "";
     }
+  }
+
+  function refreshAccountSubscriptionLine() {
+    var accountSub = document.getElementById("btca-account-sub");
+    var accountBtn = document.getElementById("btca-account-btn");
+    if (!accountSub || !accountBtn || accountBtn.hasAttribute("hidden")) return;
+    var token = readSessionToken();
+    if (!token) {
+      accountSub.setAttribute("hidden", "hidden");
+      accountSub.textContent = "";
+      return;
+    }
+    licensePost("/v1/account", { session_token: token })
+      .then(function (data) {
+        var label =
+          (data.subscription && data.subscription.label) ||
+          "Подписка не активна";
+        accountSub.textContent = label;
+        accountSub.removeAttribute("hidden");
+      })
+      .catch(function () {
+        accountSub.setAttribute("hidden", "hidden");
+      });
   }
 
   function claimPlatformDownload(platform, label) {
@@ -2398,6 +2432,7 @@
               if (data.phone) localStorage.setItem(LICENSE_PHONE_KEY, data.phone);
               if (data.name) localStorage.setItem(LICENSE_NAME_KEY, data.name);
             } catch (e) {}
+            refreshAccountSubscriptionLine();
             modal.setAttribute("hidden", "hidden");
           })
           .catch(function (error) {
@@ -2439,6 +2474,7 @@
           (data.subscription && data.subscription.label) ||
           (data.subscription && data.subscription.status) ||
           "";
+        refreshAccountSubscriptionLine();
         modal.removeAttribute("hidden");
       })
       .catch(function (error) {
@@ -2594,14 +2630,19 @@
         "</p>" +
         '<form class="auth-gate__form" action="#" method="post" novalidate>' +
         (mode === "register"
-          ? '<label class="auth-gate__field"><span>Имя</span><input name="name" autocomplete="name" required minlength="2" maxlength="120" value="' +
+          ? '<label class="auth-gate__field"><span>Имя*</span><input name="name" autocomplete="name" required minlength="2" maxlength="120" value="' +
             escapeHtml(savedName) +
             '"/></label>'
           : "") +
         (mode !== "otp"
-          ? '<label class="auth-gate__field"><span>Телефон</span><input name="phone" type="tel" autocomplete="tel" required minlength="10" maxlength="20" value="' +
+          ? '<label class="auth-gate__field"><span>' +
+            (mode === "register" ? "Телефон*" : "Телефон") +
+            '</span><input name="phone" type="tel" autocomplete="tel" required minlength="10" maxlength="20" value="' +
             escapeHtml(savedPhone) +
             '" placeholder="+7..."/></label>'
+          : "") +
+        (mode === "register"
+          ? '<label class="auth-gate__field"><span>E-mail</span><input name="email" type="email" autocomplete="email" maxlength="255"/></label>'
           : "") +
         (mode === "otp"
           ? '<label class="auth-gate__field"><span>Код (6 цифр)</span><input name="otp" type="text" inputmode="numeric" autocomplete="one-time-code" maxlength="6" pattern="[0-9]{6}" required value="' +
@@ -2697,15 +2738,27 @@
       } catch (e) {}
       var phoneInput = form.querySelector('input[name="phone"]');
       var nameInput = form.querySelector('input[name="name"]');
+      var emailInput = form.querySelector('input[name="email"]');
       var otpInput = form.querySelector('input[name="otp"]');
       var phone = phoneInput ? String(phoneInput.value || "").trim() : savedPhone;
       var name = nameInput ? String(nameInput.value || "").trim() : savedName;
+      var email = emailInput ? String(emailInput.value || "").trim() : "";
       var deviceId = getLicenseDeviceId();
       var requestMode = mode;
 
       var chain = Promise.resolve();
       if (requestMode === "register") {
-        chain = licensePost("/v1/register", { name: name, phone: phone }).then(function (data) {
+        if (!name || name.length < 2) {
+          if (submitBtn) submitBtn.disabled = false;
+          setError("Укажите имя");
+          return false;
+        }
+        if (!phone) {
+          if (submitBtn) submitBtn.disabled = false;
+          setError("Укажите телефон");
+          return false;
+        }
+        chain = licensePost("/v1/register", { name: name, phone: phone, email: email }).then(function (data) {
           savedName = name;
           savedPhone = data.phone || phone;
           try {

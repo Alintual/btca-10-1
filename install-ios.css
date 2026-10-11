@@ -702,12 +702,25 @@ code {
 
 .platform-button--account {
   width: 47.5%;
-  min-height: 48px;
-  margin: 12px auto 0;
+  min-height: 64px;
+  margin: 22px auto 0;
   border-color: #ffe08a;
 }
 
 .platform-button--account[hidden] {
+  display: none !important;
+}
+
+.platform-menu__account-sub {
+  margin: 10px 0 0;
+  padding: 0 8px;
+  color: #ffe08a;
+  font-size: 0.95rem;
+  line-height: 1.45;
+  text-align: center;
+}
+
+.platform-menu__account-sub[hidden] {
   display: none !important;
 }
 
