@@ -3,7 +3,7 @@
   "short_name": "BTCA-iOS 10.1",
   "description": "Web/PWA версия БТКА 10.1 для установки на iOS/iPadOS и offline-работы (Уровень 3 — Продвинутый).",
   "lang": "ru",
-  "start_url": "/btca-10-1/?ios-pwa=1",
+  "start_url": "/btca-10-1/",
   "scope": "/btca-10-1/",
   "display": "standalone",
   "orientation": "any",

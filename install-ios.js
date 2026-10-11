@@ -2,8 +2,8 @@
   "use strict";
 
   var BTCA_BASE = "/btca-10-1/";
-  var INSTALL_CACHE = "btca10-web-10.1.38:static-install";
-  var MEDIA_CACHE = "btca10-web-10.1.38:static-media";
+  var INSTALL_CACHE = "btca10-web-10.1.39:static-install";
+  var MEDIA_CACHE = "btca10-web-10.1.39:static-media";
   var MEDIA_PROBE_RE = /offline-unpacked\/level3\/exercises\/[^/]+\.(jpe?g|png|webp|gif)$/i;
   var MEDIA_STATE_KEY = "btca10-web:static-media-state";
   var APP_READY_KEY = "btca10-web:app-ready";
@@ -251,13 +251,15 @@
     }
   }
 
-  function persistIosPwaLaunchUrl() {
-    if (!isAppleMobile()) return;
+  /** В Safari-вкладке убираем ?ios-pwa=1 — иначе reload сразу открывает «установленное» PWA. */
+  function stripIosPwaQueryInBrowser() {
+    if (isStandalone()) return;
     try {
       var url = new URL(window.location.href);
-      if (url.searchParams.get("ios-pwa") === "1") return;
-      url.searchParams.set("ios-pwa", "1");
-      window.history.replaceState(null, "", url.pathname + url.search + url.hash);
+      if (!url.searchParams.has("ios-pwa")) return;
+      url.searchParams.delete("ios-pwa");
+      var q = url.searchParams.toString();
+      window.history.replaceState(null, "", url.pathname + (q ? "?" + q : "") + url.hash);
     } catch (_) {}
   }
 
@@ -268,8 +270,9 @@
     return isAppPreparedSync();
   }
 
+  // Только настоящий ярлык «На экран Домой» (standalone). Не по кэшу offline и не по ?ios-pwa=.
   function isAppShellMode() {
-    return isStandalone() || hasIosPwaQuery() || isAppPreparedSync();
+    return isStandalone();
   }
 
   function getCacheGeneration() {
@@ -2112,7 +2115,7 @@
       if (sessionStorage.getItem(LICENSE_LAUNCH_KEY) === "1") return true;
     } catch (e) {}
     // Ярлык «Домой» — отдельный контекст: sessionStorage пустой.
-    if (isStandalone() || hasIosPwaQuery()) {
+    if (isStandalone()) {
       try {
         if (localStorage.getItem(LICENSE_LAUNCH_KEY) === "1") return true;
       } catch (e2) {}
@@ -2133,7 +2136,6 @@
       sessionStorage.setItem(LICENSE_LAUNCH_KEY, "1");
       localStorage.setItem(LICENSE_LAUNCH_KEY, "1");
     } catch (e) {}
-    persistIosPwaLaunchUrl();
   }
 
   function getLicenseDeviceId() {
@@ -3118,6 +3120,7 @@
 
   function paintBootUi() {
     cleanupOrphanHomePhraseMarkup();
+    stripIosPwaQueryInBrowser();
     if (isAppShellMode()) {
       renderInstalledHome();
       syncPortraitMode();
@@ -3131,6 +3134,7 @@
   function init() {
     window.__BTCA_IOS_INSTALLER_READY__ = true;
     window.__BTCA_OPEN_DATE_INPUT__ = openCenteredDatePicker;
+    stripIosPwaQueryInBrowser();
     clearStaleClientState();
     // iPad: Cache/SW могут не resolve — UI сразу, иначе «зависает».
     paintBootUi();
