@@ -806,9 +806,15 @@ code {
 /* После .platform-button — иначе width: 95% перекрывает половину. */
 .platform-button.platform-button--account {
   width: calc(95% / 2);
-  min-height: 64px;
+  min-height: 44px;
+  padding-top: 8px;
+  padding-bottom: 8px;
   margin: 28px auto 0;
   border-color: #0ab10a;
+}
+
+body.btca-apple-comfort .platform-button.platform-button--account {
+  min-height: var(--btca-touch);
 }
 
 .platform-button--account[hidden] {
