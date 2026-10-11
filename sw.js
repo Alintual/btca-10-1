@@ -1,4 +1,4 @@
-const CACHE_VERSION = "btca10-web-10.1.52";
+const CACHE_VERSION = "btca10-web-10.1.53";
 const APP_CACHE = `${CACHE_VERSION}:app`;
 const RUNTIME_CACHE = `${CACHE_VERSION}:runtime`;
 const BASE_PATH = "/btca-10-1";
@@ -147,8 +147,8 @@ self.addEventListener("install", function () {
 });
 
 self.addEventListener("activate", (event) => {
-  // Не вызываем clients.claim() здесь: иначе Safari-вкладка загрузочной
-  // внезапно перехватывается SW и «перестаёт перезагружаться».
+  // claim нужен, чтобы PWA сразу начал отдавать /offline-unpacked/ из нового SW.
+  // Документы/HTML по-прежнему не перехватываются в fetch (ранний return).
   event.waitUntil(
     caches.keys()
       .then((keys) => Promise.all(
@@ -156,6 +156,9 @@ self.addEventListener("activate", (event) => {
           .filter((key) => !shouldKeepCache(key))
           .map((key) => caches.delete(key))
       ))
+      .then(function () {
+        return self.clients.claim();
+      })
   );
 });
 
@@ -189,25 +192,28 @@ self.addEventListener("fetch", (event) => {
   // На GitHub Pages пути /offline-unpacked/... нет — без SW будет пусто.
   if (path.indexOf(BASE_PATH + "/offline-unpacked/") === 0) {
     event.respondWith(
-      caches.match(event.request).then(function (cached) {
+      caches.match(event.request, { ignoreSearch: true }).then(function (cached) {
         if (cached) return cached;
-        return caches.keys().then(function (keys) {
-          var mediaKeys = keys.filter(function (key) {
-            return /:static-media$/.test(key);
-          });
-          return mediaKeys.reduce(function (chain, key) {
-            return chain.then(function (hit) {
-              if (hit) return hit;
-              return caches.open(key).then(function (cache) {
-                return cache.match(event.request).then(function (entry) {
-                  if (entry) return entry;
-                  // Совпадение без query / с полным URL.
-                  return cache.match(requestUrl.pathname);
+        var absolute = requestUrl.origin + requestUrl.pathname;
+        return caches.match(absolute, { ignoreSearch: true }).then(function (byUrl) {
+          if (byUrl) return byUrl;
+          return caches.keys().then(function (keys) {
+            var mediaKeys = keys.filter(function (key) {
+              return /:static-media$/.test(key);
+            });
+            return mediaKeys.reduce(function (chain, key) {
+              return chain.then(function (hit) {
+                if (hit) return hit;
+                return caches.open(key).then(function (cache) {
+                  return cache.match(event.request, { ignoreSearch: true }).then(function (entry) {
+                    if (entry) return entry;
+                    return cache.match(absolute, { ignoreSearch: true });
+                  });
                 });
               });
+            }, Promise.resolve(null)).then(function (hit) {
+              return hit || new Response("", { status: 404, statusText: "Not Found" });
             });
-          }, Promise.resolve(null)).then(function (hit) {
-            return hit || new Response("", { status: 404, statusText: "Not Found" });
           });
         });
       })
