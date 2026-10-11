@@ -185,7 +185,37 @@ self.addEventListener("fetch", (event) => {
   // Документ/HTML никогда не через SW — иначе Safari на iPad «роняет» загрузочную.
   if (isDocument) return;
 
-  // iPad: cacheFirst без таймаута вешает вкладку. Перехватываем только offline-медиа.
+  // Картинки упражнений/полезностей живут только в Cache API (после распаковки zip).
+  // На GitHub Pages пути /offline-unpacked/... нет — без SW будет пусто.
+  if (path.indexOf(BASE_PATH + "/offline-unpacked/") === 0) {
+    event.respondWith(
+      caches.match(event.request).then(function (cached) {
+        if (cached) return cached;
+        return caches.keys().then(function (keys) {
+          var mediaKeys = keys.filter(function (key) {
+            return /:static-media$/.test(key);
+          });
+          return mediaKeys.reduce(function (chain, key) {
+            return chain.then(function (hit) {
+              if (hit) return hit;
+              return caches.open(key).then(function (cache) {
+                return cache.match(event.request).then(function (entry) {
+                  if (entry) return entry;
+                  // Совпадение без query / с полным URL.
+                  return cache.match(requestUrl.pathname);
+                });
+              });
+            });
+          }, Promise.resolve(null)).then(function (hit) {
+            return hit || new Response("", { status: 404, statusText: "Not Found" });
+          });
+        });
+      })
+    );
+    return;
+  }
+
+  // Манифест/zip offline — networkFirst в runtime-кэш.
   if (path.indexOf(BASE_PATH + "/offline/") !== 0) return;
 
   event.respondWith(networkFirst(event.request, RUNTIME_CACHE));

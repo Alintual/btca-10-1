@@ -741,14 +741,16 @@ body.btca-installed-mode #btca-auth-gate {
   margin-top: 8px;
 }
 
-/* Стартовый экран PWA: кегль формы OTP = «Аккаунт | Обновление» (1rem). */
+/* Форма OTP на старте PWA — тот же кегль, что у «Аккаунт | Обновление». */
+body.btca-installed-mode .auth-gate,
 body.btca-installed-mode .auth-gate__title,
 body.btca-installed-mode .auth-gate__field,
 body.btca-installed-mode .auth-gate__field input,
-body.btca-installed-mode .auth-gate__error,
 body.btca-installed-mode .auth-gate__info,
+body.btca-installed-mode .auth-gate__error,
 body.btca-installed-mode .auth-gate__debug,
 body.btca-installed-mode .auth-gate__link,
+body.btca-installed-mode .auth-gate .platform-button,
 body.btca-installed-mode .auth-gate .platform-button span {
   font-size: 1rem;
 }

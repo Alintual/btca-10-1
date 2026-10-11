@@ -2001,10 +2001,8 @@
   function handleAppNavigation(event) {
     var target = event.target && event.target.closest ? event.target.closest("[data-btca-route]") : null;
     if (!target || !document.body.classList.contains("btca-installed-mode")) return;
-    var route = target.getAttribute("data-btca-route");
-    // Ссылка «Аккаунт | Обновление» — нативный <a target=_blank>, не перехватываем.
-    if (route === "account-update") return;
     event.preventDefault();
+    var route = target.getAttribute("data-btca-route");
     if (route === "level1") {
       try {
         renderLevel1Screen();
@@ -2024,6 +2022,9 @@
     if (route === "about") {
       renderAboutScreen();
       return;
+    }
+    if (route === "account-update") {
+      openDownloadsFromAccountLink();
     }
   }
 
@@ -2192,21 +2193,35 @@
     });
   }
 
-  function downloadsPageUrl() {
-    var base = String(LOADING_PAGE_URL || "").replace(/\/?$/, "/");
-    return base + "?open=downloads";
-  }
-
   function openDownloadsFromAccountLink() {
-    // В standalone PWA target=_blank открывает Safari; текущий экран PWA не заменяется.
-    var url = downloadsPageUrl();
-    var a = document.createElement("a");
-    a.href = url;
-    a.target = "_blank";
-    a.rel = "noopener noreferrer";
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
+    var url =
+      LOADING_PAGE_URL + (LOADING_PAGE_URL.indexOf("?") >= 0 ? "&" : "?") + "open=downloads";
+    // Из установленного PWA — открыть загрузочную во внешнем Safari, не подменяя экран PWA.
+    if (isStandalone()) {
+      try {
+        var safariScheme = url
+          .replace(/^https:\/\//i, "x-safari-https://")
+          .replace(/^http:\/\//i, "x-safari-http://");
+        var probe = document.createElement("a");
+        probe.href = safariScheme;
+        probe.target = "_blank";
+        probe.rel = "noopener noreferrer";
+        probe.style.display = "none";
+        document.body.appendChild(probe);
+        probe.click();
+        probe.remove();
+        return;
+      } catch (e) {}
+      try {
+        var opened = window.open(url, "_blank", "noopener,noreferrer");
+        if (opened) return;
+      } catch (e2) {}
+    }
+    try {
+      window.open(url, "_blank", "noopener,noreferrer");
+    } catch (e3) {
+      window.location.href = url;
+    }
   }
 
   function enterDownloadsViewFromSession() {
@@ -3155,8 +3170,8 @@
         '<button class="platform-button btca-work-menu__item btca-work-menu__item--level3" type="button" data-btca-route="level3"><span>Уровень 3 — Продвинутый</span></button>' +
         '<button class="platform-button btca-work-menu__item btca-work-menu__item--about" type="button" data-btca-route="about"><span>О проекте</span></button>' +
         '<a class="btca-work-menu__account-link" href="' +
-        escapeHtml(downloadsPageUrl()) +
-        '" target="_blank" rel="noopener noreferrer">Аккаунт | Обновление</a>';
+        escapeHtml(LOADING_PAGE_URL + (LOADING_PAGE_URL.indexOf("?") >= 0 ? "&" : "?") + "open=downloads") +
+        '" target="_blank" rel="noopener noreferrer" data-btca-route="account-update">Аккаунт | Обновление</a>';
     }
     if (footer) {
       footer.innerHTML = "<span>BTCA-mobile v.10.1 © 2026 Alint&apos;s R.lab</span>";
@@ -3168,6 +3183,13 @@
     syncPortraitMode();
     markStandaloneShellReady();
     ensureUpdateAvailableHint();
+    // Если zip ещё не распакован в Cache — докачать в фоне (иначе картинки пустые).
+    verifyMediaCacheReady()
+      .then(function (ready) {
+        if (ready) return;
+        return repairStandaloneShell({ deferHome: true });
+      })
+      .catch(function () {});
   }
 
   function parseDateRuValue(value) {
