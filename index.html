@@ -1,16 +1,17 @@
 <!doctype html>
 <html lang="ru">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="btca-cache-version" content="btca10-web-10.1.62" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-    <meta name="theme-color" content="#1a4854" />
-    <meta name="apple-mobile-web-app-capable" content="yes" />
-    <meta name="mobile-web-app-capable" content="yes" />
-    <meta name="apple-mobile-web-app-title" content="BTCA-iOS 10.1" />
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-    <link rel="manifest" href="/btca-10-1/manifest.webmanifest" />
-    <link rel="apple-touch-icon" href="https://alintual.github.io/btca-10-1/apple-touch-icon.png" />
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="btca-cache-version" content="btca10-web-10.1.63" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="theme-color" content="#1a4854" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-title" content="BTCA-iOS 10.1" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <link rel="manifest" href="/btca-10-1/manifest.webmanifest" />
+  <link rel="apple-touch-icon" href="https://alintual.github.io/btca-10-1/apple-touch-icon.png" />
     <link rel="apple-touch-icon" sizes="180x180" href="https://alintual.github.io/btca-10-1/apple-touch-icon-180x180.png" />
     <link rel="apple-touch-icon" sizes="167x167" href="https://alintual.github.io/btca-10-1/apple-touch-icon-167x167.png" />
     <link rel="apple-touch-icon" sizes="152x152" href="https://alintual.github.io/btca-10-1/apple-touch-icon-152x152.png" />
@@ -21,124 +22,136 @@
     <link rel="shortcut icon" href="https://alintual.github.io/btca-10-1/favicon.ico" />
     <!-- btca-css -->
     <style>html,body{margin:0;background:#1a4854;color:#fff}</style>
-    <link rel="stylesheet" href="/btca-10-1/install-ios.css?v=btca10-web-10.1.62" />
+    <link rel="stylesheet" href="/btca-10-1/install-ios.css?v=btca10-web-10.1.63" />
     <!-- /btca-css -->
-    <title>BTCA 10.1 Web</title>
-    <script>
-      (function () {
-        var ua = navigator.userAgent || "";
-        var iPadDesktop = navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1;
-        if (/iPhone|iPad|iPod/.test(ua) || iPadDesktop) {
-          document.documentElement.classList.add("btca-early-apple");
-        }
-        var standalone = false;
-        try {
-          standalone = window.matchMedia("(display-mode: standalone)").matches;
-        } catch (_) {}
-        if (window.navigator.standalone) standalone = true;
-        if (standalone) {
-          document.documentElement.classList.add("btca-standalone-boot");
-        }
-        // Не прячем загрузочную: на iPad JS/SW могут не дойти до btca-shell-ready.
-        document.documentElement.classList.add("btca-shell-ready");
-      })();
-    </script>
-  </head>
-  <body>
-    <div id="root">
-      <main class="app">
-        <section class="home" aria-labelledby="app-title">
-          <div class="home__hero" aria-label="Бильярдный Тренировочный Комплекс Абриколь">
-            <div class="home__hero-block">
-              <div class="home__logo" role="img" aria-label="Логотип БТКА"><img class="home__logo-img" src="/btca-10-1/branding/logo3.png" alt="" decoding="async" /></div>
-              <div class="home__logo-pyramid" aria-hidden="true">
-                <span></span><span></span><span></span><span></span><span></span><span></span>
-              </div>
-              <div class="home__tagline-outer">
-                <div class="home__tagline-slot">
-                  <p class="home__phrase home__phrase--one home__phrase--one-default"> Бильярдный
-Тренировочный</p>
-                  <p class="home__phrase home__phrase--one home__phrase--one-tablet"><span class="home__phrase1-line1">  Бильярдный</span><span class="home__phrase1-line2"> Тренировочный</span></p>
-                  <div class="home__phrase home__phrase--two">
-                    <span class="home__phrase2-line1">Комплекс</span>
-                    <span class="home__phrase2-line2">            Абриколь</span>
-                  </div>
-                  <div class="home__phrase home__phrase--two home__phrase--two-tablet">
-                    <span class="home__phrase2-line1">Комплекс</span>
-                    <span class="home__phrase2-line2">              Абриколь</span>
-                  </div>
+  <title>BTCA 10.1 Web</title>
+  <script>
+    (function () {
+      var ua = navigator.userAgent || "";
+      var iPadDesktop = navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1;
+      if (/iPhone|iPad|iPod/.test(ua) || iPadDesktop) {
+        document.documentElement.classList.add("btca-early-apple");
+      }
+      var standalone = false;
+      try {
+        standalone = window.matchMedia("(display-mode: standalone)").matches;
+      } catch (_) { }
+      if (window.navigator.standalone) standalone = true;
+      if (standalone) {
+        document.documentElement.classList.add("btca-standalone-boot");
+      }
+      // Не прячем загрузочную: на iPad JS/SW могут не дойти до btca-shell-ready.
+      document.documentElement.classList.add("btca-shell-ready");
+    })();
+  </script>
+</head>
+
+<body>
+  <div id="root">
+    <main class="app">
+      <section class="home" aria-labelledby="app-title">
+        <div class="home__hero" aria-label="Бильярдный Тренировочный Комплекс Абриколь">
+          <div class="home__hero-block">
+            <div class="home__logo" role="img" aria-label="Логотип БТКА"><img class="home__logo-img"
+                src="/btca-10-1/branding/logo3.png" alt="" decoding="async" /></div>
+            <div class="home__logo-pyramid" aria-hidden="true">
+              <span></span><span></span><span></span><span></span><span></span><span></span>
+            </div>
+            <div class="home__tagline-outer">
+              <div class="home__tagline-slot">
+                <p class="home__phrase home__phrase--one home__phrase--one-default"> Бильярдный
+                  Тренировочный</p>
+                <p class="home__phrase home__phrase--one home__phrase--one-tablet"><span class="home__phrase1-line1">
+                    Бильярдный</span><span class="home__phrase1-line2"> Тренировочный</span></p>
+                <div class="home__phrase home__phrase--two">
+                  <span class="home__phrase2-line1">Комплекс</span>
+                  <span class="home__phrase2-line2"> Абриколь</span>
+                </div>
+                <div class="home__phrase home__phrase--two home__phrase--two-tablet">
+                  <span class="home__phrase2-line1">Комплекс</span>
+                  <span class="home__phrase2-line2"> Абриколь</span>
                 </div>
               </div>
             </div>
           </div>
+        </div>
 
-          <div class="home__intro">
-            <p class="eyebrow">Система тренировок БТКА 10.1</p>
-            <p class="eyebrow eyebrow--release">версия от 11.10.2026</p>
-            <p class="eyebrow eyebrow--levels">
-              <span>|&nbsp;&nbsp;Уровень 3 - Продвинутый&nbsp;&nbsp;|</span>
-            </p>
-            <h1 id="app-title">Вход в систему</h1>
-            <p>
-              Войдите или зарегистрируйтесь. После подтверждения кода станут доступны варианты загрузки.
-            </p>
-          </div>
+        <div class="home__intro">
+          <p class="eyebrow">Система тренировок БТКА 10.1</p>
+          <p class="eyebrow eyebrow--release">версия от 11.10.2026</p>
+          <p class="eyebrow eyebrow--levels">
+            <span>|&nbsp;&nbsp;Уровень 3 - Продвинутый&nbsp;&nbsp;|</span>
+          </p>
+          <h1 id="app-title">Вход в систему</h1>
+          <p>
+            Войдите или зарегистрируйтесь. После подтверждения кода станут доступны варианты загрузки.
+          </p>
+        </div>
 
-          <nav class="platform-menu" aria-label="Выбор платформы" hidden>
-            <button id="btca-static-ios" class="platform-button platform-button--ios" type="button">
-              <span class="platform-button__label">
-                <span class="platform-button__name">iOS</span>
-                <span class="platform-button__os-version">15+</span>
-              </span>
-              <small>Загрузить все данные для offline</small>
-            </button>
-            <a class="platform-button platform-button--android" href="#" aria-disabled="true">
-              <span class="platform-button__label">
-                <span class="platform-button__name">Android</span>
-                <span class="platform-button__os-version">7+</span>
-              </span>
-              <small>Скачать дистрибутив APK</small>
-            </a>
-            <a class="platform-button platform-button--windows" href="#" aria-disabled="true">
-              <span class="platform-button__label">
-                <span class="platform-button__name">Windows</span>
-                <span class="platform-button__os-version">10+</span>
-              </span>
-              <small>Скачать дистрибутив EXE</small>
-            </a>
-          </nav>
+        <nav class="platform-menu" aria-label="Выбор платформы" hidden>
+          <button id="btca-static-ios" class="platform-button platform-button--ios" type="button">
+            <span class="platform-button__label">
+              <span class="platform-button__name">iOS</span>
+              <span class="platform-button__os-version">15+</span>
+            </span>
+            <small>Загрузить все данные для offline</small>
+          </button>
+          <a class="platform-button platform-button--android" href="#" aria-disabled="true">
+            <span class="platform-button__label">
+              <span class="platform-button__name">Android</span>
+              <span class="platform-button__os-version">7+</span>
+            </span>
+            <small>Скачать дистрибутив APK</small>
+          </a>
+          <a class="platform-button platform-button--windows" href="#" aria-disabled="true">
+            <span class="platform-button__label">
+              <span class="platform-button__name">Windows</span>
+              <span class="platform-button__os-version">10+</span>
+            </span>
+            <small>Скачать дистрибутив EXE</small>
+          </a>
+        </nav>
 
-          <section id="btca-static-ios-panel" class="ios-panel" aria-label="Подготовка iOS/iPadOS" hidden>
-            <div class="ios-panel__header"><span>iOS/iPadOS</span></div>
-            <p class="hint">Стартовая страница загружена. Подготовка offline-пакета будет подключена следующим шагом.</p>
-          </section>
+        <section id="btca-static-ios-panel" class="ios-panel" aria-label="Подготовка iOS/iPadOS" hidden>
+          <div class="ios-panel__header"><span>iOS/iPadOS</span></div>
+          <p class="hint">Стартовая страница загружена. Подготовка offline-пакета будет подключена следующим шагом.</p>
         </section>
+      </section>
 
-        <footer class="footer">
-          <span>BTCA-Web v.10.1</span>
-          <span>© 2026 Alint&apos;s R.lab</span>
-        </footer>
-      </main>
-    </div>
-    <script>
-      (function () {
-        var button = document.getElementById("btca-static-ios");
-        var panel = document.getElementById("btca-static-ios-panel");
-        if (!button || !panel) return;
+      <footer class="footer">
+        <span class="footer__side footer__side--left">BTCA-Web v.10.1</span>
+        <div class="footer__support">
+          <button type="button" class="footer__support-btn" aria-label="Служба поддержки" aria-expanded="false" aria-controls="btca-support-bubble">
+            <span class="footer__support-icon" aria-hidden="true"></span>
+          </button>
+          <div id="btca-support-bubble" class="footer__support-bubble" hidden role="dialog" aria-label="Служба поддержки">
+            <p class="footer__support-text">Служба поддержки: interual@gmail.com</p>
+          </div>
+        </div>
+        <span class="footer__side footer__side--right">© 2026 Alint&apos;s R.lab</span>
+      </footer>
+    </main>
+  </div>
+  <script>
+    (function () {
+      var button = document.getElementById("btca-static-ios");
+      var panel = document.getElementById("btca-static-ios-panel");
+      if (!button || !panel) return;
 
-        button.addEventListener("click", function () {
-          window.setTimeout(function () {
-            if (window.__BTCA_IOS_INSTALLER_READY__) return;
-            panel.className = "ios-panel ios-panel--open";
-            panel.innerHTML =
-              '<div class="ios-panel__header"><span>iOS/iPadOS</span></div>' +
-              '<p class="prepare-status prepare-status--error">Скрипт подготовки offline не загрузился. Обновите хостинг из свежей папки dist и перезагрузите страницу в Safari.</p>';
-          }, 600);
-        });
-      })();
-    </script>
-    <!-- btca-install -->
-    <script src="/btca-10-1/install-ios.js?v=btca10-web-10.1.62" defer></script>
+      button.addEventListener("click", function () {
+        window.setTimeout(function () {
+          if (window.__BTCA_IOS_INSTALLER_READY__) return;
+          panel.className = "ios-panel ios-panel--open";
+          panel.innerHTML =
+            '<div class="ios-panel__header"><span>iOS/iPadOS</span></div>' +
+            '<p class="prepare-status prepare-status--error">Скрипт подготовки offline не загрузился. Обновите хостинг из свежей папки dist и перезагрузите страницу в Safari.</p>';
+        }, 600);
+      });
+    })();
+  </script>
+  <!-- btca-install -->
+    <script src="/btca-10-1/install-ios.js?v=btca10-web-10.1.63" defer></script>
     <!-- /btca-install -->
-  </body>
+</body>
+
 </html>
