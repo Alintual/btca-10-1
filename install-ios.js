@@ -2,8 +2,8 @@
   "use strict";
 
   var BTCA_BASE = "/btca-10-1/";
-  var INSTALL_CACHE = "btca10-web-10.1.36:static-install";
-  var MEDIA_CACHE = "btca10-web-10.1.36:static-media";
+  var INSTALL_CACHE = "btca10-web-10.1.37:static-install";
+  var MEDIA_CACHE = "btca10-web-10.1.37:static-media";
   var MEDIA_PROBE_RE = /offline-unpacked\/level3\/exercises\/[^/]+\.(jpe?g|png|webp|gif)$/i;
   var MEDIA_STATE_KEY = "btca10-web:static-media-state";
   var APP_READY_KEY = "btca10-web:app-ready";
@@ -326,7 +326,7 @@
 
   function probePackageAccess() {
     return fetch(assetPath("offline/media/manifest.json"), {
-      credentials: "include",
+      credentials: isGitHubPagesHost() ? "omit" : "include",
       cache: "no-store",
     })
       .then(function (response) {
@@ -2083,12 +2083,8 @@
     }
   }
 
-  // Same-origin на ProHoster; fallback если страница ещё с GitHub Pages.
-  // OTP/админка на ProHoster; загрузочная и PWA — на GitHub Pages.
-  var LICENSE_API_BASE =
-    window.location.hostname.indexOf("sslip.io") >= 0 || window.location.hostname.indexOf("185.212.129.18") >= 0
-      ? ""
-      : "https://185-212-129-18.sslip.io";
+  // GitHub Pages — публичный пакет; OTP/License API на ProHoster больше не используем.
+  var LICENSE_API_BASE = "";
   var LICENSE_PHONE_KEY = "btca101.phone";
   var LICENSE_NAME_KEY = "btca101.name";
   var LICENSE_DEVICE_KEY = "btca101.deviceId";
@@ -2096,7 +2092,16 @@
   var LICENSE_LAUNCH_KEY = "btca101.launchUnlocked";
   var LICENSE_DOWNLOAD_LINKS_KEY = "btca101.downloadLinks";
 
+  function isGitHubPagesHost() {
+    try {
+      return window.location.hostname.indexOf("github.io") >= 0;
+    } catch (e) {
+      return false;
+    }
+  }
+
   function isLaunchUnlocked() {
+    if (isGitHubPagesHost()) return true;
     try {
       if (sessionStorage.getItem(LICENSE_LAUNCH_KEY) === "1") return true;
     } catch (e) {}
@@ -2578,7 +2583,9 @@
 
   function gateLoadingHome() {
     if (isAppShellMode()) return;
-    if (isPersistedLaunchUnlocked()) {
+    // На GitHub Pages пакет публичный — сразу меню платформ, без OTP/ProHoster.
+    if (isGitHubPagesHost() || isPersistedLaunchUnlocked()) {
+      markLaunchUnlocked();
       showPlatformMenuUnlocked();
       return;
     }
@@ -3112,7 +3119,8 @@
       syncPortraitMode();
       return;
     }
-    if (isPersistedLaunchUnlocked()) {
+    if (isGitHubPagesHost() || isPersistedLaunchUnlocked()) {
+      markLaunchUnlocked();
       showPlatformMenuUnlocked();
       syncPortraitModeImmediate();
       return;
