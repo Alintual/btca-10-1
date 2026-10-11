@@ -2,8 +2,8 @@
   "use strict";
 
   var BTCA_BASE = "/btca-10-1/";
-  var INSTALL_CACHE = "btca10-web-10.1.65:static-install";
-  var MEDIA_CACHE = "btca10-web-10.1.65:static-media";
+  var INSTALL_CACHE = "btca10-web-10.1.66:static-install";
+  var MEDIA_CACHE = "btca10-web-10.1.66:static-media";
   var MEDIA_PROBE_RE = /offline-unpacked\/level3\/exercises\/[^/]+\.(jpe?g|png|webp|gif)$/i;
   var MEDIA_STATE_KEY = "btca10-web:static-media-state";
   var APP_READY_KEY = "btca10-web:app-ready";
@@ -25,8 +25,8 @@
   var ABOUT_MAIN_TEXT = "Настоящее Приложение разработано для локальной установки (развёртывания) на смартфоне или планшете с операционными системами Android или iOS и рассчитано для обучения и тренировки учеников с уровнем подготовки «Уровень 3 — Продвинутый».";
   var ABOUT_POST_TEXT = "*****\nБТКА, это — учебно-тренировочный программный комплекс, предназначенный для комплексного обучения игре на русском бильярде, выработки и закрепления практических навыков ведения бильярдной игры в Пирамиду, как самостоятельно, так и с тренером, с применением современных методик и технологий.\nТренировочный комплекс БТКА в сочетании с уникальной Методологией обучения составляют общую Систему тренировок БТКА школы русского бильярда «Абриколь» г. Красноярск.\n<a href=\"https://cloud.mail.ru/public/sujN/mpE8mr6aW\">Методика обучения</a>\n\nВ текущей версии Приложения БТКА 10.1 доступен раздел:\n•  *Уровень 3 — Продвинутый* Упражнений – 40, Задач – 263, Полезностей – 15.\n\nВсе Приложения функционируют без использования сети Интернет.\nКаждое Приложение:\n•  Содержит специфический (соответствующий уровню подготовки) набор упражнений, задач и тестов (в графическом виде), ранжированных по принципу - \"от простого к сложному\", и сгруппированных в тематические разделы по видам тренировок;\n•  Включает необходимые инструкции, методическую и справочную информацию;\n•  Обеспечивает возможность ввода, хранения и обработки результатов прогресса выполнения учеником практических заданий для последующего статистического анализа с использованием локальной Базы данных (БД);\n•  Имеет весь необходимый функционал и автоматизацию, а также интуитивно-понятный интерфейс, что способствует осуществлению полноценного, эффективного тренировочного процесса в комфортных условиях.\n\nОТ АВТОРА. Система тренировок БТКА разработана по результатам систематизации методик обучения русскому бильярду на основе: секретов ведущих тренеров и игроков (в т.ч. В. Симонича, В. Лазарева, С. Баурова, Е. Сталева и др.), опыта «старой школы», а также современных научных и экспериментальных исследований и IT-технологий.\n<a href=\"https://cloud.mail.ru/public/Ye3r/ZYwpjB9uz\">Подробное описание комплекса БТКА</a>\n\nCopyright © Юрий Алинт (Андрей Юрьев) 2026";
   var installedHomeSnapshot = "";
-  var LEVEL1_MODULE_VERSION = "10.1.35";
-  var LEVEL3_MODULE_VERSION = "10.1.35";
+  var LEVEL1_MODULE_VERSION = "10.1.36";
+  var LEVEL3_MODULE_VERSION = "10.1.36";
 
   var CORE_REL_PATHS = [
     "",
@@ -45,6 +45,7 @@
     "branding/gal.png",
     "branding/del.png",
     "branding/support.png",
+    "branding/generate.png",
     "branding/splash.gif",
     "offline/app-shell.json",
     "offline/media/manifest.json",
@@ -2154,25 +2155,34 @@
     return out;
   }
 
-  function passwordFieldHtml(name, label, required) {
+  function passwordFieldHtml(name, label, required, withGenerator) {
+    var auto =
+      name === "new_password" || name === "password" ? "new-password" : "current-password";
+    var genHtml = withGenerator
+      ? '<button type="button" class="auth-gate__pw-gen" data-pw-gen="' +
+        name +
+        '" title="Сгенерировать пароль" aria-label="Сгенерировать пароль">' +
+        '<img class="auth-gate__pw-gen-img" src="' +
+        assetPath("branding/generate.png") +
+        '" alt="" width="40" height="20" decoding="async" />' +
+        "</button>"
+      : "";
     return (
       '<label class="auth-gate__field"><span>' +
       escapeHtml(label) +
       "</span>" +
-      '<div class="auth-gate__password-row">' +
+      '<div class="auth-gate__password-row' +
+      (withGenerator ? " auth-gate__password-row--gen" : "") +
+      '">' +
       '<input name="' +
       name +
       '" type="text" autocomplete="' +
-      (name === "password" ? "new-password" : "current-password") +
+      auto +
       '" ' +
       (required ? "required " : "") +
       'minlength="6" maxlength="128" placeholder=""/>' +
-      '<button type="button" class="auth-gate__pw-gen" data-pw-gen="' +
-      name +
-      '" title="Сгенерировать пароль" aria-label="Сгенерировать пароль">' +
-      '<svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true">' +
-      '<path fill="currentColor" d="M12 2a4 4 0 0 1 4 4v1h1.5A2.5 2.5 0 0 1 20 9.5V11h-2v-.5a.5.5 0 0 0-.5-.5H16v2h1.2l1.9 3.3a1 1 0 0 1-.3 1.3l-1.4.9-1.1-1.9H14v2h-2v-2h-1.3l-1.1 1.9-1.4-.9a1 1 0 0 1-.3-1.3L9.8 12H11V9.5h-1.5a.5.5 0 0 0-.5.5V11H7V9.5A2.5 2.5 0 0 1 9.5 7H11V6a4 4 0 0 1 4-4zm0 2a2 2 0 0 0-2 2v1h4V6a2 2 0 0 0-2-2z"/>' +
-      "</svg></button></div></label>"
+      genHtml +
+      "</div></label>"
     );
   }
 
@@ -2622,7 +2632,7 @@
       '<form class="account-modal__form" novalidate>' +
       '<label class="account-modal__field"><span>Логин</span><input name="login" readonly tabindex="-1"/></label>' +
       '<label class="account-modal__field"><span>Активный пароль</span><input name="current_password" type="text" autocomplete="current-password" minlength="6" maxlength="128" placeholder="Введите текущий для смены"/></label>' +
-      passwordFieldHtml("new_password", "Новый пароль", false).replace(/auth-gate__/g, "account-modal__") +
+      passwordFieldHtml("new_password", "Новый пароль", false, true).replace(/auth-gate__/g, "account-modal__") +
       '<label class="account-modal__field"><span>E-mail</span><input name="email" type="email" autocomplete="email" maxlength="255"/></label>' +
       emailOtpCheckboxHtml(false).replace("auth-gate__check", "account-modal__check") +
       '<label class="account-modal__field"><span>Подписка</span><input name="subscription" readonly tabindex="-1"/></label>' +
@@ -2923,7 +2933,7 @@
           '<label class="auth-gate__field"><span>Логин*</span><input name="login" autocomplete="username" required minlength="3" maxlength="64" value="' +
           escapeHtml(savedLogin) +
           '"/></label>' +
-          passwordFieldHtml("password", "Пароль*", true) +
+          passwordFieldHtml("password", "Пароль*", true, true) +
           '<label class="auth-gate__field"><span>E-mail</span><input name="email" type="email" autocomplete="email" maxlength="255" value=""/></label>' +
           emailOtpCheckboxHtml(false);
       } else if (mode === "login") {
@@ -2931,7 +2941,7 @@
           '<label class="auth-gate__field"><span>Логин</span><input name="login" autocomplete="username" required minlength="3" maxlength="64" value="' +
           escapeHtml(savedLogin) +
           '"/></label>' +
-          (preferOtp ? "" : passwordFieldHtml("password", "Пароль", true));
+          (preferOtp ? "" : passwordFieldHtml("password", "Пароль", true, false));
       } else {
         bodyHtml =
           '<label class="auth-gate__field"><span>Код (6 цифр)</span><input name="otp" type="text" inputmode="numeric" autocomplete="one-time-code" maxlength="6" pattern="[0-9]{6}" required value="' +

@@ -652,6 +652,58 @@ code {
   font-size: 1.05rem;
 }
 
+.auth-gate__password-row {
+  position: relative;
+  width: 100%;
+}
+
+.auth-gate__password-row--gen input {
+  padding-right: 56px;
+}
+
+.auth-gate__pw-gen {
+  position: absolute;
+  top: 50%;
+  right: 10px;
+  transform: translateY(-50%);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 28px;
+  padding: 0;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.auth-gate__pw-gen-img {
+  display: block;
+  width: 40px;
+  height: 20px;
+  object-fit: contain;
+  pointer-events: none;
+}
+
+.auth-gate__check {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  color: #dcecef;
+  font-size: 0.95rem;
+  line-height: 1.35;
+  text-align: left;
+}
+
+.auth-gate__check input {
+  width: 18px;
+  height: 18px;
+  margin-top: 2px;
+  flex: 0 0 auto;
+}
+
 .auth-gate__submit {
   margin-top: 4px;
 }
@@ -826,6 +878,60 @@ body.btca-installed-mode #btca-static-ios-panel.btca-home-splash-panel {
 .account-modal__field input[readonly] {
   opacity: 0.85;
   border-style: dashed;
+}
+
+.account-modal__password-row {
+  position: relative;
+  width: 100%;
+}
+
+.account-modal__password-row--gen input {
+  width: 100%;
+  box-sizing: border-box;
+  padding-right: 56px;
+}
+
+.account-modal__pw-gen {
+  position: absolute;
+  top: 50%;
+  right: 10px;
+  transform: translateY(-50%);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 28px;
+  padding: 0;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.account-modal__pw-gen-img {
+  display: block;
+  width: 40px;
+  height: 20px;
+  object-fit: contain;
+  pointer-events: none;
+}
+
+.account-modal__check {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  color: #dcecef;
+  font-size: 0.92rem;
+  line-height: 1.35;
+  text-align: left;
+}
+
+.account-modal__check input {
+  width: 18px;
+  height: 18px;
+  margin-top: 2px;
+  flex: 0 0 auto;
 }
 
 .account-modal__error {
