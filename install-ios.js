@@ -2,8 +2,8 @@
   "use strict";
 
   var BTCA_BASE = "/btca-10-1/";
-  var INSTALL_CACHE = "btca10-web-10.1.50:static-install";
-  var MEDIA_CACHE = "btca10-web-10.1.50:static-media";
+  var INSTALL_CACHE = "btca10-web-10.1.51:static-install";
+  var MEDIA_CACHE = "btca10-web-10.1.51:static-media";
   var MEDIA_PROBE_RE = /offline-unpacked\/level3\/exercises\/[^/]+\.(jpe?g|png|webp|gif)$/i;
   var MEDIA_STATE_KEY = "btca10-web:static-media-state";
   var APP_READY_KEY = "btca10-web:app-ready";
@@ -25,8 +25,8 @@
   var ABOUT_MAIN_TEXT = "Настоящее Приложение разработано для локальной установки (развёртывания) на смартфоне или планшете с операционными системами Android или iOS и рассчитано для обучения и тренировки учеников с уровнем подготовки «Уровень 3 — Продвинутый».";
   var ABOUT_POST_TEXT = "*****\nБТКА, это — учебно-тренировочный программный комплекс, предназначенный для комплексного обучения игре на русском бильярде, выработки и закрепления практических навыков ведения бильярдной игры в Пирамиду, как самостоятельно, так и с тренером, с применением современных методик и технологий.\nТренировочный комплекс БТКА в сочетании с уникальной Методологией обучения составляют общую Систему тренировок БТКА школы русского бильярда «Абриколь» г. Красноярск.\n<a href=\"https://cloud.mail.ru/public/sujN/mpE8mr6aW\">Методика обучения</a>\n\nВ текущей версии Приложения БТКА 10.1 доступен раздел:\n•  *Уровень 3 — Продвинутый* Упражнений – 40, Задач – 263, Полезностей – 15.\n\nВсе Приложения функционируют без использования сети Интернет.\nКаждое Приложение:\n•  Содержит специфический (соответствующий уровню подготовки) набор упражнений, задач и тестов (в графическом виде), ранжированных по принципу - \"от простого к сложному\", и сгруппированных в тематические разделы по видам тренировок;\n•  Включает необходимые инструкции, методическую и справочную информацию;\n•  Обеспечивает возможность ввода, хранения и обработки результатов прогресса выполнения учеником практических заданий для последующего статистического анализа с использованием локальной Базы данных (БД);\n•  Имеет весь необходимый функционал и автоматизацию, а также интуитивно-понятный интерфейс, что способствует осуществлению полноценного, эффективного тренировочного процесса в комфортных условиях.\n\nОТ АВТОРА. Система тренировок БТКА разработана по результатам систематизации методик обучения русскому бильярду на основе: секретов ведущих тренеров и игроков (в т.ч. В. Симонича, В. Лазарева, С. Баурова, Е. Сталева и др.), опыта «старой школы», а также современных научных и экспериментальных исследований и IT-технологий.\n<a href=\"https://cloud.mail.ru/public/Ye3r/ZYwpjB9uz\">Подробное описание комплекса БТКА</a>\n\nCopyright © Юрий Алинт (Андрей Юрьев) 2026";
   var installedHomeSnapshot = "";
-  var LEVEL1_MODULE_VERSION = "10.1.20";
-  var LEVEL3_MODULE_VERSION = "10.1.20";
+  var LEVEL1_MODULE_VERSION = "10.1.21";
+  var LEVEL3_MODULE_VERSION = "10.1.21";
 
   var CORE_REL_PATHS = [
     "",
@@ -3145,7 +3145,7 @@
         '<button class="btca-work-menu__account-link" type="button" data-btca-route="account-update">Аккаунт | Обновление</button>';
     }
     if (footer) {
-      footer.innerHTML = "<span>BTCA 10.1 © 2026 Alint&apos;s R.lab</span>";
+      footer.innerHTML = "<span>BTCA-mobile v.10.1 © 2026 Alint&apos;s R.lab</span>";
     }
     ensurePhraseOneTabletMarkup();
     ensurePhraseTwoTabletMarkup();
@@ -3153,6 +3153,53 @@
     installedHomeSnapshot = "";
     syncPortraitMode();
     markStandaloneShellReady();
+    ensureUpdateAvailableHint();
+  }
+
+  function parseDateRuValue(value) {
+    var m = String(value || "").match(/(\d{2})\.(\d{2})\.(\d{4})/);
+    if (!m) return 0;
+    return Number(m[3]) * 10000 + Number(m[2]) * 100 + Number(m[1]);
+  }
+
+  function readLocalPackageReleaseDate() {
+    var el = document.querySelector(".eyebrow--release");
+    var text = el ? String(el.textContent || "") : "";
+    var m = text.match(/(\d{2}\.\d{2}\.\d{4})/);
+    return m ? m[1] : "";
+  }
+
+  function ensureUpdateAvailableHint() {
+    if (!isStandalone() || !isLaunchUnlocked()) return;
+    var menu = document.querySelector(".btca-work-menu");
+    if (!menu) return;
+    var localDate = readLocalPackageReleaseDate();
+    if (!localDate) return;
+
+    function showHint(remoteDate) {
+      var existing = document.getElementById("btca-update-available");
+      if (parseDateRuValue(remoteDate) <= parseDateRuValue(localDate)) {
+        if (existing) existing.remove();
+        return;
+      }
+      if (!existing) {
+        existing = document.createElement("p");
+        existing.id = "btca-update-available";
+        existing.className = "btca-work-menu__update-hint";
+        var link = menu.querySelector(".btca-work-menu__account-link");
+        if (link) link.insertAdjacentElement("afterend", existing);
+        else menu.appendChild(existing);
+      }
+      existing.textContent = "Есть обновление от " + remoteDate;
+    }
+
+    fetchRemoteAppShellPayload()
+      .then(function (payload) {
+        if (!payload) return;
+        var remoteDate = String(payload.packageReleaseDate || "").trim();
+        if (remoteDate) showHint(remoteDate);
+      })
+      .catch(function () {});
   }
 
   function renderError(error) {
