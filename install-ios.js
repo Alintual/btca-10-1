@@ -2,8 +2,8 @@
   "use strict";
 
   var BTCA_BASE = "/btca-10-1/";
-  var INSTALL_CACHE = "btca10-web-10.1.47:static-install";
-  var MEDIA_CACHE = "btca10-web-10.1.47:static-media";
+  var INSTALL_CACHE = "btca10-web-10.1.48:static-install";
+  var MEDIA_CACHE = "btca10-web-10.1.48:static-media";
   var MEDIA_PROBE_RE = /offline-unpacked\/level3\/exercises\/[^/]+\.(jpe?g|png|webp|gif)$/i;
   var MEDIA_STATE_KEY = "btca10-web:static-media-state";
   var APP_READY_KEY = "btca10-web:app-ready";
@@ -2594,7 +2594,7 @@
           .catch(function (error) {
             if (err) {
               err.removeAttribute("hidden");
-              err.textContent = (error && error.message) || "Не удалось сохранить";
+              err.textContent = localizeUserFacingError(error, "Не удалось сохранить");
             }
           });
         return false;
@@ -2642,7 +2642,7 @@
       .catch(function (error) {
         if (err) {
           err.removeAttribute("hidden");
-          err.textContent = (error && error.message) || "Не удалось загрузить аккаунт";
+          err.textContent = localizeUserFacingError(error, "Не удалось загрузить аккаунт");
         }
         modal.removeAttribute("hidden");
       });
@@ -2988,7 +2988,7 @@
           paintSafe();
         })
         .catch(function (err) {
-          var message = (err && err.message) || "Ошибка запроса";
+          var message = localizeUserFacingError(err, "Ошибка запроса");
           if (requestMode !== "otp" && isSubscriptionInactiveError(message)) {
             markInactive();
             return;
