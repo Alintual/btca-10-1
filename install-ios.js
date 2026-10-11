@@ -2,8 +2,8 @@
   "use strict";
 
   var BTCA_BASE = "/btca-10-1/";
-  var INSTALL_CACHE = "btca10-web-10.1.46:static-install";
-  var MEDIA_CACHE = "btca10-web-10.1.46:static-media";
+  var INSTALL_CACHE = "btca10-web-10.1.47:static-install";
+  var MEDIA_CACHE = "btca10-web-10.1.47:static-media";
   var MEDIA_PROBE_RE = /offline-unpacked\/level3\/exercises\/[^/]+\.(jpe?g|png|webp|gif)$/i;
   var MEDIA_STATE_KEY = "btca10-web:static-media-state";
   var APP_READY_KEY = "btca10-web:app-ready";
@@ -25,8 +25,8 @@
   var ABOUT_MAIN_TEXT = "Настоящее Приложение разработано для локальной установки (развёртывания) на смартфоне или планшете с операционными системами Android или iOS и рассчитано для обучения и тренировки учеников с уровнем подготовки «Уровень 3 — Продвинутый».";
   var ABOUT_POST_TEXT = "*****\nБТКА, это — учебно-тренировочный программный комплекс, предназначенный для комплексного обучения игре на русском бильярде, выработки и закрепления практических навыков ведения бильярдной игры в Пирамиду, как самостоятельно, так и с тренером, с применением современных методик и технологий.\nТренировочный комплекс БТКА в сочетании с уникальной Методологией обучения составляют общую Систему тренировок БТКА школы русского бильярда «Абриколь» г. Красноярск.\n<a href=\"https://cloud.mail.ru/public/sujN/mpE8mr6aW\">Методика обучения</a>\n\nВ текущей версии Приложения БТКА 10.1 доступен раздел:\n•  *Уровень 3 — Продвинутый* Упражнений – 40, Задач – 263, Полезностей – 15.\n\nВсе Приложения функционируют без использования сети Интернет.\nКаждое Приложение:\n•  Содержит специфический (соответствующий уровню подготовки) набор упражнений, задач и тестов (в графическом виде), ранжированных по принципу - \"от простого к сложному\", и сгруппированных в тематические разделы по видам тренировок;\n•  Включает необходимые инструкции, методическую и справочную информацию;\n•  Обеспечивает возможность ввода, хранения и обработки результатов прогресса выполнения учеником практических заданий для последующего статистического анализа с использованием локальной Базы данных (БД);\n•  Имеет весь необходимый функционал и автоматизацию, а также интуитивно-понятный интерфейс, что способствует осуществлению полноценного, эффективного тренировочного процесса в комфортных условиях.\n\nОТ АВТОРА. Система тренировок БТКА разработана по результатам систематизации методик обучения русскому бильярду на основе: секретов ведущих тренеров и игроков (в т.ч. В. Симонича, В. Лазарева, С. Баурова, Е. Сталева и др.), опыта «старой школы», а также современных научных и экспериментальных исследований и IT-технологий.\n<a href=\"https://cloud.mail.ru/public/Ye3r/ZYwpjB9uz\">Подробное описание комплекса БТКА</a>\n\nCopyright © Юрий Алинт (Андрей Юрьев) 2026";
   var installedHomeSnapshot = "";
-  var LEVEL1_MODULE_VERSION = "10.1.17";
-  var LEVEL3_MODULE_VERSION = "10.1.17";
+  var LEVEL1_MODULE_VERSION = "10.1.18";
+  var LEVEL3_MODULE_VERSION = "10.1.18";
 
   var CORE_REL_PATHS = [
     "",
@@ -392,7 +392,7 @@
     if (ios) {
       ios.disabled = true;
       var small = ios.querySelector("small");
-      if (small) small.textContent = "Проверка лимита скачивания...";
+      if (small) small.textContent = "Подготовка скачивания...";
     }
     clearDownloadLimitWarning();
     var links = readStoredDownloadLinks();
@@ -422,7 +422,9 @@
       .catch(function (error) {
         if (ios) ios.disabled = false;
         ensureIosPrepareButton(ios);
-        showDownloadLimitWarning((error && error.message) || "Превышен лимит скачиваний");
+        showDownloadLimitWarning(
+          localizeUserFacingError(error, "Не удалось начать скачивание. Повторите попытку.")
+        );
       });
   }
 
@@ -2276,7 +2278,19 @@
         if (err && err.name === "AbortError") {
           throw new Error("Сервер не ответил. Проверьте сеть и нажмите ещё раз.");
         }
-        throw err;
+        var raw = err && err.message ? String(err.message) : String(err || "");
+        // Safari/WebKit часто отдаёт английский «Load failed» / «Failed to fetch».
+        if (
+          /load failed/i.test(raw) ||
+          /failed to fetch/i.test(raw) ||
+          /networkerror/i.test(raw) ||
+          /network request failed/i.test(raw) ||
+          /the internet connection appears to be offline/i.test(raw)
+        ) {
+          throw new Error("Не удалось связаться с сервером. Проверьте сеть и повторите.");
+        }
+        if (err instanceof Error) throw err;
+        throw new Error(raw || "Ошибка запроса");
       })
       .then(
         function (data) {
@@ -2288,6 +2302,25 @@
           throw err;
         }
       );
+  }
+
+  function localizeUserFacingError(error, fallback) {
+    var raw = error && error.message ? String(error.message) : String(error || "");
+    if (!raw) return fallback || "Ошибка запроса";
+    if (/load failed/i.test(raw) || /failed to fetch/i.test(raw) || /networkerror/i.test(raw)) {
+      return "Не удалось связаться с сервером. Проверьте сеть и повторите.";
+    }
+    if (/internal server error/i.test(raw) || /error 500/i.test(raw) || raw === "Ошибка 500") {
+      return "Ошибка сервера. Повторите попытку через минуту.";
+    }
+    if (/unique constraint/i.test(raw) || /integrityerror/i.test(raw)) {
+      return "Повторное скачивание разрешено. Обновите страницу и нажмите ещё раз.";
+    }
+    // Не показываем сырой английский текст браузера.
+    if (/^[A-Za-z][A-Za-z0-9 _.,:;'"()%/+-]{0,120}$/.test(raw) && !/[А-Яа-яЁё]/.test(raw)) {
+      return fallback || "Ошибка запроса. Повторите попытку.";
+    }
+    return raw;
   }
 
   function ensureAuthGateMount() {
@@ -2674,7 +2707,9 @@
           })
           .catch(function (error) {
             btn.disabled = false;
-            showDownloadLimitWarning((error && error.message) || "Не удалось начать скачивание");
+            showDownloadLimitWarning(
+              localizeUserFacingError(error, "Не удалось начать скачивание. Повторите попытку.")
+            );
           });
       };
     }
