@@ -4008,12 +4008,85 @@ body.btca-level3-mode .btca-date-picker-day--selected {
 
 .footer {
   display: flex;
-  flex-wrap: wrap;
-  gap: 8px 14px;
-  justify-content: space-between;
+  flex-direction: column;
+  align-items: stretch;
+  width: 100%;
+  box-sizing: border-box;
+  gap: 6px;
   padding-top: 16px;
   color: #a9d7df;
   font-size: 0.88rem;
+}
+
+.footer__row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  align-items: center;
+  width: 100%;
+  box-sizing: border-box;
+  gap: 8px;
+}
+
+.footer__side--left {
+  justify-self: start;
+  text-align: left;
+  white-space: nowrap;
+}
+
+.footer__side--right {
+  justify-self: end;
+  text-align: right;
+  white-space: nowrap;
+}
+
+.footer__support-btn {
+  justify-self: center;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.footer__support-btn:focus-visible {
+  outline: 2px solid #0ab10a;
+  outline-offset: 2px;
+}
+
+.footer__support-img {
+  display: block;
+  width: 28px;
+  height: 28px;
+  object-fit: contain;
+  pointer-events: none;
+}
+
+.footer__support-line {
+  margin: 0;
+  padding: 0 4px;
+  width: 100%;
+  text-align: center;
+  color: #ffe08a;
+  font-size: 0.9rem;
+  line-height: 1.35;
+  user-select: text;
+  -webkit-user-select: text;
+  cursor: text;
+}
+
+.footer__support-line[hidden] {
+  display: none !important;
+}
+
+.footer:has(.footer__support-btn:hover) .footer__support-line,
+.footer.is-support-open .footer__support-line {
+  display: block !important;
 }
 
 .btca-installed-mode .footer {
@@ -4021,9 +4094,19 @@ body.btca-level3-mode .btca-date-picker-day--selected {
   right: 0;
   bottom: max(6px, env(safe-area-inset-bottom));
   left: 0;
-  justify-content: center;
   padding: 0 max(8px, env(safe-area-inset-right)) 0 max(8px, env(safe-area-inset-left));
   text-align: center;
+}
+
+.btca-installed-mode .footer__support-btn,
+.btca-installed-mode .footer__support-line,
+.btca-installed-mode .footer__side--right {
+  display: none !important;
+}
+
+.btca-installed-mode .footer__row {
+  grid-template-columns: 1fr;
+  justify-items: center;
 }
 
 body.btca-desktop-browser {
