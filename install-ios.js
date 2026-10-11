@@ -2,8 +2,8 @@
   "use strict";
 
   var BTCA_BASE = "/btca-10-1/";
-  var INSTALL_CACHE = "btca10-web-10.1.55:static-install";
-  var MEDIA_CACHE = "btca10-web-10.1.55:static-media";
+  var INSTALL_CACHE = "btca10-web-10.1.56:static-install";
+  var MEDIA_CACHE = "btca10-web-10.1.56:static-media";
   var MEDIA_PROBE_RE = /offline-unpacked\/level3\/exercises\/[^/]+\.(jpe?g|png|webp|gif)$/i;
   var MEDIA_STATE_KEY = "btca10-web:static-media-state";
   var APP_READY_KEY = "btca10-web:app-ready";
@@ -25,8 +25,8 @@
   var ABOUT_MAIN_TEXT = "Настоящее Приложение разработано для локальной установки (развёртывания) на смартфоне или планшете с операционными системами Android или iOS и рассчитано для обучения и тренировки учеников с уровнем подготовки «Уровень 3 — Продвинутый».";
   var ABOUT_POST_TEXT = "*****\nБТКА, это — учебно-тренировочный программный комплекс, предназначенный для комплексного обучения игре на русском бильярде, выработки и закрепления практических навыков ведения бильярдной игры в Пирамиду, как самостоятельно, так и с тренером, с применением современных методик и технологий.\nТренировочный комплекс БТКА в сочетании с уникальной Методологией обучения составляют общую Систему тренировок БТКА школы русского бильярда «Абриколь» г. Красноярск.\n<a href=\"https://cloud.mail.ru/public/sujN/mpE8mr6aW\">Методика обучения</a>\n\nВ текущей версии Приложения БТКА 10.1 доступен раздел:\n•  *Уровень 3 — Продвинутый* Упражнений – 40, Задач – 263, Полезностей – 15.\n\nВсе Приложения функционируют без использования сети Интернет.\nКаждое Приложение:\n•  Содержит специфический (соответствующий уровню подготовки) набор упражнений, задач и тестов (в графическом виде), ранжированных по принципу - \"от простого к сложному\", и сгруппированных в тематические разделы по видам тренировок;\n•  Включает необходимые инструкции, методическую и справочную информацию;\n•  Обеспечивает возможность ввода, хранения и обработки результатов прогресса выполнения учеником практических заданий для последующего статистического анализа с использованием локальной Базы данных (БД);\n•  Имеет весь необходимый функционал и автоматизацию, а также интуитивно-понятный интерфейс, что способствует осуществлению полноценного, эффективного тренировочного процесса в комфортных условиях.\n\nОТ АВТОРА. Система тренировок БТКА разработана по результатам систематизации методик обучения русскому бильярду на основе: секретов ведущих тренеров и игроков (в т.ч. В. Симонича, В. Лазарева, С. Баурова, Е. Сталева и др.), опыта «старой школы», а также современных научных и экспериментальных исследований и IT-технологий.\n<a href=\"https://cloud.mail.ru/public/Ye3r/ZYwpjB9uz\">Подробное описание комплекса БТКА</a>\n\nCopyright © Юрий Алинт (Андрей Юрьев) 2026";
   var installedHomeSnapshot = "";
-  var LEVEL1_MODULE_VERSION = "10.1.25";
-  var LEVEL3_MODULE_VERSION = "10.1.25";
+  var LEVEL1_MODULE_VERSION = "10.1.26";
+  var LEVEL3_MODULE_VERSION = "10.1.26";
 
   var CORE_REL_PATHS = [
     "",
@@ -2123,8 +2123,8 @@
 
   // Загрузочная на GitHub Pages; OTP/подписка — License API на ProHoster.
   var LICENSE_API_BASE = "https://185-212-129-18.sslip.io";
-  var LICENSE_PHONE_KEY = "btca101.phone";
-  var LICENSE_NAME_KEY = "btca101.name";
+  var LICENSE_LOGIN_KEY = "btca101.login";
+  var LICENSE_AUTH_OTP_KEY = "btca101.authByEmailOtp";
   var LICENSE_DEVICE_KEY = "btca101.deviceId";
   var LICENSE_SESSION_KEY = "btca101.sessionToken";
   var LICENSE_LAUNCH_KEY = "btca101.launchUnlocked";
@@ -2138,13 +2138,68 @@
     }
   }
 
-  function isLaunchUnlocked() {
-    // Только sessionStorage: переживает уход в фон, сбрасывается после смахивания/закрытия.
-    // Не использовать localStorage / isAppPreparedSync — иначе OTP пропускается сам.
+  function generateClientPassword() {
+    var alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789";
+    var out = "";
     try {
-      return sessionStorage.getItem(LICENSE_LAUNCH_KEY) === "1";
+      var arr = new Uint32Array(12);
+      if (typeof crypto !== "undefined" && crypto.getRandomValues) {
+        crypto.getRandomValues(arr);
+        for (var i = 0; i < 12; i++) out += alphabet[arr[i] % alphabet.length];
+        return out;
+      }
+    } catch (e) {}
+    for (var j = 0; j < 12; j++) out += alphabet[Math.floor(Math.random() * alphabet.length)];
+    return out;
+  }
+
+  function passwordFieldHtml(name, label, required) {
+    return (
+      '<label class="auth-gate__field"><span>' +
+      escapeHtml(label) +
+      "</span>" +
+      '<div class="auth-gate__password-row">' +
+      '<input name="' +
+      name +
+      '" type="text" autocomplete="' +
+      (name === "password" ? "new-password" : "current-password") +
+      '" ' +
+      (required ? "required " : "") +
+      'minlength="6" maxlength="128" placeholder=""/>' +
+      '<button type="button" class="auth-gate__pw-gen" data-pw-gen="' +
+      name +
+      '" title="Сгенерировать пароль" aria-label="Сгенерировать пароль">' +
+      '<svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true">' +
+      '<path fill="currentColor" d="M12 2a4 4 0 0 1 4 4v1h1.5A2.5 2.5 0 0 1 20 9.5V11h-2v-.5a.5.5 0 0 0-.5-.5H16v2h1.2l1.9 3.3a1 1 0 0 1-.3 1.3l-1.4.9-1.1-1.9H14v2h-2v-2h-1.3l-1.1 1.9-1.4-.9a1 1 0 0 1-.3-1.3L9.8 12H11V9.5h-1.5a.5.5 0 0 0-.5.5V11H7V9.5A2.5 2.5 0 0 1 9.5 7H11V6a4 4 0 0 1 4-4zm0 2a2 2 0 0 0-2 2v1h4V6a2 2 0 0 0-2-2z"/>' +
+      "</svg></button></div></label>"
+    );
+  }
+
+  function emailOtpCheckboxHtml(checked) {
+    return (
+      '<label class="auth-gate__check">' +
+      '<input name="auth_by_email_otp" type="checkbox"' +
+      (checked ? " checked" : "") +
+      "/>" +
+      "<span>Авторизация по коду на e-mail</span></label>"
+    );
+  }
+
+  function isLaunchUnlocked() {
+    try {
+      if (sessionStorage.getItem(LICENSE_LAUNCH_KEY) === "1") return true;
+      var token = localStorage.getItem(LICENSE_SESSION_KEY);
+      return Boolean(token && token.length >= 16);
     } catch (e) {
       return false;
+    }
+  }
+
+  function readSessionToken() {
+    try {
+      return String(localStorage.getItem(LICENSE_SESSION_KEY) || "").trim();
+    } catch (e) {
+      return "";
     }
   }
 
@@ -2401,14 +2456,6 @@
   var PAID_UNTIL_KEY = "btca101.paidUntil";
   var downloadMenuExpireTimer = null;
 
-  function readSessionToken() {
-    try {
-      return String(localStorage.getItem(LICENSE_SESSION_KEY) || "").trim();
-    } catch (e) {
-      return "";
-    }
-  }
-
   function formatDateRu(value) {
     if (!value) return "";
     var raw = String(value).trim();
@@ -2527,7 +2574,7 @@
   function claimPlatformDownload(platform, label) {
     var token = readSessionToken();
     if (!token) {
-      return Promise.reject(new Error("Сессия не найдена. Войдите по коду ещё раз."));
+      return Promise.reject(new Error("Сессия не найдена. Войдите ещё раз."));
     }
     return licensePost("/v1/downloads/claim", {
       session_token: token,
@@ -2572,9 +2619,11 @@
       '<button type="button" class="account-modal__close" data-account-close aria-label="Закрыть">×</button>' +
       '<h2 id="btca-account-title" class="account-modal__title">Аккаунт</h2>' +
       '<form class="account-modal__form" novalidate>' +
-      '<label class="account-modal__field"><span>Имя</span><input name="name" autocomplete="name" required minlength="2" maxlength="120"/></label>' +
-      '<label class="account-modal__field"><span>Телефон</span><input name="phone" type="tel" autocomplete="tel" required minlength="10" maxlength="20"/></label>' +
+      '<label class="account-modal__field"><span>Логин</span><input name="login" readonly tabindex="-1"/></label>' +
+      '<label class="account-modal__field"><span>Активный пароль</span><input name="current_password" type="text" autocomplete="current-password" minlength="6" maxlength="128" placeholder="Введите текущий для смены"/></label>' +
+      passwordFieldHtml("new_password", "Новый пароль", false).replace(/auth-gate__/g, "account-modal__") +
       '<label class="account-modal__field"><span>E-mail</span><input name="email" type="email" autocomplete="email" maxlength="255"/></label>' +
+      emailOtpCheckboxHtml(false).replace("auth-gate__check", "account-modal__check") +
       '<label class="account-modal__field"><span>Подписка</span><input name="subscription" readonly tabindex="-1"/></label>' +
       '<p class="account-modal__error" data-account-error hidden></p>' +
       '<button class="platform-button account-modal__save" type="submit"><span>Сохранить</span></button>' +
@@ -2583,6 +2632,12 @@
     modal.addEventListener("click", function (event) {
       if (event.target === modal || (event.target && event.target.getAttribute("data-account-close") != null)) {
         modal.setAttribute("hidden", "hidden");
+      }
+      var gen = event.target && event.target.closest ? event.target.closest("[data-pw-gen]") : null;
+      if (gen) {
+        event.preventDefault();
+        var field = modal.querySelector('input[name="' + gen.getAttribute("data-pw-gen") + '"]');
+        if (field) field.value = generateClientPassword();
       }
     });
     var form = modal.querySelector("form");
@@ -2595,19 +2650,34 @@
           err.textContent = "";
         }
         var token = readSessionToken();
-        var nameInput = form.querySelector('input[name="name"]');
-        var phoneInput = form.querySelector('input[name="phone"]');
         var emailInput = form.querySelector('input[name="email"]');
-        licensePost("/v1/account/update", {
+        var otpInput = form.querySelector('input[name="auth_by_email_otp"]');
+        var currentPw = form.querySelector('input[name="current_password"]');
+        var newPw = form.querySelector('input[name="new_password"]');
+        var email = emailInput ? emailInput.value.trim() : "";
+        var wantOtp = Boolean(otpInput && otpInput.checked);
+        if (wantOtp && !email) {
+          if (err) {
+            err.removeAttribute("hidden");
+            err.textContent = "Для авторизации по коду укажите E-mail.";
+          }
+          return false;
+        }
+        var payload = {
           session_token: token,
-          name: nameInput ? nameInput.value.trim() : "",
-          phone: phoneInput ? phoneInput.value.trim() : "",
-          email: emailInput ? emailInput.value.trim() : "",
-        })
+          email: email,
+          auth_by_email_otp: wantOtp,
+        };
+        var newPassword = newPw ? String(newPw.value || "") : "";
+        if (newPassword) {
+          payload.current_password = currentPw ? String(currentPw.value || "") : "";
+          payload.new_password = newPassword;
+        }
+        licensePost("/v1/account/update", payload)
           .then(function (data) {
             try {
-              if (data.phone) localStorage.setItem(LICENSE_PHONE_KEY, data.phone);
-              if (data.name) localStorage.setItem(LICENSE_NAME_KEY, data.name);
+              if (data.login) localStorage.setItem(LICENSE_LOGIN_KEY, data.login);
+              localStorage.setItem(LICENSE_AUTH_OTP_KEY, data.auth_by_email_otp ? "1" : "0");
             } catch (e) {}
             if (data.subscription && data.subscription.paid_until) {
               storePaidUntil(data.subscription.paid_until);
@@ -2641,7 +2711,7 @@
     if (!token) {
       if (err) {
         err.removeAttribute("hidden");
-        err.textContent = "Сначала войдите по коду на загрузочной.";
+        err.textContent = "Сначала войдите на загрузочной.";
       }
       modal.removeAttribute("hidden");
       return;
@@ -2650,9 +2720,12 @@
       .then(function (data) {
         var form = modal.querySelector("form");
         if (!form) return;
-        form.name.value = data.name || "";
-        form.phone.value = data.phone || "";
+        form.login.value = data.login || "";
         form.email.value = data.email || "";
+        form.current_password.value = "";
+        if (form.new_password) form.new_password.value = "";
+        var otpBox = form.querySelector('input[name="auth_by_email_otp"]');
+        if (otpBox) otpBox.checked = Boolean(data.auth_by_email_otp);
         if (data.subscription && data.subscription.paid_until) {
           storePaidUntil(data.subscription.paid_until);
         }
@@ -2789,20 +2862,35 @@
       return;
     }
     gate.removeAttribute("hidden");
-    var savedPhone = "";
-    var savedName = "";
+    var savedLogin = "";
+    var preferOtp = false;
     try {
-      savedPhone = localStorage.getItem(LICENSE_PHONE_KEY) || "";
-      savedName = localStorage.getItem(LICENSE_NAME_KEY) || "";
+      savedLogin = localStorage.getItem(LICENSE_LOGIN_KEY) || "";
+      preferOtp = localStorage.getItem(LICENSE_AUTH_OTP_KEY) === "1";
     } catch (e) {}
-    // В установленном PWA регистрация недоступна: клиент уже получил доступ на скачивание.
-    var mode = loginOnly ? "login" : savedPhone ? "login" : "register";
+    var mode = loginOnly ? "login" : savedLogin ? "login" : "register";
     var debugCode = "";
     var subscriptionBlocked = false;
 
+    function finishWithSession(data) {
+      markLaunchUnlocked(data.session_token);
+      storePaidUntil(data && data.paid_until);
+      try {
+        sessionStorage.removeItem(DOWNLOAD_MENU_SHOWN_KEY);
+        sessionStorage.setItem(DOWNLOAD_MENU_SHOWN_KEY, String(Date.now()));
+      } catch (e) {}
+      var links = (data && data.download_links) || {};
+      try {
+        sessionStorage.setItem(LICENSE_DOWNLOAD_LINKS_KEY, JSON.stringify(links));
+      } catch (e) {}
+      return activatePwaDownloadCookie(links.pwa).then(function () {
+        gate.setAttribute("hidden", "hidden");
+        onUnlocked();
+      });
+    }
+
     function paint() {
       if (loginOnly && mode === "register") mode = "login";
-      // Safari iOS: смена innerHTML при открытой клавиатуре роняет вкладку.
       try {
         var active = document.activeElement;
         if (active && active.blur) active.blur();
@@ -2810,6 +2898,14 @@
       var title =
         mode === "register" ? "Регистрация" : mode === "otp" ? "Код подтверждения" : "Вход";
       var showSubmit = !(mode === "login" && subscriptionBlocked);
+      var submitLabel =
+        mode === "register"
+          ? "Зарегистрироваться"
+          : mode === "otp"
+            ? "Подтвердить код"
+            : preferOtp
+              ? "Получить код"
+              : "Войти";
       var tabsHtml = loginOnly
         ? ""
         : '<div class="auth-gate__tabs" role="tablist">' +
@@ -2820,41 +2916,43 @@
           (mode === "register" ? " auth-gate__tab--active" : "") +
           '" data-auth-mode="register">Регистрация</button>' +
           "</div>";
+      var bodyHtml = "";
+      if (mode === "register") {
+        bodyHtml =
+          '<label class="auth-gate__field"><span>Логин*</span><input name="login" autocomplete="username" required minlength="3" maxlength="64" value="' +
+          escapeHtml(savedLogin) +
+          '"/></label>' +
+          passwordFieldHtml("password", "Пароль*", true) +
+          '<label class="auth-gate__field"><span>E-mail</span><input name="email" type="email" autocomplete="email" maxlength="255" value=""/></label>' +
+          emailOtpCheckboxHtml(false);
+      } else if (mode === "login") {
+        bodyHtml =
+          '<label class="auth-gate__field"><span>Логин</span><input name="login" autocomplete="username" required minlength="3" maxlength="64" value="' +
+          escapeHtml(savedLogin) +
+          '"/></label>' +
+          (preferOtp ? "" : passwordFieldHtml("password", "Пароль", true));
+      } else {
+        bodyHtml =
+          '<label class="auth-gate__field"><span>Код (6 цифр)</span><input name="otp" type="text" inputmode="numeric" autocomplete="one-time-code" maxlength="6" pattern="[0-9]{6}" required value="' +
+          escapeHtml(debugCode) +
+          '"/></label>' +
+          (debugCode
+            ? '<p class="auth-gate__debug">Тестовый код: ' + escapeHtml(debugCode) + "</p>"
+            : "");
+      }
       gate.innerHTML =
         tabsHtml +
         '<p class="auth-gate__title">' +
         escapeHtml(title) +
         "</p>" +
         '<form class="auth-gate__form" action="#" method="post" novalidate>' +
-        (mode === "register"
-          ? '<label class="auth-gate__field"><span>Имя*</span><input name="name" autocomplete="name" required minlength="2" maxlength="120" value="' +
-            escapeHtml(savedName) +
-            '"/></label>'
-          : "") +
-        (mode !== "otp"
-          ? '<label class="auth-gate__field"><span>' +
-            (mode === "register" ? "Телефон*" : "Телефон") +
-            '</span><input name="phone" type="tel" autocomplete="tel" required minlength="10" maxlength="20" value="' +
-            escapeHtml(savedPhone) +
-            '" placeholder="+7..."/></label>'
-          : "") +
-        (mode === "register"
-          ? '<label class="auth-gate__field"><span>E-mail</span><input name="email" type="email" autocomplete="email" maxlength="255" value=""/></label>'
-          : "") +
-        (mode === "otp"
-          ? '<label class="auth-gate__field"><span>Код (6 цифр)</span><input name="otp" type="text" inputmode="numeric" autocomplete="one-time-code" maxlength="6" pattern="[0-9]{6}" required value="' +
-            escapeHtml(debugCode) +
-            '"/></label>'
-          : "") +
-        (debugCode && mode === "otp"
-          ? '<p class="auth-gate__debug">Тестовый код: ' + escapeHtml(debugCode) + "</p>"
-          : "") +
+        bodyHtml +
         '<p class="auth-gate__error" data-auth-error' +
         (subscriptionBlocked ? ">" + escapeHtml(SUBSCRIPTION_INACTIVE_MSG) : " hidden>") +
         "</p>" +
         (showSubmit
           ? '<button class="platform-button auth-gate__submit" type="submit"><span>' +
-            (mode === "register" ? "Зарегистрироваться" : mode === "otp" ? "Подтвердить код" : "Получить код") +
+            submitLabel +
             "</span></button>"
           : "") +
         "</form>";
@@ -2894,6 +2992,13 @@
 
     paint();
     gate.onclick = function (event) {
+      var gen = event.target && event.target.closest ? event.target.closest("[data-pw-gen]") : null;
+      if (gen) {
+        event.preventDefault();
+        var field = gate.querySelector('input[name="' + gen.getAttribute("data-pw-gen") + '"]');
+        if (field) field.value = generateClientPassword();
+        return;
+      }
       if (loginOnly) return;
       var tab = event.target && event.target.closest ? event.target.closest("[data-auth-mode]") : null;
       if (!tab) return;
@@ -2904,18 +3009,18 @@
     };
     gate.oninput = function (event) {
       if (!subscriptionBlocked) return;
-      if (event.target && event.target.name === "phone") {
+      if (event.target && event.target.name === "login") {
         subscriptionBlocked = false;
         setError("");
-        savedPhone = String(event.target.value || "");
+        savedLogin = String(event.target.value || "");
         paintSafe();
         window.setTimeout(function () {
-          var phoneEl = gate.querySelector('input[name="phone"]');
-          if (phoneEl) {
-            phoneEl.focus();
+          var loginEl = gate.querySelector('input[name="login"]');
+          if (loginEl) {
+            loginEl.focus();
             try {
-              var len = phoneEl.value.length;
-              phoneEl.setSelectionRange(len, len);
+              var len = loginEl.value.length;
+              loginEl.setSelectionRange(len, len);
             } catch (e) {}
           }
         }, 40);
@@ -2933,86 +3038,120 @@
       try {
         if (document.activeElement && document.activeElement.blur) document.activeElement.blur();
       } catch (e) {}
-      var phoneInput = form.querySelector('input[name="phone"]');
-      var nameInput = form.querySelector('input[name="name"]');
+      var loginInput = form.querySelector('input[name="login"]');
+      var passwordInput = form.querySelector('input[name="password"]');
       var emailInput = form.querySelector('input[name="email"]');
+      var otpFlag = form.querySelector('input[name="auth_by_email_otp"]');
       var otpInput = form.querySelector('input[name="otp"]');
-      var phone = phoneInput ? String(phoneInput.value || "").trim() : savedPhone;
-      var name = nameInput ? String(nameInput.value || "").trim() : savedName;
+      var login = loginInput ? String(loginInput.value || "").trim() : savedLogin;
+      var password = passwordInput ? String(passwordInput.value || "") : "";
       var email = emailInput ? String(emailInput.value || "").trim() : "";
+      var wantOtp = Boolean(otpFlag && otpFlag.checked);
       var deviceId = getLicenseDeviceId();
       var requestMode = mode;
 
+      function storeLoginPrefs(loginValue, otpFlagValue) {
+        savedLogin = loginValue;
+        preferOtp = Boolean(otpFlagValue);
+        try {
+          localStorage.setItem(LICENSE_LOGIN_KEY, savedLogin);
+          localStorage.setItem(LICENSE_AUTH_OTP_KEY, preferOtp ? "1" : "0");
+        } catch (e) {}
+      }
+
       var chain = Promise.resolve();
       if (requestMode === "register") {
-        if (!name || name.length < 2) {
-          setError("Укажите имя");
+        if (!login || login.length < 3) {
+          setError("Укажите логин");
           if (submitBtn) submitBtn.disabled = false;
           return false;
         }
-        if (!phone) {
-          setError("Укажите телефон");
+        if (!password || password.length < 6) {
+          setError("Укажите пароль (минимум 6 символов)");
           if (submitBtn) submitBtn.disabled = false;
           return false;
         }
-        chain = licensePost("/v1/register", { name: name, phone: phone, email: email }).then(function (data) {
-          savedName = name;
-          savedPhone = data.phone || phone;
-          try {
-            localStorage.setItem(LICENSE_NAME_KEY, savedName);
-            localStorage.setItem(LICENSE_PHONE_KEY, savedPhone);
-          } catch (e) {}
-          return licensePost("/v1/otp/request", {
-            phone: savedPhone,
+        if (wantOtp && !email) {
+          setError("Для авторизации по коду укажите E-mail");
+          if (submitBtn) submitBtn.disabled = false;
+          return false;
+        }
+        chain = licensePost("/v1/register", {
+          login: login,
+          password: password,
+          email: email,
+          auth_by_email_otp: wantOtp,
+        }).then(function (data) {
+          storeLoginPrefs(data.login || login, data.auth_by_email_otp);
+          if (data.auth_by_email_otp) {
+            return licensePost("/v1/otp/request", {
+              login: savedLogin,
+              device_id: deviceId,
+              platform: "pwa",
+              app_version: "10.1",
+              device_label: "PWA",
+            }).then(function (otpData) {
+              return { __otp: true, data: otpData };
+            });
+          }
+          return licensePost("/v1/login", {
+            login: savedLogin,
+            password: password,
             device_id: deviceId,
-            platform: "pwa",
-            app_version: "10.1",
-            device_label: "PWA",
+          }).then(function (loginData) {
+            return { __session: true, data: loginData };
           });
         });
       } else if (requestMode === "login") {
-        savedPhone = phone;
-        try {
-          localStorage.setItem(LICENSE_PHONE_KEY, savedPhone);
-        } catch (e) {}
-        chain = licensePost("/v1/otp/request", {
-          phone: savedPhone,
-          device_id: deviceId,
-          platform: "pwa",
-          app_version: "10.1",
-          device_label: "PWA",
+        if (!login) {
+          setError("Укажите логин");
+          if (submitBtn) submitBtn.disabled = false;
+          return false;
+        }
+        chain = licensePost("/v1/auth/mode", { login: login }).then(function (modeData) {
+          storeLoginPrefs(modeData.login || login, modeData.auth_by_email_otp);
+          if (preferOtp) {
+            return licensePost("/v1/otp/request", {
+              login: savedLogin,
+              device_id: deviceId,
+              platform: "pwa",
+              app_version: "10.1",
+              device_label: "PWA",
+            }).then(function (otpData) {
+              return { __otp: true, data: otpData };
+            });
+          }
+          if (!password) {
+            throw new Error("Введите пароль");
+          }
+          return licensePost("/v1/login", {
+            login: savedLogin,
+            password: password,
+            device_id: deviceId,
+          }).then(function (loginData) {
+            return { __session: true, data: loginData };
+          });
         });
       } else {
         chain = licensePost("/v1/otp/verify", {
-          phone: savedPhone,
+          login: savedLogin,
           device_id: deviceId,
           code: otpInput ? String(otpInput.value || "").trim() : "",
         }).then(function (data) {
-          markLaunchUnlocked(data.session_token);
-          storePaidUntil(data && data.paid_until);
-          try {
-            sessionStorage.removeItem(DOWNLOAD_MENU_SHOWN_KEY);
-            sessionStorage.setItem(DOWNLOAD_MENU_SHOWN_KEY, String(Date.now()));
-          } catch (e) {}
-          var links = (data && data.download_links) || {};
-          try {
-            sessionStorage.setItem(LICENSE_DOWNLOAD_LINKS_KEY, JSON.stringify(links));
-          } catch (e) {}
-          // Сразу гасим одноразовую PWA-ссылку в cookie — до нажатия iOS.
-          return activatePwaDownloadCookie(links.pwa).then(function () {
-            gate.setAttribute("hidden", "hidden");
-            onUnlocked();
-          });
+          return { __session: true, data: data };
         });
       }
 
       chain
-        .then(function (data) {
-          if (requestMode === "otp") return;
-          subscriptionBlocked = false;
-          debugCode = (data && data.debug_code) || "";
-          mode = "otp";
-          paintSafe();
+        .then(function (result) {
+          if (!result) return;
+          if (result.__session) return finishWithSession(result.data);
+          if (result.__otp) {
+            subscriptionBlocked = false;
+            debugCode = (result.data && result.data.debug_code) || "";
+            mode = "otp";
+            paintSafe();
+          }
         })
         .catch(function (err) {
           var message = localizeUserFacingError(err, "Ошибка запроса");
@@ -3020,8 +3159,23 @@
             markInactive();
             return;
           }
+          if (message === "Введите пароль") {
+            setError(message);
+            return;
+          }
           if (requestMode === "register") {
             mode = "login";
+            paintSafe();
+            window.setTimeout(function () {
+              setError(message);
+            }, 40);
+            return;
+          }
+          if (/вход по паролю отключён|войдите с паролем|код на e-mail/i.test(message)) {
+            preferOtp = /код на e-mail|паролю отключён/i.test(message);
+            try {
+              localStorage.setItem(LICENSE_AUTH_OTP_KEY, preferOtp ? "1" : "0");
+            } catch (e) {}
             paintSafe();
             window.setTimeout(function () {
               setError(message);
@@ -3058,7 +3212,6 @@
         downloadMenuExpireTimer = null;
       }
       ensurePlatformDownloadHint(false);
-      // Перезагрузка загрузочной = новый цикл OTP (старый unlock/код не действуют).
       clearLaunchUnlock();
       var menu = document.querySelector(".platform-menu");
       var panel = getEls().panel;
@@ -3067,12 +3220,30 @@
         menu.setAttribute("hidden", "hidden");
       }
       if (panel) panel.setAttribute("hidden", "hidden");
-      renderAuthGate(function () {
-        showPlatformMenuUnlocked();
-      });
-      try {
-        window.scrollTo(0, 0);
-      } catch (e) {}
+      function showLoginForm() {
+        renderAuthGate(function () {
+          showPlatformMenuUnlocked();
+        });
+        try {
+          window.scrollTo(0, 0);
+        } catch (e) {}
+      }
+      var token = readSessionToken();
+      if (token) {
+        mintDownloadLinksForSession()
+          .then(function () {
+            markLaunchUnlocked(token);
+            showPlatformMenuUnlocked();
+          })
+          .catch(function () {
+            try {
+              localStorage.removeItem(LICENSE_SESSION_KEY);
+            } catch (e) {}
+            showLoginForm();
+          });
+        return;
+      }
+      showLoginForm();
     }
 
     // Персональная /d/… → /recover: cookie уже есть, OTP на этом устройстве мог быть сброшен.
