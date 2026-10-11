@@ -2,8 +2,8 @@
   "use strict";
 
   var BTCA_BASE = "/btca-10-1/";
-  var INSTALL_CACHE = "btca10-web-10.1.45:static-install";
-  var MEDIA_CACHE = "btca10-web-10.1.45:static-media";
+  var INSTALL_CACHE = "btca10-web-10.1.46:static-install";
+  var MEDIA_CACHE = "btca10-web-10.1.46:static-media";
   var MEDIA_PROBE_RE = /offline-unpacked\/level3\/exercises\/[^/]+\.(jpe?g|png|webp|gif)$/i;
   var MEDIA_STATE_KEY = "btca10-web:static-media-state";
   var APP_READY_KEY = "btca10-web:app-ready";
@@ -25,8 +25,8 @@
   var ABOUT_MAIN_TEXT = "Настоящее Приложение разработано для локальной установки (развёртывания) на смартфоне или планшете с операционными системами Android или iOS и рассчитано для обучения и тренировки учеников с уровнем подготовки «Уровень 3 — Продвинутый».";
   var ABOUT_POST_TEXT = "*****\nБТКА, это — учебно-тренировочный программный комплекс, предназначенный для комплексного обучения игре на русском бильярде, выработки и закрепления практических навыков ведения бильярдной игры в Пирамиду, как самостоятельно, так и с тренером, с применением современных методик и технологий.\nТренировочный комплекс БТКА в сочетании с уникальной Методологией обучения составляют общую Систему тренировок БТКА школы русского бильярда «Абриколь» г. Красноярск.\n<a href=\"https://cloud.mail.ru/public/sujN/mpE8mr6aW\">Методика обучения</a>\n\nВ текущей версии Приложения БТКА 10.1 доступен раздел:\n•  *Уровень 3 — Продвинутый* Упражнений – 40, Задач – 263, Полезностей – 15.\n\nВсе Приложения функционируют без использования сети Интернет.\nКаждое Приложение:\n•  Содержит специфический (соответствующий уровню подготовки) набор упражнений, задач и тестов (в графическом виде), ранжированных по принципу - \"от простого к сложному\", и сгруппированных в тематические разделы по видам тренировок;\n•  Включает необходимые инструкции, методическую и справочную информацию;\n•  Обеспечивает возможность ввода, хранения и обработки результатов прогресса выполнения учеником практических заданий для последующего статистического анализа с использованием локальной Базы данных (БД);\n•  Имеет весь необходимый функционал и автоматизацию, а также интуитивно-понятный интерфейс, что способствует осуществлению полноценного, эффективного тренировочного процесса в комфортных условиях.\n\nОТ АВТОРА. Система тренировок БТКА разработана по результатам систематизации методик обучения русскому бильярду на основе: секретов ведущих тренеров и игроков (в т.ч. В. Симонича, В. Лазарева, С. Баурова, Е. Сталева и др.), опыта «старой школы», а также современных научных и экспериментальных исследований и IT-технологий.\n<a href=\"https://cloud.mail.ru/public/Ye3r/ZYwpjB9uz\">Подробное описание комплекса БТКА</a>\n\nCopyright © Юрий Алинт (Андрей Юрьев) 2026";
   var installedHomeSnapshot = "";
-  var LEVEL1_MODULE_VERSION = "10.1.16";
-  var LEVEL3_MODULE_VERSION = "10.1.16";
+  var LEVEL1_MODULE_VERSION = "10.1.17";
+  var LEVEL3_MODULE_VERSION = "10.1.17";
 
   var CORE_REL_PATHS = [
     "",
@@ -137,7 +137,11 @@
     }
     discardStaleRuntimeModules();
     if (level1ModuleFresh() && level3ModuleFresh() && slideMenuReady()) {
-      hideHomeSplashIndicator();
+      if (options.keepSplashUntilUnlock && !isLaunchUnlocked()) {
+        renderHomeSplashIndicator(100);
+      } else {
+        hideHomeSplashIndicator();
+      }
       return Promise.resolve();
     }
 
@@ -183,7 +187,11 @@
     }
 
     if (!steps.length) {
-      hideHomeSplashIndicator();
+      if (options.keepSplashUntilUnlock && !isLaunchUnlocked()) {
+        renderHomeSplashIndicator(100);
+      } else {
+        hideHomeSplashIndicator();
+      }
       return Promise.resolve();
     }
 
@@ -207,7 +215,11 @@
     }).catch(function (error) {
       console.warn("BTCA module preload failed", error);
     }).then(function () {
-      hideHomeSplashIndicator();
+      if (options.keepSplashUntilUnlock && !isLaunchUnlocked()) {
+        renderHomeSplashIndicator(100);
+      } else {
+        hideHomeSplashIndicator();
+      }
     });
   }
 
@@ -2009,8 +2021,8 @@
       renderAboutScreen();
       return;
     }
-    if (route === "account") {
-      window.location.href = LOADING_PAGE_URL;
+    if (route === "account-update") {
+      openDownloadsFromAccountLink();
     }
   }
 
@@ -2125,17 +2137,13 @@
   }
 
   function isLaunchUnlocked() {
+    // Только sessionStorage: переживает уход в фон, сбрасывается после смахивания/закрытия.
+    // Не использовать localStorage / isAppPreparedSync — иначе OTP пропускается сам.
     try {
-      if (sessionStorage.getItem(LICENSE_LAUNCH_KEY) === "1") return true;
-    } catch (e) {}
-    // Ярлык «Домой» — отдельный контекст: sessionStorage пустой.
-    if (isStandalone()) {
-      try {
-        if (localStorage.getItem(LICENSE_LAUNCH_KEY) === "1") return true;
-      } catch (e2) {}
-      return isAppPreparedSync();
+      return sessionStorage.getItem(LICENSE_LAUNCH_KEY) === "1";
+    } catch (e) {
+      return false;
     }
-    return false;
   }
 
   function clearLaunchUnlock() {
@@ -2149,8 +2157,59 @@
     try {
       if (token) localStorage.setItem(LICENSE_SESSION_KEY, token);
       sessionStorage.setItem(LICENSE_LAUNCH_KEY, "1");
-      localStorage.setItem(LICENSE_LAUNCH_KEY, "1");
     } catch (e) {}
+  }
+
+  function wantsOpenDownloads() {
+    try {
+      return new URLSearchParams(window.location.search).get("open") === "downloads";
+    } catch (e) {
+      return false;
+    }
+  }
+
+  function stripOpenDownloadsQuery() {
+    try {
+      var url = new URL(window.location.href);
+      if (!url.searchParams.has("open")) return;
+      url.searchParams.delete("open");
+      var q = url.searchParams.toString();
+      window.history.replaceState(null, "", url.pathname + (q ? "?" + q : "") + url.hash);
+    } catch (_) {}
+  }
+
+  function mintDownloadLinksForSession() {
+    var token = readSessionToken();
+    if (!token) return Promise.reject(new Error("Сессия не найдена"));
+    return licensePost("/v1/downloads/links", { session_token: token }).then(function (data) {
+      var links = (data && data.download_links) || {};
+      try {
+        sessionStorage.setItem(LICENSE_DOWNLOAD_LINKS_KEY, JSON.stringify(links));
+      } catch (e) {}
+      if (data && data.paid_until) storePaidUntil(data.paid_until);
+      return links;
+    });
+  }
+
+  function openDownloadsFromAccountLink() {
+    window.location.href = LOADING_PAGE_URL + (LOADING_PAGE_URL.indexOf("?") >= 0 ? "&" : "?") + "open=downloads";
+  }
+
+  function enterDownloadsViewFromSession() {
+    document.body.classList.remove("btca-installed-mode", "btca-screen-mode", "btca-level1-mode", "btca-level3-mode");
+    stripOpenDownloadsQuery();
+    var gate = document.getElementById("btca-auth-gate");
+    if (gate) gate.setAttribute("hidden", "hidden");
+    hideHomeSplashIndicator();
+    return mintDownloadLinksForSession()
+      .then(function () {
+        markLaunchUnlocked();
+        showPlatformMenuUnlocked();
+      })
+      .catch(function () {
+        clearLaunchUnlock();
+        gateLoadingHome();
+      });
   }
 
   function storePaidUntil(value) {
@@ -2986,7 +3045,7 @@
     document.body.classList.add("btca-installed-mode");
     document.body.classList.remove("btca-screen-mode", "btca-level1-mode", "btca-level3-mode");
 
-    // Стартовый экран PWA: заголовок + дата версии с загрузочной страницы (без текста про загрузку).
+    // Стартовый экран PWA: заголовок + дата версии над логотипом.
     if (intro) {
       intro.removeAttribute("hidden");
       var titleEl = intro.querySelector(".eyebrow:not(.eyebrow--release):not(.eyebrow--levels)");
@@ -3007,6 +3066,7 @@
     if (panel && !preserveSplash) {
       panel.className = "ios-panel";
       panel.innerHTML = "";
+      panel.setAttribute("hidden", "hidden");
     }
 
     if (!isLaunchUnlocked()) {
@@ -3016,9 +3076,16 @@
         menu.setAttribute("hidden", "hidden");
       }
       if (gate) gate.removeAttribute("hidden");
+      if (panel) {
+        panel.removeAttribute("hidden");
+        if (!panel.classList.contains("btca-home-splash-panel")) {
+          renderHomeSplashIndicator(0);
+        }
+      }
       renderAuthGate(
         function () {
-          renderInstalledHome(options);
+          hideHomeSplashIndicator();
+          renderInstalledHome({});
         },
         { loginOnly: true }
       );
@@ -3032,6 +3099,7 @@
     }
 
     if (gate) gate.setAttribute("hidden", "hidden");
+    hideHomeSplashIndicator();
     if (menu) {
       menu.removeAttribute("hidden");
       menu.className = "platform-menu btca-work-menu";
@@ -3039,7 +3107,7 @@
       menu.innerHTML =
         '<button class="platform-button btca-work-menu__item btca-work-menu__item--level3" type="button" data-btca-route="level3"><span>Уровень 3 — Продвинутый</span></button>' +
         '<button class="platform-button btca-work-menu__item btca-work-menu__item--about" type="button" data-btca-route="about"><span>О проекте</span></button>' +
-        '<button class="platform-button btca-work-menu__item btca-work-menu__item--account" type="button" data-btca-route="account"><span>Аккаунт</span></button>';
+        '<button class="btca-work-menu__account-link" type="button" data-btca-route="account-update">Аккаунт | Обновление</button>';
     }
     if (footer) {
       footer.innerHTML = "<span>BTCA 10.1 © 2026 Alint&apos;s R.lab</span>";
@@ -3291,7 +3359,8 @@
     beginOfflinePreparation();
   }
 
-  function repairStandaloneShell() {
+  function repairStandaloneShell(options) {
+    options = options || {};
     if (!isStandalone()) return Promise.resolve();
     if (!("serviceWorker" in navigator) || !("caches" in window)) {
       return Promise.resolve();
@@ -3336,6 +3405,16 @@
       })
       .then(function () {
         setOfflinePreparationActive(false);
+        if (options.deferHome || !isLaunchUnlocked()) {
+          // Холодный старт: ждём OTP, splash остаётся под формой.
+          if (isLaunchUnlocked()) {
+            hideHomeSplashIndicator();
+            renderInstalledHome();
+          } else {
+            renderHomeSplashIndicator(100);
+          }
+          return;
+        }
         hideHomeSplashIndicator();
         renderInstalledHome();
       });
@@ -3406,14 +3485,26 @@
   }
 
   function bootstrapStandaloneShell(mediaReady) {
-    function showHome() {
+    function showHomeUnlocked() {
       discardStaleRuntimeModules();
       renderInstalledHome();
       return preloadAppModulesForHome();
     }
 
+    // Холодный старт / после смахивания: OTP + splash, без автоперехода в меню.
+    if (!isLaunchUnlocked()) {
+      renderInstalledHome({ preserveSplash: true });
+      var coldPreload = preloadAppModulesForHome({ keepSplashUntilUnlock: true });
+      if (!mediaReady) {
+        return repairStandaloneShell({ deferHome: true }).then(function () {
+          return coldPreload;
+        });
+      }
+      return coldPreload;
+    }
+
     if (!mediaReady) {
-      renderInstalledHome();
+      renderInstalledHome({ preserveSplash: true });
       return repairStandaloneShell().then(function () {
         return preloadAppModulesForHome();
       });
@@ -3423,7 +3514,7 @@
       markAppPrepared();
     }
 
-    showHome().then(function () {
+    showHomeUnlocked().then(function () {
       refreshShellCacheQuietly();
     });
   }
@@ -3450,11 +3541,25 @@
     }
   }
 
+  var bootOpenDownloadsOnly = false;
+
   function paintBootUi() {
     cleanupOrphanHomePhraseMarkup();
     stripIosPwaQueryInBrowser();
+    if (wantsOpenDownloads()) {
+      // «Аккаунт | Обновление» → загрузочная сразу к кнопкам скачивания.
+      bootOpenDownloadsOnly = true;
+      if (readSessionToken()) {
+        enterDownloadsViewFromSession();
+      } else {
+        document.body.classList.remove("btca-installed-mode");
+        gateLoadingHome();
+      }
+      syncPortraitModeImmediate();
+      return;
+    }
     if (isAppShellMode()) {
-      renderInstalledHome();
+      renderInstalledHome({ preserveSplash: !isLaunchUnlocked() });
       syncPortraitMode();
       return;
     }
@@ -3497,6 +3602,7 @@
     boot
       .then(function (ctx) {
         if (!ctx || ctx.reloading) return;
+        if (bootOpenDownloadsOnly) return;
         if (isAppShellMode()) {
           ensureFreshShellAfterDeploy();
           recordInstallSession();
@@ -3510,8 +3616,14 @@
       })
       .catch(function (error) {
         console.warn("BTCA bootstrap failed", error);
+        if (bootOpenDownloadsOnly) return;
         if (isAppShellMode()) {
           recordInstallSession();
+          if (!isLaunchUnlocked()) {
+            return repairStandaloneShell({ deferHome: true }).then(function () {
+              return preloadAppModulesForHome({ keepSplashUntilUnlock: true });
+            });
+          }
           return repairStandaloneShell().then(function () {
             return preloadAppModulesForHome();
           });

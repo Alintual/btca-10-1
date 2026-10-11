@@ -439,8 +439,16 @@ body:not(.btca-installed-mode) .home__tagline-slot .home__phrase2-line2 {
   }
 }
 
+/* PWA start: заголовок и версия над логотипом. */
+.btca-installed-mode .home {
+  display: flex;
+  flex-direction: column;
+}
+
 .btca-installed-mode .home__intro {
-  margin-top: calc(-162rem / 17);
+  order: -1;
+  margin-top: max(8px, env(safe-area-inset-top));
+  margin-bottom: 10px;
 }
 
 /* PWA start: only system title + release date (same typeface/size). */
@@ -452,6 +460,7 @@ body:not(.btca-installed-mode) .home__tagline-slot .home__phrase2-line2 {
 
 .btca-installed-mode .home__intro .eyebrow {
   margin-bottom: 6px;
+  text-transform: uppercase;
 }
 
 .btca-installed-mode .home__intro .eyebrow--release {
@@ -463,6 +472,29 @@ body:not(.btca-installed-mode) .home__tagline-slot .home__phrase2-line2 {
   font-family: inherit;
   line-height: inherit;
   text-transform: none;
+}
+
+.btca-work-menu__account-link {
+  display: block;
+  margin: 14px auto 0;
+  padding: 8px 12px;
+  width: fit-content;
+  max-width: 95%;
+  color: #ffe08a;
+  font-size: 1rem;
+  font-weight: 500;
+  line-height: 1.4;
+  text-align: center;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+}
+
+.btca-work-menu__account-link:hover,
+.btca-work-menu__account-link:focus-visible {
+  color: #fff3b0;
 }
 
 .home__intro {
@@ -688,6 +720,14 @@ code {
 
 .btca-work-menu__item--account {
   border-color: #ffe08a;
+}
+
+body.btca-installed-mode #btca-auth-gate {
+  margin-top: 8px;
+}
+
+body.btca-installed-mode #btca-static-ios-panel.btca-home-splash-panel {
+  display: block;
 }
 
 .account-modal {
