@@ -718,21 +718,13 @@ code {
   margin-top: 4px;
 }
 
-/* Войти / Получить код / Подтвердить: высота как у поля ввода (не 64px от .platform-button). */
-.auth-gate .platform-button {
-  box-sizing: border-box;
-  width: 100%;
-  min-height: 48px;
-  height: 48px;
-  padding-top: 0;
-  padding-bottom: 0;
-  align-content: center;
-  gap: 0;
-}
-
-body.btca-apple-comfort .auth-gate .platform-button {
-  min-height: 48px;
-  height: 48px;
+/* Не-Safari: красные кнопки Вход/Аккаунт = высота вкладок «Вход»/«Регистрация».
+   Safari (btca-apple-comfort) уже даёт ~44px через --btca-touch. */
+body:not(.btca-apple-comfort) .platform-button.auth-gate__submit,
+body:not(.btca-apple-comfort) .platform-button.account-modal__save {
+  min-height: 44px;
+  padding-top: 8px;
+  padding-bottom: 8px;
 }
 
 .auth-gate__error {
