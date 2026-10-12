@@ -736,6 +736,14 @@ code {
   font-size: 1rem;
 }
 
+.auth-gate__notice {
+  margin: 0 0 10px;
+  color: #c8e2e6;
+  font-size: 1rem;
+  line-height: 1.45;
+  text-align: center;
+}
+
 .auth-gate__link {
   border: 0;
   background: transparent;
@@ -811,6 +819,7 @@ body.btca-installed-mode .auth-gate__field input,
 body.btca-installed-mode .auth-gate__info,
 body.btca-installed-mode .auth-gate__error,
 body.btca-installed-mode .auth-gate__debug,
+body.btca-installed-mode .auth-gate__notice,
 body.btca-installed-mode .auth-gate__link,
 body.btca-installed-mode .auth-gate .platform-button,
 body.btca-installed-mode .auth-gate .platform-button span {
