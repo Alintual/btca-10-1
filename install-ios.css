@@ -4235,11 +4235,18 @@ body.btca-level3-mode .btca-date-picker-day--selected {
   display: block !important;
 }
 
+/* Стартовый экран PWA: как в 8.1 — одна строка по центру (текст подставляет JS). */
 .btca-installed-mode .footer {
   position: fixed;
   right: 0;
   bottom: max(6px, env(safe-area-inset-bottom));
   left: 0;
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 8px 14px;
   padding: 0 max(8px, env(safe-area-inset-right)) 0 max(8px, env(safe-area-inset-left));
   text-align: center;
 }
@@ -4251,8 +4258,7 @@ body.btca-level3-mode .btca-date-picker-day--selected {
 }
 
 .btca-installed-mode .footer__row {
-  grid-template-columns: 1fr;
-  justify-items: center;
+  display: contents;
 }
 
 body.btca-desktop-browser {
