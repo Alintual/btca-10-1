@@ -731,17 +731,20 @@ code {
 }
 
 .auth-gate__debug {
-  margin: 0;
-  color: #ffe08a;
-  font-size: 1rem;
+  display: none;
 }
 
-.auth-gate__notice {
-  margin: 0 0 10px;
+.auth-gate__hint {
+  margin: 0 0 8px;
   color: #c8e2e6;
-  font-size: 1rem;
-  line-height: 1.45;
+  font-size: 0.95rem;
+  line-height: 1.4;
   text-align: center;
+}
+
+.auth-gate__hint--ok {
+  color: #b8f0c8;
+  font-weight: 500;
 }
 
 .auth-gate__link {
@@ -819,7 +822,6 @@ body.btca-installed-mode .auth-gate__field input,
 body.btca-installed-mode .auth-gate__info,
 body.btca-installed-mode .auth-gate__error,
 body.btca-installed-mode .auth-gate__debug,
-body.btca-installed-mode .auth-gate__notice,
 body.btca-installed-mode .auth-gate__link,
 body.btca-installed-mode .auth-gate .platform-button,
 body.btca-installed-mode .auth-gate .platform-button span {

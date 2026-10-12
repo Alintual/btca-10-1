@@ -2219,7 +2219,7 @@
       (checked ? " checked" : "") +
       (disabled ? " disabled" : "") +
       "/>" +
-      "<span>Авторизация по коду на e-mail</span></label>"
+      "<span>Вход по коду на e-mail (вместо пароля)</span></label>"
     );
   }
 
@@ -2260,15 +2260,15 @@
 
   function isLaunchUnlocked() {
     try {
-      // Установленный PWA: можно восстановить по session token.
+      // Вкладка после успешного входа (sessionStorage сбрасывается при закрытии вкладки / перезагрузке в Safari).
+      if (sessionStorage.getItem(LICENSE_LAUNCH_KEY) === "1") return true;
+      // Только установленный PWA: можно восстановить по session token без повторного входа.
       if (isStandalone()) {
-        if (sessionStorage.getItem(LICENSE_LAUNCH_KEY) === "1") return true;
         var token = localStorage.getItem(LICENSE_SESSION_KEY);
         return Boolean(token && token.length >= 16);
       }
-      // Загрузочная в Safari/браузере: только sessionStorage этой вкладки.
-      // Reload на загрузочной всегда сбрасывает вход (см. gateLoadingHome).
-      return sessionStorage.getItem(LICENSE_LAUNCH_KEY) === "1";
+      // Safari и прочие браузеры на загрузочной: после перезагрузки — снова «Вход в систему».
+      return false;
     } catch (e) {
       return false;
     }
@@ -2950,7 +2950,7 @@
       preferOtp = localStorage.getItem(LICENSE_AUTH_OTP_KEY) === "1";
     } catch (e) {}
     var mode = loginOnly ? "login" : savedLogin ? "login" : "register";
-    var otpSentNotice = "";
+    var otpSentHint = "";
     var subscriptionBlocked = false;
 
     function finishWithSession(data) {
@@ -3005,7 +3005,8 @@
           '"/></label>' +
           passwordFieldHtml("password", "Пароль*", true, true) +
           '<label class="auth-gate__field"><span>E-mail</span><input name="email" type="email" autocomplete="email" maxlength="255" value=""/></label>' +
-          emailOtpCheckboxHtml(false, true);
+          emailOtpCheckboxHtml(false, true) +
+          '<p class="auth-gate__hint">Два варианта входа: логин+пароль или логин+код на e-mail (галочка). Не одновременно.</p>';
       } else if (mode === "login") {
         bodyHtml =
           '<label class="auth-gate__field"><span>Логин</span><input name="login" autocomplete="username" required minlength="3" maxlength="64" value="' +
@@ -3014,8 +3015,8 @@
           (preferOtp ? "" : passwordFieldHtml("password", "Пароль", true, false));
       } else {
         bodyHtml =
-          (otpSentNotice
-            ? '<p class="auth-gate__notice">' + escapeHtml(otpSentNotice) + "</p>"
+          (otpSentHint
+            ? '<p class="auth-gate__hint auth-gate__hint--ok">' + escapeHtml(otpSentHint) + "</p>"
             : "") +
           '<label class="auth-gate__field"><span>Код (6 цифр)</span><input name="otp" type="text" inputmode="numeric" autocomplete="one-time-code" maxlength="6" pattern="[0-9]{6}" required value=""/></label>';
       }
@@ -3067,7 +3068,7 @@
     function markInactive() {
       subscriptionBlocked = true;
       mode = "login";
-      otpSentNotice = "";
+      otpSentHint = "";
       paintSafe();
       window.setTimeout(function () {
         setError(SUBSCRIPTION_INACTIVE_MSG);
@@ -3087,7 +3088,7 @@
       var tab = event.target && event.target.closest ? event.target.closest("[data-auth-mode]") : null;
       if (!tab) return;
       mode = tab.getAttribute("data-auth-mode") === "register" ? "register" : "login";
-      otpSentNotice = "";
+      otpSentHint = "";
       subscriptionBlocked = false;
       paintSafe();
     };
@@ -3233,7 +3234,7 @@
           if (result.__session) return finishWithSession(result.data);
           if (result.__otp) {
             subscriptionBlocked = false;
-            otpSentNotice = "Код отправлен на Ваш e-mail.";
+            otpSentHint = "Код отправлен на Ваш e-mail.";
             mode = "otp";
             paintSafe();
           }
@@ -3256,8 +3257,8 @@
             }, 40);
             return;
           }
-          if (/вход по паролю отключён|войдите с паролем|код на e-mail/i.test(message)) {
-            preferOtp = /код на e-mail|паролю отключён/i.test(message);
+          if (/вход по коду на e-mail|вход по паролю|Получить код|Введите логин и пароль/i.test(message)) {
+            preferOtp = /вход по коду на e-mail|Получить код/i.test(message);
             try {
               localStorage.setItem(LICENSE_AUTH_OTP_KEY, preferOtp ? "1" : "0");
             } catch (e) {}
@@ -3313,7 +3314,7 @@
           window.scrollTo(0, 0);
         } catch (e) {}
       }
-      // Загрузочная (в т.ч. Safari на iOS): любой reload → снова «Вход в систему».
+      // Загрузочная (в т.ч. Safari): перезагрузка всегда → «Вход в систему».
       showLoginForm();
     }
 
