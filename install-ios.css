@@ -704,6 +704,16 @@ code {
   flex: 0 0 auto;
 }
 
+.auth-gate__check--disabled {
+  color: #7a949a;
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.auth-gate__check--disabled input {
+  cursor: not-allowed;
+}
+
 .auth-gate__submit {
   margin-top: 4px;
 }
@@ -932,6 +942,16 @@ body.btca-installed-mode #btca-static-ios-panel.btca-home-splash-panel {
   height: 18px;
   margin-top: 2px;
   flex: 0 0 auto;
+}
+
+.account-modal__check--disabled {
+  color: #7a949a;
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.account-modal__check--disabled input {
+  cursor: not-allowed;
 }
 
 .account-modal__error {

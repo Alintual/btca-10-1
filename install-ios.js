@@ -2,8 +2,8 @@
   "use strict";
 
   var BTCA_BASE = "/btca-10-1/";
-  var INSTALL_CACHE = "btca10-web-10.1.66:static-install";
-  var MEDIA_CACHE = "btca10-web-10.1.66:static-media";
+  var INSTALL_CACHE = "btca10-web-10.1.67:static-install";
+  var MEDIA_CACHE = "btca10-web-10.1.67:static-media";
   var MEDIA_PROBE_RE = /offline-unpacked\/level3\/exercises\/[^/]+\.(jpe?g|png|webp|gif)$/i;
   var MEDIA_STATE_KEY = "btca10-web:static-media-state";
   var APP_READY_KEY = "btca10-web:app-ready";
@@ -25,8 +25,8 @@
   var ABOUT_MAIN_TEXT = "Настоящее Приложение разработано для локальной установки (развёртывания) на смартфоне или планшете с операционными системами Android или iOS и рассчитано для обучения и тренировки учеников с уровнем подготовки «Уровень 3 — Продвинутый».";
   var ABOUT_POST_TEXT = "*****\nБТКА, это — учебно-тренировочный программный комплекс, предназначенный для комплексного обучения игре на русском бильярде, выработки и закрепления практических навыков ведения бильярдной игры в Пирамиду, как самостоятельно, так и с тренером, с применением современных методик и технологий.\nТренировочный комплекс БТКА в сочетании с уникальной Методологией обучения составляют общую Систему тренировок БТКА школы русского бильярда «Абриколь» г. Красноярск.\n<a href=\"https://cloud.mail.ru/public/sujN/mpE8mr6aW\">Методика обучения</a>\n\nВ текущей версии Приложения БТКА 10.1 доступен раздел:\n•  *Уровень 3 — Продвинутый* Упражнений – 40, Задач – 263, Полезностей – 15.\n\nВсе Приложения функционируют без использования сети Интернет.\nКаждое Приложение:\n•  Содержит специфический (соответствующий уровню подготовки) набор упражнений, задач и тестов (в графическом виде), ранжированных по принципу - \"от простого к сложному\", и сгруппированных в тематические разделы по видам тренировок;\n•  Включает необходимые инструкции, методическую и справочную информацию;\n•  Обеспечивает возможность ввода, хранения и обработки результатов прогресса выполнения учеником практических заданий для последующего статистического анализа с использованием локальной Базы данных (БД);\n•  Имеет весь необходимый функционал и автоматизацию, а также интуитивно-понятный интерфейс, что способствует осуществлению полноценного, эффективного тренировочного процесса в комфортных условиях.\n\nОТ АВТОРА. Система тренировок БТКА разработана по результатам систематизации методик обучения русскому бильярду на основе: секретов ведущих тренеров и игроков (в т.ч. В. Симонича, В. Лазарева, С. Баурова, Е. Сталева и др.), опыта «старой школы», а также современных научных и экспериментальных исследований и IT-технологий.\n<a href=\"https://cloud.mail.ru/public/Ye3r/ZYwpjB9uz\">Подробное описание комплекса БТКА</a>\n\nCopyright © Юрий Алинт (Андрей Юрьев) 2026";
   var installedHomeSnapshot = "";
-  var LEVEL1_MODULE_VERSION = "10.1.36";
-  var LEVEL3_MODULE_VERSION = "10.1.36";
+  var LEVEL1_MODULE_VERSION = "10.1.37";
+  var LEVEL3_MODULE_VERSION = "10.1.37";
 
   var CORE_REL_PATHS = [
     "",
@@ -2186,14 +2186,46 @@
     );
   }
 
-  function emailOtpCheckboxHtml(checked) {
+  function emailOtpCheckboxHtml(checked, disabled) {
     return (
-      '<label class="auth-gate__check">' +
+      '<label class="auth-gate__check' +
+      (disabled ? " auth-gate__check--disabled" : "") +
+      '">' +
       '<input name="auth_by_email_otp" type="checkbox"' +
       (checked ? " checked" : "") +
+      (disabled ? " disabled" : "") +
       "/>" +
       "<span>Авторизация по коду на e-mail</span></label>"
     );
+  }
+
+  function syncEmailOtpCheckbox(scope) {
+    if (!scope) return;
+    var emailInput = scope.querySelector('input[name="email"]');
+    var otpBox = scope.querySelector('input[name="auth_by_email_otp"]');
+    var label = otpBox
+      ? otpBox.closest(".auth-gate__check, .account-modal__check")
+      : null;
+    if (!emailInput || !otpBox || !label) return;
+    var hasEmail = Boolean(String(emailInput.value || "").trim());
+    otpBox.disabled = !hasEmail;
+    if (!hasEmail) otpBox.checked = false;
+    label.classList.toggle("auth-gate__check--disabled", !hasEmail);
+    label.classList.toggle("account-modal__check--disabled", !hasEmail);
+  }
+
+  function wireEmailOtpCheckbox(scope) {
+    if (!scope || scope.getAttribute("data-otp-email-wired") === "1") return;
+    var emailInput = scope.querySelector('input[name="email"]');
+    if (!emailInput) return;
+    scope.setAttribute("data-otp-email-wired", "1");
+    emailInput.addEventListener("input", function () {
+      syncEmailOtpCheckbox(scope);
+    });
+    emailInput.addEventListener("change", function () {
+      syncEmailOtpCheckbox(scope);
+    });
+    syncEmailOtpCheckbox(scope);
   }
 
   function isLaunchUnlocked() {
@@ -2634,7 +2666,7 @@
       '<label class="account-modal__field"><span>Активный пароль</span><input name="current_password" type="text" autocomplete="current-password" minlength="6" maxlength="128" placeholder="Введите текущий для смены"/></label>' +
       passwordFieldHtml("new_password", "Новый пароль", false, true).replace(/auth-gate__/g, "account-modal__") +
       '<label class="account-modal__field"><span>E-mail</span><input name="email" type="email" autocomplete="email" maxlength="255"/></label>' +
-      emailOtpCheckboxHtml(false).replace("auth-gate__check", "account-modal__check") +
+          emailOtpCheckboxHtml(false, true).replace(/auth-gate__/g, "account-modal__") +
       '<label class="account-modal__field"><span>Подписка</span><input name="subscription" readonly tabindex="-1"/></label>' +
       '<p class="account-modal__error" data-account-error hidden></p>' +
       '<button class="platform-button account-modal__save" type="submit"><span>Сохранить</span></button>' +
@@ -2653,6 +2685,7 @@
     });
     var form = modal.querySelector("form");
     if (form) {
+      wireEmailOtpCheckbox(form);
       form.onsubmit = function (event) {
         event.preventDefault();
         var err = modal.querySelector("[data-account-error]");
@@ -2737,6 +2770,7 @@
         if (form.new_password) form.new_password.value = "";
         var otpBox = form.querySelector('input[name="auth_by_email_otp"]');
         if (otpBox) otpBox.checked = Boolean(data.auth_by_email_otp);
+        syncEmailOtpCheckbox(form);
         if (data.subscription && data.subscription.paid_until) {
           storePaidUntil(data.subscription.paid_until);
         }
@@ -2935,7 +2969,7 @@
           '"/></label>' +
           passwordFieldHtml("password", "Пароль*", true, true) +
           '<label class="auth-gate__field"><span>E-mail</span><input name="email" type="email" autocomplete="email" maxlength="255" value=""/></label>' +
-          emailOtpCheckboxHtml(false);
+          emailOtpCheckboxHtml(false, true);
       } else if (mode === "login") {
         bodyHtml =
           '<label class="auth-gate__field"><span>Логин</span><input name="login" autocomplete="username" required minlength="3" maxlength="64" value="' +
@@ -2967,6 +3001,11 @@
             "</span></button>"
           : "") +
         "</form>";
+      var formEl = gate.querySelector(".auth-gate__form");
+      if (formEl) {
+        formEl.removeAttribute("data-otp-email-wired");
+        wireEmailOtpCheckbox(formEl);
+      }
     }
 
     function paintSafe() {
