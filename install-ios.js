@@ -2,8 +2,8 @@
   "use strict";
 
   var BTCA_BASE = "/btca-10-1/";
-  var INSTALL_CACHE = "btca10-web-10.1.88:static-install";
-  var MEDIA_CACHE = "btca10-web-10.1.88:static-media";
+  var INSTALL_CACHE = "btca10-web-10.1.89:static-install";
+  var MEDIA_CACHE = "btca10-web-10.1.89:static-media";
   var MEDIA_PROBE_RE = /offline-unpacked\/level3\/exercises\/[^/]+\.(jpe?g|png|webp|gif)$/i;
   var MEDIA_STATE_KEY = "btca10-web:static-media-state";
   var APP_READY_KEY = "btca10-web:app-ready";
@@ -3351,6 +3351,9 @@
 
   var SUBSCRIPTION_INACTIVE_MSG =
     "Подписка не активна. Для оформления или продления доступа обратитесь к автору по телефону +7 983 205 2230";
+  var DEVICE_NOT_BOUND_MSG =
+    "Это устройство не привязано к аккаунту. PWA работает только на устройстве, с которого выполнена регистрация. " +
+    "Если нужен доступ с дополнительного устройства — обратитесь к автору по телефону +7 983 205 2230";
 
   function isSubscriptionInactiveError(message) {
     return /подписка не активна/i.test(String(message || ""));
@@ -3452,7 +3455,10 @@
           passwordFieldHtml("password", "Пароль*", true, true) +
           '<label class="auth-gate__field"><span>E-mail</span><input name="email" type="email" autocomplete="email" maxlength="255" value=""/></label>' +
           emailOtpCheckboxHtml(false, true) +
-          '<p class="auth-gate__hint">Два варианта входа: логин+пароль или логин+код на e-mail.</p>';
+          '<label class="auth-gate__field"><span>ID устройства</span><input name="device_id" type="text" readonly tabindex="-1" value="' +
+          escapeHtml(getLicenseDeviceId()) +
+          '"/></label>' +
+          '<p class="auth-gate__hint">Аккаунт жёстко привязывается к этому устройству. На другом устройстве PWA не откроется без разрешения автора.</p>';
       } else if (mode === "login") {
         bodyHtml =
           '<label class="auth-gate__field"><span>Логин</span><input name="login" autocomplete="username" required minlength="3" maxlength="64" value="' +
@@ -3673,6 +3679,9 @@
           password: password,
           email: email,
           auth_by_email_otp: wantOtp,
+          device_id: deviceId,
+          platform: "pwa",
+          device_label: "Устройство регистрации",
         }).then(function (data) {
           storeLoginPrefs(data.login || login, data.auth_by_email_otp);
           if (data.auth_by_email_otp) {
@@ -4004,9 +4013,45 @@
       });
   }
 
+  function renderDeviceBlockedGate(message, options) {
+    options = options || {};
+    pendingInstalledLoginReveal = false;
+    hideHomeSplashIndicator();
+    var gate = ensureAuthGateMount();
+    if (!gate) return;
+    gate.removeAttribute("hidden");
+    var allowLogin = Boolean(options.allowLogin);
+    gate.innerHTML =
+      '<p class="auth-gate__title">Устройство не авторизовано</p>' +
+      '<p class="auth-gate__hint">' +
+      escapeHtml(message || DEVICE_NOT_BOUND_MSG) +
+      "</p>" +
+      '<p class="auth-gate__hint"><span>ID устройства: </span><code>' +
+      escapeHtml(getLicenseDeviceId()) +
+      "</code></p>" +
+      (allowLogin
+        ? '<button type="button" class="platform-button auth-gate__submit" data-device-try-login><span>Войти на этом устройстве</span></button>' +
+          '<p class="auth-gate__hint">Только если автор увеличил лимит устройств для вашего аккаунта.</p>'
+        : "");
+    gate.onclick = function (event) {
+      var btn = event.target && event.target.closest ? event.target.closest("[data-device-try-login]") : null;
+      if (!btn) return;
+      event.preventDefault();
+      pendingInstalledLoginReveal = true;
+      renderAuthGate(
+        function () {
+          hideHomeSplashIndicator();
+          renderInstalledHome({});
+        },
+        { loginOnly: true, prefillLogin: "" }
+      );
+    };
+  }
+
   /**
-   * Жёсткие проверки на каждом splash (первый запуск / после смахивания):
-   * подписка + дата версии (обновление) + отчёт даты версии в админку.
+   * Жёсткие проверки на каждом splash:
+   * device_id (привязка) + подписка + дата версии + отчёт в админку.
+   * На своём устройстве — автовход без формы; на чужом — блок.
    */
   function runSplashBootChecks() {
     if (!isStandalone()) return Promise.resolve({ ok: true, skipped: true });
@@ -4024,67 +4069,70 @@
         return "";
       });
 
-    var token = "";
     try {
-      token = String(localStorage.getItem(LICENSE_SESSION_KEY) || "").trim();
-    } catch (e) {}
-    if (!token || token.length < 16) {
-      return updateCheck.then(function () {
-        return { ok: false, reason: "no-session" };
-      });
-    }
-
-    try {
-      renderHomeSplashIndicator(22);
+      renderHomeSplashIndicator(18);
     } catch (e) {}
 
-    return licensePost("/v1/account", { session_token: token })
+    return licensePost("/v1/auth/device-session", {
+      device_id: getLicenseDeviceId(),
+      platform: "pwa",
+      app_version: PACKAGE_APP_VERSION,
+      device_label: "iOS/PWA",
+      version_date: localDate || "",
+    })
       .then(function (data) {
         try {
-          renderHomeSplashIndicator(45);
+          renderHomeSplashIndicator(40);
         } catch (e) {}
-        if (data && data.login) {
-          persistLicenseIdentity(data.login, data.auth_by_email_otp);
-        }
-        if (data && data.subscription && data.subscription.paid_until) {
-          storePaidUntil(data.subscription.paid_until);
-        }
-        var status = data && data.subscription && data.subscription.status;
-        if (status && status !== "active") {
+        if (!data || !data.bound) {
+          clearLaunchUnlock();
           try {
             localStorage.removeItem(LICENSE_SESSION_KEY);
           } catch (e) {}
-          clearLaunchUnlock();
-          return { ok: false, reason: "inactive" };
+          return { ok: false, reason: "unbound", message: (data && data.message) || DEVICE_NOT_BOUND_MSG };
         }
+        if (data.login) {
+          persistLicenseIdentity(data.login, data.auth_by_email_otp);
+        }
+        if (data.paid_until) storePaidUntil(data.paid_until);
+        if (!data.subscription_active || !data.session_token) {
+          clearLaunchUnlock();
+          try {
+            localStorage.removeItem(LICENSE_SESSION_KEY);
+          } catch (e) {}
+          return {
+            ok: false,
+            reason: "inactive",
+            message: (data && data.message) || SUBSCRIPTION_INACTIVE_MSG,
+            login: data.login || "",
+          };
+        }
+        markLaunchUnlocked(data.session_token);
         return claimPlatformDownload("pwa", "iOS/PWA")
           .then(function () {
-            return { ok: true };
+            return { ok: true, bound: true, login: data.login || "" };
           })
           .catch(function (err) {
             var msg = localizeUserFacingError(err, "");
-            if (isSubscriptionInactiveError(msg) || /402|сессия|авториза/i.test(String(err && err.message || ""))) {
-              try {
-                localStorage.removeItem(LICENSE_SESSION_KEY);
-              } catch (e) {}
+            if (isSubscriptionInactiveError(msg) || /403|402|не привязано|лимит устройств/i.test(msg)) {
               clearLaunchUnlock();
-              return { ok: false, reason: "claim-auth" };
+              return { ok: false, reason: "device-or-sub", message: msg || DEVICE_NOT_BOUND_MSG };
             }
-            // Лимит устройств / сеть — не блокируем уже установленный PWA.
-            return { ok: true, claimSkipped: true };
+            return { ok: true, bound: true, claimSkipped: true, login: data.login || "" };
           });
       })
       .catch(function (err) {
         var msg = String((err && err.message) || err || "");
-        if (/401|402|сессия|недействитель|истек|не активна/i.test(msg)) {
-          try {
-            localStorage.removeItem(LICENSE_SESSION_KEY);
-          } catch (e) {}
-          clearLaunchUnlock();
-          return { ok: false, reason: "auth" };
+        // Сеть недоступна: если локально уже разблокированы — не выкидываем offline.
+        if (isLaunchUnlocked() && readSessionToken()) {
+          return { ok: true, offline: true };
         }
-        // Офлайн: оставляем локальный доступ, дату версии всё равно сверили выше.
-        return { ok: true, offline: true };
+        clearLaunchUnlock();
+        return {
+          ok: false,
+          reason: "network",
+          message: msg || "Нет связи с сервером лицензий. Проверьте интернет и откройте приложение снова.",
+        };
       })
       .then(function (result) {
         return updateCheck.then(function () {
@@ -4484,8 +4532,10 @@
   }
 
   function bootstrapStandaloneShell(mediaReady) {
-    // Холодный старт / после смахивания: splash + жёсткие проверки подписки и даты версии.
+    // Холодный старт / после смахивания: splash + device_id / подписка / дата версии.
     renderInstalledHome({ preserveSplash: true });
+    // Не открываем форму входа по таймауту — решение примет device-session.
+    pendingInstalledLoginReveal = false;
     var identityWarm = ensureLicenseIdentityRestored();
     var chain = Promise.resolve();
     if (!mediaReady) {
@@ -4504,33 +4554,37 @@
         });
       })
       .then(function (check) {
-        var needLogin = !isLaunchUnlocked() || (check && check.ok === false);
-        if (needLogin) {
-          pendingInstalledLoginReveal = true;
+        if (check && check.ok) {
+          if (!readAppPreparedState()) markAppPrepared();
+          discardStaleRuntimeModules();
           renderInstalledHome({ preserveSplash: true });
-          return preloadAppModulesForHome({ keepSplashUntilUnlock: true }).then(function () {
-            finishInstalledSplashForLogin();
+          return preloadAppModulesForHome().then(function () {
+            ensureUpdateAvailableHint();
+            refreshShellCacheQuietly();
           });
         }
-        if (!readAppPreparedState()) markAppPrepared();
-        discardStaleRuntimeModules();
-        renderInstalledHome({ preserveSplash: true });
-        return preloadAppModulesForHome().then(function () {
-          ensureUpdateAvailableHint();
-          refreshShellCacheQuietly();
+        // Чужое устройство / нет подписки — без формы входа на «своём» сценарии.
+        return preloadAppModulesForHome({ keepSplashUntilUnlock: true }).then(function () {
+          hideHomeSplashIndicator();
+          if (check && check.reason === "unbound") {
+            renderDeviceBlockedGate(check.message, { allowLogin: true });
+            return;
+          }
+          if (check && check.reason === "inactive") {
+            renderDeviceBlockedGate(check.message || SUBSCRIPTION_INACTIVE_MSG, { allowLogin: false });
+            return;
+          }
+          // Сеть / прочее: дать попробовать вход (если админ открыл доп. слот).
+          renderDeviceBlockedGate(
+            (check && check.message) || DEVICE_NOT_BOUND_MSG,
+            { allowLogin: true }
+          );
         });
       })
       .catch(function (error) {
         console.warn("BTCA cold boot failed", error);
-        if (!isLaunchUnlocked()) {
-          pendingInstalledLoginReveal = true;
-          renderInstalledHome({ preserveSplash: true });
-          finishInstalledSplashForLogin();
-          return;
-        }
-        discardStaleRuntimeModules();
-        renderInstalledHome({});
-        return preloadAppModulesForHome();
+        hideHomeSplashIndicator();
+        renderDeviceBlockedGate(DEVICE_NOT_BOUND_MSG, { allowLogin: true });
       });
   }
 
