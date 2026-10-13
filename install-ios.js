@@ -2,8 +2,8 @@
   "use strict";
 
   var BTCA_BASE = "/btca-10-1/";
-  var INSTALL_CACHE = "btca10-web-10.1.95:static-install";
-  var MEDIA_CACHE = "btca10-web-10.1.95:static-media";
+  var INSTALL_CACHE = "btca10-web-10.1.96:static-install";
+  var MEDIA_CACHE = "btca10-web-10.1.96:static-media";
   var MEDIA_PROBE_RE = /offline-unpacked\/level3\/exercises\/[^/]+\.(jpe?g|png|webp|gif)$/i;
   var MEDIA_STATE_KEY = "btca10-web:static-media-state";
   var APP_READY_KEY = "btca10-web:app-ready";
@@ -25,8 +25,8 @@
   var ABOUT_MAIN_TEXT = "Настоящее Приложение разработано для локальной установки (развёртывания) на смартфоне или планшете с операционными системами Android или iOS и рассчитано для обучения и тренировки учеников с уровнем подготовки «Уровень 3 — Продвинутый».";
   var ABOUT_POST_TEXT = "*****\nБТКА, это — учебно-тренировочный программный комплекс, предназначенный для комплексного обучения игре на русском бильярде, выработки и закрепления практических навыков ведения бильярдной игры в Пирамиду, как самостоятельно, так и с тренером, с применением современных методик и технологий.\nТренировочный комплекс БТКА в сочетании с уникальной Методологией обучения составляют общую Систему тренировок БТКА школы русского бильярда «Абриколь» г. Красноярск.\n<a href=\"https://cloud.mail.ru/public/sujN/mpE8mr6aW\">Методика обучения</a>\n\nВ текущей версии Приложения БТКА 10.1 доступен раздел:\n•  *Уровень 3 — Продвинутый* Упражнений – 40, Задач – 263, Полезностей – 15.\n\nВсе Приложения функционируют без использования сети Интернет.\nКаждое Приложение:\n•  Содержит специфический (соответствующий уровню подготовки) набор упражнений, задач и тестов (в графическом виде), ранжированных по принципу - \"от простого к сложному\", и сгруппированных в тематические разделы по видам тренировок;\n•  Включает необходимые инструкции, методическую и справочную информацию;\n•  Обеспечивает возможность ввода, хранения и обработки результатов прогресса выполнения учеником практических заданий для последующего статистического анализа с использованием локальной Базы данных (БД);\n•  Имеет весь необходимый функционал и автоматизацию, а также интуитивно-понятный интерфейс, что способствует осуществлению полноценного, эффективного тренировочного процесса в комфортных условиях.\n\nОТ АВТОРА. Система тренировок БТКА разработана по результатам систематизации методик обучения русскому бильярду на основе: секретов ведущих тренеров и игроков (в т.ч. В. Симонича, В. Лазарева, С. Баурова, Е. Сталева и др.), опыта «старой школы», а также современных научных и экспериментальных исследований и IT-технологий.\n<a href=\"https://cloud.mail.ru/public/Ye3r/ZYwpjB9uz\">Подробное описание комплекса БТКА</a>\n\nCopyright © Юрий Алинт (Андрей Юрьев) 2026";
   var installedHomeSnapshot = "";
-  var LEVEL1_MODULE_VERSION = "10.1.56";
-  var LEVEL3_MODULE_VERSION = "10.1.56";
+  var LEVEL1_MODULE_VERSION = "10.1.57";
+  var LEVEL3_MODULE_VERSION = "10.1.57";
 
   var CORE_REL_PATHS = [
     "",
@@ -185,12 +185,14 @@
   var LICENSE_API_BASE = "https://185-212-129-18.sslip.io";
   var LICENSE_LOGIN_KEY = "btca101.login";
   var LICENSE_AUTH_OTP_KEY = "btca101.authByEmailOtp";
-  var LICENSE_DEVICE_KEY = "btca101.deviceId";
+  var LICENSE_DEVICE_KEY = "btca101.deviceId"; // серверный короткий ID (после claim)
+  var LICENSE_BROWSER_KEY = "btca101.browserClientId"; // nonce для OTP/сессии на загрузочной
   var LICENSE_SESSION_KEY = "btca101.sessionToken";
   var LICENSE_LAUNCH_KEY = "btca101.launchUnlocked";
   var LICENSE_DOWNLOAD_LINKS_KEY = "btca101.downloadLinks";
   var LICENSE_LOGIN_COOKIE = "btca101_login";
   var LICENSE_DEVICE_COOKIE = "btca101_device";
+  var LICENSE_BROWSER_COOKIE = "btca101_browser";
   var LICENSE_PACKAGE_DATE_KEY = "btca101.packageReleaseDate";
   var LICENSE_PACKAGE_DATE_COOKIE = "btca101_pkg_date";
 
@@ -322,12 +324,52 @@
 
   function persistLicenseDeviceId(deviceId) {
     var clean = String(deviceId || "").trim();
-    if (clean.length < 8) return "";
+    if (clean.length < 6) return "";
     try {
       localStorage.setItem(LICENSE_DEVICE_KEY, clean);
     } catch (e) {}
     writeDeviceCookie(clean);
     return clean;
+  }
+
+  function writeBrowserCookie(browserId) {
+    writePathCookie(LICENSE_BROWSER_COOKIE, browserId);
+  }
+
+  function readBrowserCookie() {
+    return readPathCookie(LICENSE_BROWSER_COOKIE);
+  }
+
+  /** Клиентский nonce для входа/OTP на странице загрузки (не ID привязки). */
+  function getBrowserClientId() {
+    try {
+      var fromCookie = readBrowserCookie();
+      if (fromCookie && fromCookie.length >= 8) {
+        try {
+          localStorage.setItem(LICENSE_BROWSER_KEY, fromCookie);
+        } catch (e) {}
+        return fromCookie;
+      }
+      var existing = "";
+      try {
+        existing = String(localStorage.getItem(LICENSE_BROWSER_KEY) || "").trim();
+      } catch (e) {}
+      if (existing.length >= 8) {
+        writeBrowserCookie(existing);
+        return existing;
+      }
+      var id =
+        typeof crypto !== "undefined" && crypto.randomUUID
+          ? crypto.randomUUID()
+          : "b-" + Date.now().toString(36) + "-" + Math.random().toString(36).slice(2, 10);
+      try {
+        localStorage.setItem(LICENSE_BROWSER_KEY, id);
+      } catch (e) {}
+      writeBrowserCookie(id);
+      return id;
+    } catch (e) {
+      return "b-fallback-" + String(Date.now());
+    }
   }
 
   function writePackageDateCookie(dateRu) {
@@ -2834,41 +2876,37 @@
     } catch (e) {}
   }
 
+  /** Серверный короткий ID после claim. Пусто — устройство ещё не привязано. */
   function getLicenseDeviceId() {
     try {
-      // Cookie первым: на iOS Safari и ярлык PWA часто имеют разный localStorage.
       var fromCookie = readDeviceCookie();
-      if (fromCookie && fromCookie.length >= 8) {
+      if (fromCookie && fromCookie.length >= 6) {
         try {
           localStorage.setItem(LICENSE_DEVICE_KEY, fromCookie);
         } catch (e) {}
         return fromCookie;
       }
       var existing = localStorage.getItem(LICENSE_DEVICE_KEY);
-      if (existing && existing.length >= 8) {
-        writeDeviceCookie(existing);
-        return existing;
+      if (existing && String(existing).trim().length >= 6) {
+        writeDeviceCookie(String(existing).trim());
+        return String(existing).trim();
       }
       try {
         var fromJson = JSON.parse(localStorage.getItem("btca101.identityJson") || "null");
-        if (fromJson && fromJson.device_id && String(fromJson.device_id).length >= 8) {
-          return persistLicenseDeviceId(String(fromJson.device_id));
+        if (fromJson && fromJson.device_id && String(fromJson.device_id).trim().length >= 6) {
+          return persistLicenseDeviceId(String(fromJson.device_id).trim());
         }
       } catch (e) {}
-      var id =
-        typeof crypto !== "undefined" && crypto.randomUUID
-          ? crypto.randomUUID()
-          : "d-" + Date.now().toString(36) + "-" + Math.random().toString(36).slice(2, 10);
-      return persistLicenseDeviceId(id);
+      return "";
     } catch (e) {
-      return "d-fallback-" + String(Date.now());
+      return "";
     }
   }
 
-  /** До splash: подтянуть device_id из cookie / IDB / cache (Safari vs PWA). */
+  /** До splash: подтянуть серверный device_id из cookie / IDB / cache (без генерации). */
   function ensureLicenseDeviceIdReady() {
     var fromCookie = readDeviceCookie();
-    if (fromCookie.length >= 8) {
+    if (fromCookie.length >= 6) {
       persistLicenseDeviceId(fromCookie);
       return Promise.resolve(fromCookie);
     }
@@ -2876,28 +2914,28 @@
     try {
       current = String(localStorage.getItem(LICENSE_DEVICE_KEY) || "").trim();
     } catch (e) {}
-    if (current.length >= 8) {
+    if (current.length >= 6) {
       writeDeviceCookie(current);
       return Promise.resolve(current);
     }
     return readIdentityFromIdb()
       .then(function (data) {
         var fromIdb = data && String(data.device_id || "").trim();
-        if (fromIdb.length >= 8) {
+        if (fromIdb.length >= 6) {
           persistLicenseDeviceId(fromIdb);
           return fromIdb;
         }
         return readIdentityFromAnyCache().then(function (cached) {
           var fromCache = cached && String(cached.device_id || "").trim();
-          if (fromCache.length >= 8) {
+          if (fromCache.length >= 6) {
             persistLicenseDeviceId(fromCache);
             return fromCache;
           }
-          return getLicenseDeviceId();
+          return "";
         });
       })
       .catch(function () {
-        return getLicenseDeviceId();
+        return "";
       });
   }
 
@@ -3016,8 +3054,11 @@
     if (/unique constraint/i.test(raw) || /integrityerror/i.test(raw)) {
       return "Повторное скачивание разрешено. Обновите страницу и нажмите ещё раз.";
     }
-    if (/неверный код/i.test(raw)) {
-      return "Код введён неправильно. Проверьте цифры и попробуйте снова.";
+    if (/не\s*правильный код|неверный код|код введён неправильно/i.test(raw)) {
+      return "Не правильный Код.";
+    }
+    if (/не\s*правильный логин|неверный логин/i.test(raw)) {
+      return "Не правильный Логин или Пароль.";
     }
     if (/код истёк/i.test(raw)) {
       return "Код истёк. Запросите новый.";
@@ -3200,14 +3241,26 @@
     if (!token) {
       return Promise.reject(new Error("Сессия не найдена. Войдите ещё раз."));
     }
-    var versionDate = readLocalPackageReleaseDate();
+    var versionDate = readLatestPackageReleaseDate();
     return licensePost("/v1/downloads/claim", {
       session_token: token,
-      device_id: getLicenseDeviceId(),
+      device_id: getLicenseDeviceId() || "",
       platform: platform,
       app_version: PACKAGE_APP_VERSION,
       device_label: label || platform,
       version_date: versionDate || "",
+    }).then(function (data) {
+      var assigned = data && String(data.device_id || "").trim();
+      if (assigned.length >= 6) {
+        persistLicenseDeviceId(assigned);
+        try {
+          var login = String(localStorage.getItem(LICENSE_LOGIN_KEY) || "").trim() || readLoginCookie();
+          if (login) {
+            persistLicenseIdentity(login, localStorage.getItem(LICENSE_AUTH_OTP_KEY) === "1");
+          }
+        } catch (e) {}
+      }
+      return data;
     });
   }
 
@@ -3479,13 +3532,13 @@
   }
 
   var SUBSCRIPTION_INACTIVE_MSG =
-    "Подписка не активна. Для оформления или продления доступа обратитесь в Службу поддержки.";
+    "Подписка не активна, обратитесь в Службу поддержки";
   var DEVICE_NOT_BOUND_MSG =
-    "Вход в Приложение закрыт. Это устройство не привязано к аккаунту регистрации!";
-  var DEVICE_ENROLL_HINT_MSG =
-    "Это устройство ещё не привязано. Войдите в аккаунт — если лимит устройств не исчерпан, доступ будет открыт.";
+    "Запуск Приложения не возможен. Устройство не авторизовано!";
   var DEVICE_LIMIT_MSG =
-    "Лимит устройств исчерпан. Вход на этом устройстве закрыт. Обратитесь к автору аккаунта.";
+    "Превышен лимит устройств. На платформу — не более 2, всего — по лимиту в админке.";
+  var MSG_WRONG_LOGIN_PASSWORD = "Не правильный Логин или Пароль.";
+  var MSG_WRONG_CODE = "Не правильный Код.";
 
   function isSubscriptionInactiveError(message) {
     return /подписка не активна/i.test(String(message || ""));
@@ -3494,10 +3547,9 @@
   function isDeviceNotAllowedError(message) {
     var text = String(message || "");
     return (
-      /не привязано к аккаунту/i.test(text) ||
+      /устройство не авторизовано/i.test(text) ||
       /лимит устройств/i.test(text) ||
-      /только с устройства регистрации/i.test(text) ||
-      /вход в приложение закрыт/i.test(text)
+      /запуск приложения не возможен/i.test(text)
     );
   }
 
@@ -3597,7 +3649,7 @@
           passwordFieldHtml("password", "Пароль*", true, true) +
           '<label class="auth-gate__field"><span>E-mail</span><input name="email" type="email" autocomplete="email" maxlength="255" value=""/></label>' +
           emailOtpCheckboxHtml(false, true) +
-          '<p class="auth-gate__hint auth-gate__hint--warn">Аккаунт будет жёстко привязан к устройству, с которого Вы зарегистрируетесь!</p>';
+          '<p class="auth-gate__hint">После регистрации обратитесь в Службу поддержки для активации подписки.</p>';
       } else if (mode === "login") {
         bodyHtml =
           '<label class="auth-gate__field"><span>Логин</span><input name="login" autocomplete="username" required minlength="3" maxlength="64" value="' +
@@ -3797,7 +3849,7 @@
       var password = passwordInput ? String(passwordInput.value || "") : "";
       var email = emailInput ? String(emailInput.value || "").trim() : "";
       var wantOtp = Boolean(otpFlag && otpFlag.checked);
-      var deviceId = getLicenseDeviceId();
+      var deviceId = getBrowserClientId();
       var requestMode = mode;
 
       var chain = Promise.resolve();
@@ -3911,7 +3963,11 @@
             return;
           }
           if (isDeviceNotAllowedError(message) && isStandalone()) {
-            renderDeviceBlockedGate(DEVICE_LIMIT_MSG, { allowLogin: false });
+            renderDeviceBlockedGate(message || DEVICE_NOT_BOUND_MSG);
+            return;
+          }
+          if (/лимит устройств/i.test(message)) {
+            setError(message || DEVICE_LIMIT_MSG);
             return;
           }
           if (message === "Введите пароль") {
@@ -3938,14 +3994,19 @@
             return;
           }
           if (requestMode === "otp") {
-            // Оставляем форму кода; ошибку показываем явно под полем.
-            setError(message || "Код введён неправильно. Проверьте цифры и попробуйте снова.");
+            setError(
+              /код истёк/i.test(message) ? message : MSG_WRONG_CODE
+            );
             if (otpInput) {
               try {
                 otpInput.value = "";
                 otpInput.focus();
               } catch (e) {}
             }
+            return;
+          }
+          if (requestMode === "login" && /логин|пароль/i.test(message)) {
+            setError(MSG_WRONG_LOGIN_PASSWORD);
             return;
           }
           setError(message);
@@ -4136,6 +4197,35 @@
     return readStoredPackageReleaseDate();
   }
 
+  /** Самая новая дата среди платформ (PWA / Android / Windows) из shell или локальной. */
+  function pickNewestReleaseDate() {
+    var dates = [];
+    for (var i = 0; i < arguments.length; i++) {
+      var raw = String(arguments[i] || "").trim();
+      if (/^\d{2}\.\d{2}\.\d{4}$/.test(raw)) dates.push(raw);
+    }
+    if (!dates.length) return "";
+    dates.sort(function (a, b) {
+      return parseDateRuValue(b) - parseDateRuValue(a);
+    });
+    return dates[0];
+  }
+
+  function readLatestPackageReleaseDate() {
+    var local = readLocalPackageReleaseDate();
+    return pickNewestReleaseDate(local) || local || "";
+  }
+
+  function remoteLatestVersionDate(payload) {
+    if (!payload) return "";
+    return pickNewestReleaseDate(
+      payload.packageReleaseDate,
+      payload.androidReleaseDate,
+      payload.windowsReleaseDate,
+      payload.lastVersionDate
+    );
+  }
+
   function applyUpdateAvailableHint(remoteDate, localDate) {
     var menu = document.querySelector(".btca-work-menu");
     var existing = document.getElementById("btca-update-available");
@@ -4154,7 +4244,7 @@
       if (link) link.insertAdjacentElement("afterend", existing);
       else menu.appendChild(existing);
     }
-    existing.textContent = "Есть обновление от " + remote;
+    existing.textContent = "Есть обновление.";
     var splashPanel = getEls().panel;
     if (splashPanel && splashPanel.classList.contains("btca-home-splash-panel")) {
       placeHomeSplashPanel("menu");
@@ -4169,7 +4259,7 @@
     return fetchRemoteAppShellPayload()
       .then(function (payload) {
         if (!payload) return false;
-        var remoteDate = String(payload.packageReleaseDate || "").trim();
+        var remoteDate = remoteLatestVersionDate(payload);
         return applyUpdateAvailableHint(remoteDate, localDate);
       })
       .catch(function () {
@@ -4177,9 +4267,7 @@
       });
   }
 
-  function renderDeviceBlockedGate(message, options) {
-    options = options || {};
-    var allowLogin = Boolean(options.allowLogin);
+  function renderDeviceBlockedGate(message) {
     pendingInstalledLoginReveal = false;
     hideHomeSplashIndicator();
     var gate = ensureAuthGateMount();
@@ -4188,71 +4276,34 @@
     gate.onsubmit = null;
     gate.oninput = null;
     gate.onchange = null;
+    gate.onclick = null;
+    var text = message || DEVICE_NOT_BOUND_MSG;
+    var title = /подписка не активна/i.test(text)
+      ? "Подписка не активна"
+      : "Устройство не авторизовано";
     gate.innerHTML =
       '<p class="auth-gate__title">' +
-      escapeHtml(allowLogin ? "Новое устройство" : "Устройство не авторизовано") +
+      escapeHtml(title) +
       "</p>" +
       '<p class="auth-gate__hint auth-gate__hint--danger">' +
-      escapeHtml(message || (allowLogin ? DEVICE_ENROLL_HINT_MSG : DEVICE_NOT_BOUND_MSG)) +
-      "</p>" +
-      (allowLogin
-        ? '<button type="button" class="platform-button auth-gate__submit" data-device-enroll-login><span>Войти на этом устройстве</span></button>'
-        : "");
-    gate.onclick = function (event) {
-      var btn =
-        event.target && event.target.closest
-          ? event.target.closest("[data-device-enroll-login]")
-          : null;
-      if (!btn) return;
-      event.preventDefault();
-      ensureLicenseIdentityRestored()
-        .then(function (login) {
-          var prefill = String(login || "").trim();
-          if (!prefill) {
-            try {
-              prefill =
-                String(localStorage.getItem(LICENSE_LOGIN_KEY) || "").trim() || readLoginCookie();
-            } catch (e) {
-              prefill = readLoginCookie();
-            }
-          }
-          renderAuthGate(
-            function () {
-              hideHomeSplashIndicator();
-              if (!readAppPreparedState()) markAppPrepared();
-              renderInstalledHome({});
-            },
-            { loginOnly: true, prefillLogin: prefill }
-          );
-        })
-        .catch(function () {
-          renderAuthGate(
-            function () {
-              hideHomeSplashIndicator();
-              if (!readAppPreparedState()) markAppPrepared();
-              renderInstalledHome({});
-            },
-            { loginOnly: true }
-          );
-        });
-    };
+      escapeHtml(text) +
+      "</p>";
   }
 
   /**
-   * Жёсткие проверки на каждом splash:
-   * device_id (привязка) + подписка + дата версии + отчёт в админку.
-   * На своём устройстве — автовход без формы; на чужом — блок.
+   * Splash PWA: (а) подписка → (б) ID устройства → (в) обновление на фоне домашнего экрана.
+   * Вход/регистрация только на странице загрузки.
    */
   function runSplashBootChecks() {
     if (!isStandalone()) return Promise.resolve({ ok: true, skipped: true });
     try {
       renderHomeSplashIndicator(8);
     } catch (e) {}
-    var localDate = readLocalPackageReleaseDate();
+    var localDate = readLatestPackageReleaseDate() || readLocalPackageReleaseDate();
     var updateCheck = fetchRemoteAppShellPayload()
       .then(function (payload) {
-        var remoteDate = payload ? String(payload.packageReleaseDate || "").trim() : "";
-        applyUpdateAvailableHint(remoteDate, localDate);
+        var remoteDate = remoteLatestVersionDate(payload);
+        // Подсказку обновления покажем после открытия дома (п.9в).
         return remoteDate;
       })
       .catch(function () {
@@ -4264,7 +4315,7 @@
     } catch (e) {}
 
     return licensePost("/v1/auth/device-session", {
-      device_id: getLicenseDeviceId(),
+      device_id: getLicenseDeviceId() || "",
       platform: "pwa",
       app_version: PACKAGE_APP_VERSION,
       device_label: "iOS/PWA",
@@ -4274,18 +4325,8 @@
         try {
           renderHomeSplashIndicator(40);
         } catch (e) {}
-        if (!data || !data.bound) {
-          clearLaunchUnlock();
-          try {
-            localStorage.removeItem(LICENSE_SESSION_KEY);
-          } catch (e) {}
-          return { ok: false, reason: "unbound", message: (data && data.message) || DEVICE_NOT_BOUND_MSG };
-        }
-        if (data.login) {
-          persistLicenseIdentity(data.login, data.auth_by_email_otp);
-        }
-        if (data.paid_until) storePaidUntil(data.paid_until);
-        if (!data.subscription_active || !data.session_token) {
+        // Сначала подписка (если аккаунт уже известен по ID), затем привязка.
+        if (data && data.bound && (!data.subscription_active || !data.session_token)) {
           clearLaunchUnlock();
           try {
             localStorage.removeItem(LICENSE_SESSION_KEY);
@@ -4297,6 +4338,21 @@
             login: data.login || "",
           };
         }
+        if (!data || !data.bound) {
+          clearLaunchUnlock();
+          try {
+            localStorage.removeItem(LICENSE_SESSION_KEY);
+          } catch (e) {}
+          return {
+            ok: false,
+            reason: "unbound",
+            message: (data && data.message) || DEVICE_NOT_BOUND_MSG,
+          };
+        }
+        if (data.login) {
+          persistLicenseIdentity(data.login, data.auth_by_email_otp);
+        }
+        if (data.paid_until) storePaidUntil(data.paid_until);
         markLaunchUnlocked(data.session_token);
         return { ok: true, bound: true, login: data.login || "" };
       })
@@ -4752,25 +4808,18 @@
         return preloadAppModulesForHome({ keepSplashUntilUnlock: true }).then(function () {
           hideHomeSplashIndicator();
           if (check && check.reason === "inactive") {
-            renderDeviceBlockedGate(check.message || SUBSCRIPTION_INACTIVE_MSG, {
-              allowLogin: false,
-            });
+            renderDeviceBlockedGate(check.message || SUBSCRIPTION_INACTIVE_MSG);
             return;
           }
-          if (check && check.reason === "unbound") {
-            // Новое устройство: пока лимит не исчерпан — вход/привязка; лимит проверит сервер.
-            renderDeviceBlockedGate(DEVICE_ENROLL_HINT_MSG, { allowLogin: true });
-            return;
-          }
-          renderDeviceBlockedGate((check && check.message) || DEVICE_NOT_BOUND_MSG, {
-            allowLogin: false,
-          });
+          renderDeviceBlockedGate(
+            (check && check.message) || DEVICE_NOT_BOUND_MSG
+          );
         });
       })
       .catch(function (error) {
         console.warn("BTCA cold boot failed", error);
         hideHomeSplashIndicator();
-        renderDeviceBlockedGate(DEVICE_ENROLL_HINT_MSG, { allowLogin: true });
+        renderDeviceBlockedGate(DEVICE_NOT_BOUND_MSG);
       });
   }
 
@@ -4865,9 +4914,9 @@
     window.__BTCA_OPEN_DATE_INPUT__ = openCenteredDatePicker;
     stripIosPwaQueryInBrowser();
     clearStaleClientState();
-    // Сразу зафиксировать device_id в cookie (общий для Safari и ярлыка PWA).
+    // Browser nonce для входа/OTP; серверный device_id появится только после claim.
     try {
-      getLicenseDeviceId();
+      getBrowserClientId();
     } catch (e) {}
     // iPad: Cache/SW могут не resolve — UI сразу, иначе «зависает».
     paintBootUi();
