@@ -2,8 +2,8 @@
   "use strict";
 
   var BTCA_BASE = "/btca-10-1/";
-  var INSTALL_CACHE = "btca10-web-10.1.85:static-install";
-  var MEDIA_CACHE = "btca10-web-10.1.85:static-media";
+  var INSTALL_CACHE = "btca10-web-10.1.86:static-install";
+  var MEDIA_CACHE = "btca10-web-10.1.86:static-media";
   var MEDIA_PROBE_RE = /offline-unpacked\/level3\/exercises\/[^/]+\.(jpe?g|png|webp|gif)$/i;
   var MEDIA_STATE_KEY = "btca10-web:static-media-state";
   var APP_READY_KEY = "btca10-web:app-ready";
@@ -25,8 +25,8 @@
   var ABOUT_MAIN_TEXT = "Настоящее Приложение разработано для локальной установки (развёртывания) на смартфоне или планшете с операционными системами Android или iOS и рассчитано для обучения и тренировки учеников с уровнем подготовки «Уровень 3 — Продвинутый».";
   var ABOUT_POST_TEXT = "*****\nБТКА, это — учебно-тренировочный программный комплекс, предназначенный для комплексного обучения игре на русском бильярде, выработки и закрепления практических навыков ведения бильярдной игры в Пирамиду, как самостоятельно, так и с тренером, с применением современных методик и технологий.\nТренировочный комплекс БТКА в сочетании с уникальной Методологией обучения составляют общую Систему тренировок БТКА школы русского бильярда «Абриколь» г. Красноярск.\n<a href=\"https://cloud.mail.ru/public/sujN/mpE8mr6aW\">Методика обучения</a>\n\nВ текущей версии Приложения БТКА 10.1 доступен раздел:\n•  *Уровень 3 — Продвинутый* Упражнений – 40, Задач – 263, Полезностей – 15.\n\nВсе Приложения функционируют без использования сети Интернет.\nКаждое Приложение:\n•  Содержит специфический (соответствующий уровню подготовки) набор упражнений, задач и тестов (в графическом виде), ранжированных по принципу - \"от простого к сложному\", и сгруппированных в тематические разделы по видам тренировок;\n•  Включает необходимые инструкции, методическую и справочную информацию;\n•  Обеспечивает возможность ввода, хранения и обработки результатов прогресса выполнения учеником практических заданий для последующего статистического анализа с использованием локальной Базы данных (БД);\n•  Имеет весь необходимый функционал и автоматизацию, а также интуитивно-понятный интерфейс, что способствует осуществлению полноценного, эффективного тренировочного процесса в комфортных условиях.\n\nОТ АВТОРА. Система тренировок БТКА разработана по результатам систематизации методик обучения русскому бильярду на основе: секретов ведущих тренеров и игроков (в т.ч. В. Симонича, В. Лазарева, С. Баурова, Е. Сталева и др.), опыта «старой школы», а также современных научных и экспериментальных исследований и IT-технологий.\n<a href=\"https://cloud.mail.ru/public/Ye3r/ZYwpjB9uz\">Подробное описание комплекса БТКА</a>\n\nCopyright © Юрий Алинт (Андрей Юрьев) 2026";
   var installedHomeSnapshot = "";
-  var LEVEL1_MODULE_VERSION = "10.1.54";
-  var LEVEL3_MODULE_VERSION = "10.1.54";
+  var LEVEL1_MODULE_VERSION = "10.1.55";
+  var LEVEL3_MODULE_VERSION = "10.1.55";
 
   var CORE_REL_PATHS = [
     "",
@@ -164,17 +164,30 @@
   }
 
   var pendingInstalledLoginReveal = false;
+  var IDENTITY_CACHE = "btca10-identity";
+  var IDENTITY_URL = "/btca-10-1/offline/btca-identity.json";
+  var IDENTITY_IDB = "btca10-identity-db";
 
-  function hideHomeSplashIndicator() {
+  function hideHomeSplashIndicator(options) {
+    options = options || {};
     var panel = getEls().panel;
-    if (!panel) return;
-    panel.className = "ios-panel";
-    panel.innerHTML = "";
-    panel.setAttribute("hidden", "hidden");
-    if (pendingInstalledLoginReveal) {
-      // Форма входа — только после исчезновения splash.
+    if (panel) {
+      panel.className = "ios-panel";
+      panel.innerHTML = "";
+      panel.setAttribute("hidden", "hidden");
+    }
+    // Форму входа открываем только явной командой после полного splash/boot.
+    if (options.revealLogin && pendingInstalledLoginReveal) {
       window.setTimeout(revealInstalledLoginGate, 0);
     }
+  }
+
+  function finishInstalledSplashForLogin() {
+    if (!pendingInstalledLoginReveal) {
+      hideHomeSplashIndicator();
+      return;
+    }
+    hideHomeSplashIndicator({ revealLogin: true });
   }
 
   function hideInstalledAuthGate() {
@@ -197,13 +210,13 @@
       return;
     }
     pendingInstalledLoginReveal = false;
-    ensureLicenseIdentityRestored().then(function () {
+    ensureLicenseIdentityRestored().then(function (login) {
       renderAuthGate(
         function () {
           hideHomeSplashIndicator();
           renderInstalledHome({});
         },
-        { loginOnly: true }
+        { loginOnly: true, prefillLogin: login || "" }
       );
     });
   }
@@ -211,53 +224,147 @@
   function persistLicenseIdentity(login, authOtp) {
     var clean = String(login || "").trim();
     if (!clean) return;
+    var payload = {
+      login: clean,
+      auth_by_email_otp: Boolean(authOtp),
+      saved_at: Date.now(),
+    };
     try {
       localStorage.setItem(LICENSE_LOGIN_KEY, clean);
       localStorage.setItem(LICENSE_AUTH_OTP_KEY, authOtp ? "1" : "0");
+      localStorage.setItem("btca101.identityJson", JSON.stringify(payload));
     } catch (e) {}
-    if (!("caches" in window)) return;
+    if ("caches" in window) {
+      try {
+        var body = JSON.stringify(payload);
+        caches.open(IDENTITY_CACHE).then(function (cache) {
+          return cache.put(
+            IDENTITY_URL,
+            new Response(body, {
+              headers: { "Content-Type": "application/json", "Cache-Control": "no-cache" },
+            })
+          );
+        }).catch(function () {});
+      } catch (e) {}
+    }
     try {
-      var body = JSON.stringify({
-        login: clean,
-        auth_by_email_otp: Boolean(authOtp),
-        saved_at: Date.now(),
-      });
-      caches.open("btca10-identity").then(function (cache) {
-        return cache.put(
-          new Request(assetPath("offline/btca-identity.json")),
-          new Response(body, {
-            headers: { "Content-Type": "application/json", "Cache-Control": "no-cache" },
-          })
-        );
-      }).catch(function () {});
+      if (!window.indexedDB) return;
+      var req = indexedDB.open(IDENTITY_IDB, 1);
+      req.onupgradeneeded = function () {
+        var db = req.result;
+        if (!db.objectStoreNames.contains("identity")) db.createObjectStore("identity");
+      };
+      req.onsuccess = function () {
+        try {
+          var db = req.result;
+          var tx = db.transaction("identity", "readwrite");
+          tx.objectStore("identity").put(payload, "current");
+        } catch (e) {}
+      };
     } catch (e) {}
+  }
+
+  function readIdentityFromIdb() {
+    return new Promise(function (resolve) {
+      try {
+        if (!window.indexedDB) {
+          resolve(null);
+          return;
+        }
+        var req = indexedDB.open(IDENTITY_IDB, 1);
+        req.onupgradeneeded = function () {
+          var db = req.result;
+          if (!db.objectStoreNames.contains("identity")) db.createObjectStore("identity");
+        };
+        req.onerror = function () {
+          resolve(null);
+        };
+        req.onsuccess = function () {
+          try {
+            var db = req.result;
+            var tx = db.transaction("identity", "readonly");
+            var getReq = tx.objectStore("identity").get("current");
+            getReq.onsuccess = function () {
+              resolve(getReq.result || null);
+            };
+            getReq.onerror = function () {
+              resolve(null);
+            };
+          } catch (e) {
+            resolve(null);
+          }
+        };
+      } catch (e) {
+        resolve(null);
+      }
+    });
   }
 
   function ensureLicenseIdentityRestored() {
     var existing = "";
+    var otpFlag = false;
     try {
       existing = String(localStorage.getItem(LICENSE_LOGIN_KEY) || "").trim();
+      otpFlag = localStorage.getItem(LICENSE_AUTH_OTP_KEY) === "1";
     } catch (e) {}
-    if (existing) return Promise.resolve(existing);
-    if (!("caches" in window)) return Promise.resolve("");
-    return caches
-      .open("btca10-identity")
-      .then(function (cache) {
-        return cache.match(assetPath("offline/btca-identity.json"));
-      })
-      .then(function (response) {
-        if (!response) return null;
-        return response.json();
-      })
-      .then(function (data) {
-        var login = data && String(data.login || "").trim();
-        if (!login) return "";
-        persistLicenseIdentity(login, Boolean(data && data.auth_by_email_otp));
-        return login;
-      })
-      .catch(function () {
-        return "";
+    if (existing) {
+      persistLicenseIdentity(existing, otpFlag);
+      return Promise.resolve(existing);
+    }
+
+    function applyData(data) {
+      var login = data && String(data.login || "").trim();
+      if (!login) return "";
+      persistLicenseIdentity(login, Boolean(data && data.auth_by_email_otp));
+      return login;
+    }
+
+    var fromJson = null;
+    try {
+      fromJson = JSON.parse(localStorage.getItem("btca101.identityJson") || "null");
+    } catch (e) {}
+    if (fromJson && fromJson.login) {
+      return Promise.resolve(applyData(fromJson));
+    }
+
+    var token = "";
+    try {
+      token = String(localStorage.getItem(LICENSE_SESSION_KEY) || "").trim();
+    } catch (e) {}
+
+    var accountPromise = token
+      ? licensePost("/v1/account", { session_token: token })
+          .then(function (data) {
+            return applyData(data);
+          })
+          .catch(function () {
+            return "";
+          })
+      : Promise.resolve("");
+
+    return accountPromise.then(function (login) {
+      if (login) return login;
+      return readIdentityFromIdb().then(function (data) {
+        var fromIdb = applyData(data);
+        if (fromIdb) return fromIdb;
+        if (!("caches" in window)) return "";
+        return caches
+          .open(IDENTITY_CACHE)
+          .then(function (cache) {
+            return cache.match(IDENTITY_URL);
+          })
+          .then(function (response) {
+            if (!response) return null;
+            return response.json();
+          })
+          .then(function (data) {
+            return applyData(data);
+          })
+          .catch(function () {
+            return "";
+          });
       });
+    });
   }
 
   function mapBootProgress(localPct, startPct, endPct) {
@@ -2427,6 +2534,10 @@
     try {
       if (token) localStorage.setItem(LICENSE_SESSION_KEY, token);
       sessionStorage.setItem(LICENSE_LAUNCH_KEY, "1");
+      var login = String(localStorage.getItem(LICENSE_LOGIN_KEY) || "").trim();
+      if (login) {
+        persistLicenseIdentity(login, localStorage.getItem(LICENSE_AUTH_OTP_KEY) === "1");
+      }
     } catch (e) {}
   }
 
@@ -3084,9 +3195,16 @@
     var savedLogin = "";
     var preferOtp = false;
     try {
-      savedLogin = localStorage.getItem(LICENSE_LOGIN_KEY) || "";
+      savedLogin = String(options.prefillLogin || localStorage.getItem(LICENSE_LOGIN_KEY) || "").trim();
       preferOtp = localStorage.getItem(LICENSE_AUTH_OTP_KEY) === "1";
-    } catch (e) {}
+    } catch (e) {
+      savedLogin = String(options.prefillLogin || "").trim();
+    }
+    if (savedLogin) {
+      try {
+        localStorage.setItem(LICENSE_LOGIN_KEY, savedLogin);
+      } catch (e) {}
+    }
     var mode = loginOnly ? "login" : savedLogin ? "login" : "register";
     var otpSentHint = "";
     var subscriptionBlocked = false;
@@ -3108,6 +3226,7 @@
 
     function finishWithSession(data) {
       markLaunchUnlocked(data.session_token);
+      if (savedLogin) persistLicenseIdentity(savedLogin, preferOtp);
       storePaidUntil(data && data.paid_until);
       try {
         sessionStorage.removeItem(DOWNLOAD_MENU_SHOWN_KEY);
@@ -3585,7 +3704,7 @@
         menu.innerHTML = "";
         menu.setAttribute("hidden", "hidden");
       }
-      // Форма входа только после splash — пока ждём, gate скрыт.
+      // Форма входа только после полного splash/boot (finishInstalledSplashForLogin).
       pendingInstalledLoginReveal = true;
       hideInstalledAuthGate();
       if (panel) {
@@ -3602,19 +3721,9 @@
       installedHomeSnapshot = "";
       syncPortraitMode();
       markStandaloneShellReady();
-      // Если splash уже не нужен / сразу 100% — reveal сделает hideHomeSplashIndicator.
-      // Короткая страховка: splash так и не появился.
+      // Страховка: если boot завис — всё равно показать вход.
       window.setTimeout(function () {
-        if (!pendingInstalledLoginReveal) return;
-        var splashOn =
-          panel &&
-          panel.classList.contains("btca-home-splash-panel") &&
-          !panel.hasAttribute("hidden");
-        if (!splashOn) revealInstalledLoginGate();
-      }, 1200);
-      // Длинная страховка: splash завис — всё равно показать вход.
-      window.setTimeout(function () {
-        if (pendingInstalledLoginReveal) revealInstalledLoginGate();
+        if (pendingInstalledLoginReveal) finishInstalledSplashForLogin();
       }, 45000);
       return;
     }
@@ -4006,9 +4115,12 @@
       .then(function () {
         setOfflinePreparationActive(false);
         if (options.deferHome || !isLaunchUnlocked()) {
-          // Холодный старт: ждём OTP; splash при 100% убираем.
+          // Холодный старт: форму входа откроет finishInstalledSplashForLogin после всей цепочки.
           hideHomeSplashIndicator();
-          if (isLaunchUnlocked()) renderInstalledHome();
+          if (isLaunchUnlocked()) {
+            pendingInstalledLoginReveal = false;
+            renderInstalledHome();
+          }
           return;
         }
         hideHomeSplashIndicator();
@@ -4097,16 +4209,24 @@
       return preloadAppModulesForHome();
     }
 
-    // Холодный старт / после смахивания: OTP + splash, без автоперехода в меню.
+    // Холодный старт / после смахивания: splash полностью, затем форма входа.
     if (!isLaunchUnlocked()) {
       renderInstalledHome({ preserveSplash: true });
-      var coldPreload = preloadAppModulesForHome({ keepSplashUntilUnlock: true });
+      var chain = Promise.resolve();
       if (!mediaReady) {
-        return repairStandaloneShell({ deferHome: true }).then(function () {
-          return coldPreload;
-        });
+        chain = repairStandaloneShell({ deferHome: true });
       }
-      return coldPreload;
+      return chain
+        .then(function () {
+          return preloadAppModulesForHome({ keepSplashUntilUnlock: true });
+        })
+        .then(function () {
+          finishInstalledSplashForLogin();
+        })
+        .catch(function (error) {
+          console.warn("BTCA cold boot failed", error);
+          finishInstalledSplashForLogin();
+        });
     }
 
     if (!mediaReady) {
@@ -4263,9 +4383,17 @@
         if (isAppShellMode()) {
           recordInstallSession();
           if (!isLaunchUnlocked()) {
-            return repairStandaloneShell({ deferHome: true }).then(function () {
-              return preloadAppModulesForHome({ keepSplashUntilUnlock: true });
-            });
+            renderInstalledHome({ preserveSplash: true });
+            return repairStandaloneShell({ deferHome: true })
+              .then(function () {
+                return preloadAppModulesForHome({ keepSplashUntilUnlock: true });
+              })
+              .then(function () {
+                finishInstalledSplashForLogin();
+              })
+              .catch(function () {
+                finishInstalledSplashForLogin();
+              });
           }
           return repairStandaloneShell().then(function () {
             return preloadAppModulesForHome();
