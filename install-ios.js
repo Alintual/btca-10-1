@@ -2,8 +2,8 @@
   "use strict";
 
   var BTCA_BASE = "/btca-10-1/";
-  var INSTALL_CACHE = "btca10-web-10.1.86:static-install";
-  var MEDIA_CACHE = "btca10-web-10.1.86:static-media";
+  var INSTALL_CACHE = "btca10-web-10.1.87:static-install";
+  var MEDIA_CACHE = "btca10-web-10.1.87:static-media";
   var MEDIA_PROBE_RE = /offline-unpacked\/level3\/exercises\/[^/]+\.(jpe?g|png|webp|gif)$/i;
   var MEDIA_STATE_KEY = "btca10-web:static-media-state";
   var APP_READY_KEY = "btca10-web:app-ready";
@@ -167,6 +167,15 @@
   var IDENTITY_CACHE = "btca10-identity";
   var IDENTITY_URL = "/btca-10-1/offline/btca-identity.json";
   var IDENTITY_IDB = "btca10-identity-db";
+  // Ключи identity — до любых persist/restore (не ниже по файлу).
+  var LICENSE_API_BASE = "https://185-212-129-18.sslip.io";
+  var LICENSE_LOGIN_KEY = "btca101.login";
+  var LICENSE_AUTH_OTP_KEY = "btca101.authByEmailOtp";
+  var LICENSE_DEVICE_KEY = "btca101.deviceId";
+  var LICENSE_SESSION_KEY = "btca101.sessionToken";
+  var LICENSE_LAUNCH_KEY = "btca101.launchUnlocked";
+  var LICENSE_DOWNLOAD_LINKS_KEY = "btca101.downloadLinks";
+  var LICENSE_LOGIN_COOKIE = "btca101_login";
 
   function hideHomeSplashIndicator(options) {
     options = options || {};
@@ -211,22 +220,90 @@
     }
     pendingInstalledLoginReveal = false;
     ensureLicenseIdentityRestored().then(function (login) {
+      var prefill = String(login || "").trim();
+      if (!prefill) {
+        try {
+          prefill = String(localStorage.getItem(LICENSE_LOGIN_KEY) || "").trim() || readLoginCookie();
+        } catch (e) {
+          prefill = readLoginCookie();
+        }
+      }
       renderAuthGate(
         function () {
           hideHomeSplashIndicator();
           renderInstalledHome({});
         },
-        { loginOnly: true, prefillLogin: login || "" }
+        { loginOnly: true, prefillLogin: prefill }
       );
+      if (prefill) {
+        window.setTimeout(function () {
+          var gate = document.getElementById("btca-auth-gate");
+          var input = gate && gate.querySelector('input[name="login"]');
+          if (input && !String(input.value || "").trim()) {
+            input.value = prefill;
+            try {
+              input.setAttribute("value", prefill);
+            } catch (e) {}
+          }
+        }, 80);
+      }
     });
+  }
+
+  function readLoginCookie() {
+    try {
+      var parts = String(document.cookie || "").split(";");
+      for (var i = 0; i < parts.length; i++) {
+        var pair = parts[i].trim();
+        if (pair.indexOf(LICENSE_LOGIN_COOKIE + "=") === 0) {
+          return decodeURIComponent(pair.slice(LICENSE_LOGIN_COOKIE.length + 1)).trim();
+        }
+      }
+    } catch (e) {}
+    return "";
+  }
+
+  function writeLoginCookie(login) {
+    try {
+      var clean = String(login || "").trim();
+      if (!clean) return;
+      var maxAge = 60 * 60 * 24 * 400;
+      document.cookie =
+        LICENSE_LOGIN_COOKIE +
+        "=" +
+        encodeURIComponent(clean) +
+        "; path=/btca-10-1/; max-age=" +
+        maxAge +
+        "; SameSite=Lax";
+    } catch (e) {}
+  }
+
+  function putIdentityInCache(cacheName, body) {
+    if (!("caches" in window) || !cacheName) return Promise.resolve();
+    return caches
+      .open(cacheName)
+      .then(function (cache) {
+        return cache.put(
+          IDENTITY_URL,
+          new Response(body, {
+            headers: { "Content-Type": "application/json", "Cache-Control": "no-cache" },
+          })
+        );
+      })
+      .catch(function () {});
   }
 
   function persistLicenseIdentity(login, authOtp) {
     var clean = String(login || "").trim();
     if (!clean) return;
+    var deviceId = "";
+    try {
+      deviceId = String(localStorage.getItem(LICENSE_DEVICE_KEY) || "").trim();
+    } catch (e) {}
     var payload = {
       login: clean,
       auth_by_email_otp: Boolean(authOtp),
+      device_id: deviceId,
       saved_at: Date.now(),
     };
     try {
@@ -234,19 +311,10 @@
       localStorage.setItem(LICENSE_AUTH_OTP_KEY, authOtp ? "1" : "0");
       localStorage.setItem("btca101.identityJson", JSON.stringify(payload));
     } catch (e) {}
-    if ("caches" in window) {
-      try {
-        var body = JSON.stringify(payload);
-        caches.open(IDENTITY_CACHE).then(function (cache) {
-          return cache.put(
-            IDENTITY_URL,
-            new Response(body, {
-              headers: { "Content-Type": "application/json", "Cache-Control": "no-cache" },
-            })
-          );
-        }).catch(function () {});
-      } catch (e) {}
-    }
+    writeLoginCookie(clean);
+    var body = JSON.stringify(payload);
+    putIdentityInCache(IDENTITY_CACHE, body);
+    putIdentityInCache(INSTALL_CACHE, body);
     try {
       if (!window.indexedDB) return;
       var req = indexedDB.open(IDENTITY_IDB, 1);
@@ -262,6 +330,45 @@
         } catch (e) {}
       };
     } catch (e) {}
+  }
+
+  function readIdentityFromAnyCache() {
+    if (!("caches" in window)) return Promise.resolve(null);
+    return caches
+      .keys()
+      .then(function (names) {
+        var preferred = [IDENTITY_CACHE, INSTALL_CACHE].concat(
+          names.filter(function (n) {
+            return n !== IDENTITY_CACHE && n !== INSTALL_CACHE;
+          })
+        );
+        var seen = {};
+        function next(i) {
+          if (i >= preferred.length) return Promise.resolve(null);
+          var name = preferred[i];
+          if (!name || seen[name]) return next(i + 1);
+          seen[name] = true;
+          return caches
+            .open(name)
+            .then(function (cache) {
+              return cache.match(IDENTITY_URL);
+            })
+            .then(function (response) {
+              if (!response) return next(i + 1);
+              return response.json().then(function (data) {
+                if (data && data.login) return data;
+                return next(i + 1);
+              });
+            })
+            .catch(function () {
+              return next(i + 1);
+            });
+        }
+        return next(0);
+      })
+      .catch(function () {
+        return null;
+      });
   }
 
   function readIdentityFromIdb() {
@@ -307,6 +414,7 @@
       existing = String(localStorage.getItem(LICENSE_LOGIN_KEY) || "").trim();
       otpFlag = localStorage.getItem(LICENSE_AUTH_OTP_KEY) === "1";
     } catch (e) {}
+    if (!existing) existing = readLoginCookie();
     if (existing) {
       persistLicenseIdentity(existing, otpFlag);
       return Promise.resolve(existing);
@@ -315,6 +423,12 @@
     function applyData(data) {
       var login = data && String(data.login || "").trim();
       if (!login) return "";
+      if (data && data.device_id) {
+        try {
+          var did = String(data.device_id || "").trim();
+          if (did.length >= 8) localStorage.setItem(LICENSE_DEVICE_KEY, did);
+        } catch (e) {}
+      }
       persistLicenseIdentity(login, Boolean(data && data.auth_by_email_otp));
       return login;
     }
@@ -347,22 +461,22 @@
       return readIdentityFromIdb().then(function (data) {
         var fromIdb = applyData(data);
         if (fromIdb) return fromIdb;
-        if (!("caches" in window)) return "";
-        return caches
-          .open(IDENTITY_CACHE)
-          .then(function (cache) {
-            return cache.match(IDENTITY_URL);
-          })
-          .then(function (response) {
-            if (!response) return null;
-            return response.json();
-          })
-          .then(function (data) {
-            return applyData(data);
-          })
-          .catch(function () {
-            return "";
-          });
+        return readIdentityFromAnyCache().then(function (cached) {
+          var fromCache = applyData(cached);
+          if (fromCache) return fromCache;
+          var deviceId = "";
+          try {
+            deviceId = String(localStorage.getItem(LICENSE_DEVICE_KEY) || "").trim();
+          } catch (e) {}
+          if (deviceId.length < 8) return "";
+          return licensePost("/v1/auth/device-identity", { device_id: deviceId })
+            .then(function (data) {
+              return applyData(data);
+            })
+            .catch(function () {
+              return "";
+            });
+        });
       });
     });
   }
@@ -2389,13 +2503,7 @@
   }
 
   // Загрузочная на GitHub Pages; OTP/подписка — License API на ProHoster.
-  var LICENSE_API_BASE = "https://185-212-129-18.sslip.io";
-  var LICENSE_LOGIN_KEY = "btca101.login";
-  var LICENSE_AUTH_OTP_KEY = "btca101.authByEmailOtp";
-  var LICENSE_DEVICE_KEY = "btca101.deviceId";
-  var LICENSE_SESSION_KEY = "btca101.sessionToken";
-  var LICENSE_LAUNCH_KEY = "btca101.launchUnlocked";
-  var LICENSE_DOWNLOAD_LINKS_KEY = "btca101.downloadLinks";
+  // LICENSE_* ключи объявлены выше (рядом с identity persist).
 
   function isGitHubPagesHost() {
     try {
@@ -2630,6 +2738,13 @@
     try {
       var existing = localStorage.getItem(LICENSE_DEVICE_KEY);
       if (existing && existing.length >= 8) return existing;
+      try {
+        var fromJson = JSON.parse(localStorage.getItem("btca101.identityJson") || "null");
+        if (fromJson && fromJson.device_id && String(fromJson.device_id).length >= 8) {
+          localStorage.setItem(LICENSE_DEVICE_KEY, String(fromJson.device_id));
+          return String(fromJson.device_id);
+        }
+      } catch (e) {}
       var id =
         typeof crypto !== "undefined" && crypto.randomUUID
           ? crypto.randomUUID()
@@ -3226,7 +3341,8 @@
 
     function finishWithSession(data) {
       markLaunchUnlocked(data.session_token);
-      if (savedLogin) persistLicenseIdentity(savedLogin, preferOtp);
+      var loginPersist = savedLogin || readLoginFieldValue();
+      if (loginPersist) persistLicenseIdentity(loginPersist, preferOtp);
       storePaidUntil(data && data.paid_until);
       try {
         sessionStorage.removeItem(DOWNLOAD_MENU_SHOWN_KEY);
@@ -3313,7 +3429,17 @@
         formEl.removeAttribute("data-otp-email-wired");
         wireEmailOtpCheckbox(formEl);
       }
-      if (mode === "login") scheduleAuthModeSync(0);
+      if (mode === "login") {
+        // Safari Autofill иногда сбрасывает HTML value="" — фиксируем явно.
+        var loginForce = gate.querySelector('input[name="login"]');
+        if (loginForce && savedLogin) {
+          loginForce.value = savedLogin;
+          try {
+            loginForce.setAttribute("value", savedLogin);
+          } catch (e) {}
+        }
+        scheduleAuthModeSync(0);
+      }
     }
 
     function paintSafe() {
@@ -4179,9 +4305,10 @@
         })
         .then(function () {
           report(100, "Готово");
-          // Сохранить логин для первого запуска установленного PWA (после wipe кэшей).
+          // Сохранить логин в identity/install-cache после wipe кэшей — для первого запуска PWA.
           try {
-            var prepLogin = String(localStorage.getItem(LICENSE_LOGIN_KEY) || "").trim();
+            var prepLogin =
+              String(localStorage.getItem(LICENSE_LOGIN_KEY) || "").trim() || readLoginCookie();
             if (prepLogin) {
               persistLicenseIdentity(
                 prepLogin,
@@ -4212,6 +4339,8 @@
     // Холодный старт / после смахивания: splash полностью, затем форма входа.
     if (!isLaunchUnlocked()) {
       renderInstalledHome({ preserveSplash: true });
+      // Параллельно тянем login (cookie / cache / device-identity), пока крутится splash.
+      var identityWarm = ensureLicenseIdentityRestored();
       var chain = Promise.resolve();
       if (!mediaReady) {
         chain = repairStandaloneShell({ deferHome: true });
@@ -4219,6 +4348,11 @@
       return chain
         .then(function () {
           return preloadAppModulesForHome({ keepSplashUntilUnlock: true });
+        })
+        .then(function () {
+          return identityWarm.catch(function () {
+            return "";
+          });
         })
         .then(function () {
           finishInstalledSplashForLogin();
