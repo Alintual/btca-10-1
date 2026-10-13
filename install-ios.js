@@ -2,8 +2,8 @@
   "use strict";
 
   var BTCA_BASE = "/btca-10-1/";
-  var INSTALL_CACHE = "btca10-web-10.1.98:static-install";
-  var MEDIA_CACHE = "btca10-web-10.1.98:static-media";
+  var INSTALL_CACHE = "btca10-web-10.1.99:static-install";
+  var MEDIA_CACHE = "btca10-web-10.1.99:static-media";
   var MEDIA_PROBE_RE = /offline-unpacked\/level3\/exercises\/[^/]+\.(jpe?g|png|webp|gif)$/i;
   var MEDIA_STATE_KEY = "btca10-web:static-media-state";
   var APP_READY_KEY = "btca10-web:app-ready";
@@ -25,8 +25,8 @@
   var ABOUT_MAIN_TEXT = "Настоящее Приложение разработано для локальной установки (развёртывания) на смартфоне или планшете с операционными системами Android или iOS и рассчитано для обучения и тренировки учеников с уровнем подготовки «Уровень 3 — Продвинутый».";
   var ABOUT_POST_TEXT = "*****\nБТКА, это — учебно-тренировочный программный комплекс, предназначенный для комплексного обучения игре на русском бильярде, выработки и закрепления практических навыков ведения бильярдной игры в Пирамиду, как самостоятельно, так и с тренером, с применением современных методик и технологий.\nТренировочный комплекс БТКА в сочетании с уникальной Методологией обучения составляют общую Систему тренировок БТКА школы русского бильярда «Абриколь» г. Красноярск.\n<a href=\"https://cloud.mail.ru/public/sujN/mpE8mr6aW\">Методика обучения</a>\n\nВ текущей версии Приложения БТКА 10.1 доступен раздел:\n•  *Уровень 3 — Продвинутый* Упражнений – 40, Задач – 263, Полезностей – 15.\n\nВсе Приложения функционируют без использования сети Интернет.\nКаждое Приложение:\n•  Содержит специфический (соответствующий уровню подготовки) набор упражнений, задач и тестов (в графическом виде), ранжированных по принципу - \"от простого к сложному\", и сгруппированных в тематические разделы по видам тренировок;\n•  Включает необходимые инструкции, методическую и справочную информацию;\n•  Обеспечивает возможность ввода, хранения и обработки результатов прогресса выполнения учеником практических заданий для последующего статистического анализа с использованием локальной Базы данных (БД);\n•  Имеет весь необходимый функционал и автоматизацию, а также интуитивно-понятный интерфейс, что способствует осуществлению полноценного, эффективного тренировочного процесса в комфортных условиях.\n\nОТ АВТОРА. Система тренировок БТКА разработана по результатам систематизации методик обучения русскому бильярду на основе: секретов ведущих тренеров и игроков (в т.ч. В. Симонича, В. Лазарева, С. Баурова, Е. Сталева и др.), опыта «старой школы», а также современных научных и экспериментальных исследований и IT-технологий.\n<a href=\"https://cloud.mail.ru/public/Ye3r/ZYwpjB9uz\">Подробное описание комплекса БТКА</a>\n\nCopyright © Юрий Алинт (Андрей Юрьев) 2026";
   var installedHomeSnapshot = "";
-  var LEVEL1_MODULE_VERSION = "10.1.59";
-  var LEVEL3_MODULE_VERSION = "10.1.59";
+  var LEVEL1_MODULE_VERSION = "10.1.60";
+  var LEVEL3_MODULE_VERSION = "10.1.60";
 
   var CORE_REL_PATHS = [
     "",
@@ -1305,12 +1305,9 @@
 
   function reloadShellForRemoteVersion(remote) {
     var target = String(remote || "").trim() || readMetaCacheVersion() || "unknown";
-    // iPad standalone: location.replace после ярлыка роняет Safari. Кэш подтянем тихо.
+    // Установленный PWA: оболочку не обновляем тихо — только после загрузки со страницы загрузки.
     if (isStandalone()) {
-      writeAppliedShellVersion(target);
-      return refreshShellCacheQuietly().then(function () {
-        return false;
-      });
+      return Promise.resolve(false);
     }
     var attemptKey = shellRefreshAttemptKey(target);
     try {
@@ -1456,19 +1453,9 @@
 
   function ensureShellUpToDate() {
     if (!shouldRunShellUpdateCheck()) return Promise.resolve(false);
-    var swPromise = Promise.resolve();
-    if ("serviceWorker" in navigator) {
-      swPromise = navigator.serviceWorker.getRegistration(BTCA_BASE).then(function (registration) {
-        if (!registration) return;
-        return registration.update().catch(function () {}).then(function () {
-          if (registration.waiting) {
-            registration.waiting.postMessage({ type: "SKIP_WAITING" });
-          }
-        });
-      });
-    }
-    return swPromise.then(function () {
-      return probeRemoteShellVersion();
+    // PWA: не подтягиваем новую оболочку с сети — только подсказка «Есть обновление».
+    return ensureUpdateAvailableHint().then(function () {
+      return false;
     });
   }
 
@@ -3263,13 +3250,14 @@
       var assigned = data && String(data.device_id || "").trim();
       if (assigned.length >= 6) {
         persistLicenseDeviceId(assigned);
-        try {
-          var login = String(localStorage.getItem(LICENSE_LOGIN_KEY) || "").trim() || readLoginCookie();
-          if (login) {
-            persistLicenseIdentity(login, localStorage.getItem(LICENSE_AUTH_OTP_KEY) === "1");
-          }
-        } catch (e) {}
       }
+      if (versionDate) persistPackageReleaseDate(versionDate);
+      try {
+        var login = String(localStorage.getItem(LICENSE_LOGIN_KEY) || "").trim() || readLoginCookie();
+        if (login) {
+          persistLicenseIdentity(login, localStorage.getItem(LICENSE_AUTH_OTP_KEY) === "1");
+        }
+      } catch (e) {}
       return data;
     });
   }
@@ -4109,7 +4097,11 @@
         titleEl.removeAttribute("hidden");
       }
       var releaseEl = intro.querySelector(".eyebrow--release");
-      if (releaseEl) releaseEl.removeAttribute("hidden");
+      if (releaseEl) {
+        var installedDate = readStoredPackageReleaseDate() || readLocalPackageReleaseDate();
+        if (installedDate) releaseEl.textContent = "версия от " + installedDate;
+        releaseEl.removeAttribute("hidden");
+      }
       var levelsEl = intro.querySelector(".eyebrow--levels");
       if (levelsEl) levelsEl.setAttribute("hidden", "hidden");
       var appTitle = intro.querySelector("#app-title");
@@ -4196,15 +4188,22 @@
     return Number(m[3]) * 10000 + Number(m[2]) * 100 + Number(m[1]);
   }
 
-  function readLocalPackageReleaseDate() {
+  function readDomPackageReleaseDate() {
     var el = document.querySelector(".eyebrow--release");
     var text = el ? String(el.textContent || "") : "";
     var m = text.match(/(\d{2}\.\d{2}\.\d{4})/);
-    if (m) {
-      persistPackageReleaseDate(m[1]);
-      return m[1];
+    return m ? m[1] : "";
+  }
+
+  /**
+   * Дата установленной версии: в PWA — только из хранилища (зафиксирована при claim/загрузке).
+   * На загрузочной странице — дата с экрана (текущий деплой).
+   */
+  function readLocalPackageReleaseDate() {
+    if (isStandalone()) {
+      return readStoredPackageReleaseDate() || readDomPackageReleaseDate();
     }
-    return readStoredPackageReleaseDate();
+    return readDomPackageReleaseDate() || readStoredPackageReleaseDate();
   }
 
   /** Самая новая дата среди платформ (PWA / Android / Windows) из shell или локальной. */
@@ -4812,7 +4811,6 @@
           renderInstalledHome({ preserveSplash: true });
           return preloadAppModulesForHome().then(function () {
             ensureUpdateAvailableHint();
-            refreshShellCacheQuietly();
           });
         }
         return preloadAppModulesForHome({ keepSplashUntilUnlock: true }).then(function () {
