@@ -2,8 +2,8 @@
   "use strict";
 
   var BTCA_BASE = "/btca-10-1/";
-  var INSTALL_CACHE = "btca10-web-10.1.89:static-install";
-  var MEDIA_CACHE = "btca10-web-10.1.89:static-media";
+  var INSTALL_CACHE = "btca10-web-10.1.90:static-install";
+  var MEDIA_CACHE = "btca10-web-10.1.90:static-media";
   var MEDIA_PROBE_RE = /offline-unpacked\/level3\/exercises\/[^/]+\.(jpe?g|png|webp|gif)$/i;
   var MEDIA_STATE_KEY = "btca10-web:static-media-state";
   var APP_READY_KEY = "btca10-web:app-ready";
@@ -3455,10 +3455,7 @@
           passwordFieldHtml("password", "Пароль*", true, true) +
           '<label class="auth-gate__field"><span>E-mail</span><input name="email" type="email" autocomplete="email" maxlength="255" value=""/></label>' +
           emailOtpCheckboxHtml(false, true) +
-          '<label class="auth-gate__field"><span>ID устройства</span><input name="device_id" type="text" readonly tabindex="-1" value="' +
-          escapeHtml(getLicenseDeviceId()) +
-          '"/></label>' +
-          '<p class="auth-gate__hint">Аккаунт жёстко привязывается к этому устройству. На другом устройстве PWA не откроется без разрешения автора.</p>';
+          '<p class="auth-gate__hint auth-gate__hint--warn">Аккаунт будет жестко привязан к устройству, с которого Вы зарегистрируетесь!</p>';
       } else if (mode === "login") {
         bodyHtml =
           '<label class="auth-gate__field"><span>Логин</span><input name="login" autocomplete="username" required minlength="3" maxlength="64" value="' +
@@ -4108,18 +4105,7 @@
           };
         }
         markLaunchUnlocked(data.session_token);
-        return claimPlatformDownload("pwa", "iOS/PWA")
-          .then(function () {
-            return { ok: true, bound: true, login: data.login || "" };
-          })
-          .catch(function (err) {
-            var msg = localizeUserFacingError(err, "");
-            if (isSubscriptionInactiveError(msg) || /403|402|не привязано|лимит устройств/i.test(msg)) {
-              clearLaunchUnlock();
-              return { ok: false, reason: "device-or-sub", message: msg || DEVICE_NOT_BOUND_MSG };
-            }
-            return { ok: true, bound: true, claimSkipped: true, login: data.login || "" };
-          });
+        return { ok: true, bound: true, login: data.login || "" };
       })
       .catch(function (err) {
         var msg = String((err && err.message) || err || "");
