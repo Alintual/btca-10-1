@@ -271,8 +271,8 @@ body:not(.btca-installed-mode) .home__tagline-slot .home__phrase2-line2 {
 }
 
 .btca-installed-mode .home__logo {
-  width: calc(118.8rem / 17); /* 132 − 10% */
-  height: calc(118.8rem / 17);
+  width: calc(106.92rem / 17); /* ещё −10% к 118.8 */
+  height: calc(106.92rem / 17);
   margin: 0 auto calc(14rem / 17);
 }
 
