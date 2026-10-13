@@ -761,6 +761,11 @@ body:not(.btca-apple-comfort) .platform-button.account-modal__save {
   font-weight: 600;
 }
 
+.auth-gate__hint--danger {
+  color: #ff6b6b;
+  font-weight: 600;
+}
+
 .auth-gate__link {
   border: 0;
   background: transparent;
