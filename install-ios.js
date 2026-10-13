@@ -2,8 +2,8 @@
   "use strict";
 
   var BTCA_BASE = "/btca-10-1/";
-  var INSTALL_CACHE = "btca10-web-10.1.84:static-install";
-  var MEDIA_CACHE = "btca10-web-10.1.84:static-media";
+  var INSTALL_CACHE = "btca10-web-10.1.85:static-install";
+  var MEDIA_CACHE = "btca10-web-10.1.85:static-media";
   var MEDIA_PROBE_RE = /offline-unpacked\/level3\/exercises\/[^/]+\.(jpe?g|png|webp|gif)$/i;
   var MEDIA_STATE_KEY = "btca10-web:static-media-state";
   var APP_READY_KEY = "btca10-web:app-ready";
@@ -25,8 +25,8 @@
   var ABOUT_MAIN_TEXT = "Настоящее Приложение разработано для локальной установки (развёртывания) на смартфоне или планшете с операционными системами Android или iOS и рассчитано для обучения и тренировки учеников с уровнем подготовки «Уровень 3 — Продвинутый».";
   var ABOUT_POST_TEXT = "*****\nБТКА, это — учебно-тренировочный программный комплекс, предназначенный для комплексного обучения игре на русском бильярде, выработки и закрепления практических навыков ведения бильярдной игры в Пирамиду, как самостоятельно, так и с тренером, с применением современных методик и технологий.\nТренировочный комплекс БТКА в сочетании с уникальной Методологией обучения составляют общую Систему тренировок БТКА школы русского бильярда «Абриколь» г. Красноярск.\n<a href=\"https://cloud.mail.ru/public/sujN/mpE8mr6aW\">Методика обучения</a>\n\nВ текущей версии Приложения БТКА 10.1 доступен раздел:\n•  *Уровень 3 — Продвинутый* Упражнений – 40, Задач – 263, Полезностей – 15.\n\nВсе Приложения функционируют без использования сети Интернет.\nКаждое Приложение:\n•  Содержит специфический (соответствующий уровню подготовки) набор упражнений, задач и тестов (в графическом виде), ранжированных по принципу - \"от простого к сложному\", и сгруппированных в тематические разделы по видам тренировок;\n•  Включает необходимые инструкции, методическую и справочную информацию;\n•  Обеспечивает возможность ввода, хранения и обработки результатов прогресса выполнения учеником практических заданий для последующего статистического анализа с использованием локальной Базы данных (БД);\n•  Имеет весь необходимый функционал и автоматизацию, а также интуитивно-понятный интерфейс, что способствует осуществлению полноценного, эффективного тренировочного процесса в комфортных условиях.\n\nОТ АВТОРА. Система тренировок БТКА разработана по результатам систематизации методик обучения русскому бильярду на основе: секретов ведущих тренеров и игроков (в т.ч. В. Симонича, В. Лазарева, С. Баурова, Е. Сталева и др.), опыта «старой школы», а также современных научных и экспериментальных исследований и IT-технологий.\n<a href=\"https://cloud.mail.ru/public/Ye3r/ZYwpjB9uz\">Подробное описание комплекса БТКА</a>\n\nCopyright © Юрий Алинт (Андрей Юрьев) 2026";
   var installedHomeSnapshot = "";
-  var LEVEL1_MODULE_VERSION = "10.1.53";
-  var LEVEL3_MODULE_VERSION = "10.1.53";
+  var LEVEL1_MODULE_VERSION = "10.1.54";
+  var LEVEL3_MODULE_VERSION = "10.1.54";
 
   var CORE_REL_PATHS = [
     "",
@@ -163,12 +163,101 @@
       "</div>";
   }
 
+  var pendingInstalledLoginReveal = false;
+
   function hideHomeSplashIndicator() {
     var panel = getEls().panel;
     if (!panel) return;
     panel.className = "ios-panel";
     panel.innerHTML = "";
     panel.setAttribute("hidden", "hidden");
+    if (pendingInstalledLoginReveal) {
+      // Форма входа — только после исчезновения splash.
+      window.setTimeout(revealInstalledLoginGate, 0);
+    }
+  }
+
+  function hideInstalledAuthGate() {
+    var gate = document.getElementById("btca-auth-gate");
+    if (!gate) return;
+    gate.setAttribute("hidden", "hidden");
+    try {
+      gate.innerHTML = "";
+    } catch (e) {}
+  }
+
+  function revealInstalledLoginGate() {
+    if (!pendingInstalledLoginReveal) return;
+    if (!document.body.classList.contains("btca-installed-mode")) {
+      pendingInstalledLoginReveal = false;
+      return;
+    }
+    if (isLaunchUnlocked()) {
+      pendingInstalledLoginReveal = false;
+      return;
+    }
+    pendingInstalledLoginReveal = false;
+    ensureLicenseIdentityRestored().then(function () {
+      renderAuthGate(
+        function () {
+          hideHomeSplashIndicator();
+          renderInstalledHome({});
+        },
+        { loginOnly: true }
+      );
+    });
+  }
+
+  function persistLicenseIdentity(login, authOtp) {
+    var clean = String(login || "").trim();
+    if (!clean) return;
+    try {
+      localStorage.setItem(LICENSE_LOGIN_KEY, clean);
+      localStorage.setItem(LICENSE_AUTH_OTP_KEY, authOtp ? "1" : "0");
+    } catch (e) {}
+    if (!("caches" in window)) return;
+    try {
+      var body = JSON.stringify({
+        login: clean,
+        auth_by_email_otp: Boolean(authOtp),
+        saved_at: Date.now(),
+      });
+      caches.open("btca10-identity").then(function (cache) {
+        return cache.put(
+          new Request(assetPath("offline/btca-identity.json")),
+          new Response(body, {
+            headers: { "Content-Type": "application/json", "Cache-Control": "no-cache" },
+          })
+        );
+      }).catch(function () {});
+    } catch (e) {}
+  }
+
+  function ensureLicenseIdentityRestored() {
+    var existing = "";
+    try {
+      existing = String(localStorage.getItem(LICENSE_LOGIN_KEY) || "").trim();
+    } catch (e) {}
+    if (existing) return Promise.resolve(existing);
+    if (!("caches" in window)) return Promise.resolve("");
+    return caches
+      .open("btca10-identity")
+      .then(function (cache) {
+        return cache.match(assetPath("offline/btca-identity.json"));
+      })
+      .then(function (response) {
+        if (!response) return null;
+        return response.json();
+      })
+      .then(function (data) {
+        var login = data && String(data.login || "").trim();
+        if (!login) return "";
+        persistLicenseIdentity(login, Boolean(data && data.auth_by_email_otp));
+        return login;
+      })
+      .catch(function () {
+        return "";
+      });
   }
 
   function mapBootProgress(localPct, startPct, endPct) {
@@ -2801,8 +2890,12 @@
         licensePost("/v1/account/update", payload)
           .then(function (data) {
             try {
-              if (data.login) localStorage.setItem(LICENSE_LOGIN_KEY, data.login);
-              localStorage.setItem(LICENSE_AUTH_OTP_KEY, data.auth_by_email_otp ? "1" : "0");
+              if (data.login) persistLicenseIdentity(data.login, data.auth_by_email_otp);
+              else {
+                try {
+                  localStorage.setItem(LICENSE_AUTH_OTP_KEY, data.auth_by_email_otp ? "1" : "0");
+                } catch (e) {}
+              }
             } catch (e) {}
             if (data.subscription && data.subscription.paid_until) {
               storePaidUntil(data.subscription.paid_until);
@@ -3004,10 +3097,7 @@
     function storeLoginPrefs(loginValue, otpFlagValue) {
       savedLogin = String(loginValue || "").trim();
       preferOtp = Boolean(otpFlagValue);
-      try {
-        localStorage.setItem(LICENSE_LOGIN_KEY, savedLogin);
-        localStorage.setItem(LICENSE_AUTH_OTP_KEY, preferOtp ? "1" : "0");
-      } catch (e) {}
+      persistLicenseIdentity(savedLogin, preferOtp);
     }
 
     function readLoginFieldValue() {
@@ -3495,7 +3585,9 @@
         menu.innerHTML = "";
         menu.setAttribute("hidden", "hidden");
       }
-      if (gate) gate.removeAttribute("hidden");
+      // Форма входа только после splash — пока ждём, gate скрыт.
+      pendingInstalledLoginReveal = true;
+      hideInstalledAuthGate();
       if (panel) {
         panel.removeAttribute("hidden");
         if (!panel.classList.contains("btca-home-splash-panel")) {
@@ -3504,21 +3596,30 @@
           placeHomeSplashPanel("login");
         }
       }
-      renderAuthGate(
-        function () {
-          hideHomeSplashIndicator();
-          renderInstalledHome({});
-        },
-        { loginOnly: true }
-      );
       ensurePhraseOneTabletMarkup();
       ensurePhraseTwoTabletMarkup();
       cleanupOrphanHomePhraseMarkup();
       installedHomeSnapshot = "";
       syncPortraitMode();
       markStandaloneShellReady();
+      // Если splash уже не нужен / сразу 100% — reveal сделает hideHomeSplashIndicator.
+      // Короткая страховка: splash так и не появился.
+      window.setTimeout(function () {
+        if (!pendingInstalledLoginReveal) return;
+        var splashOn =
+          panel &&
+          panel.classList.contains("btca-home-splash-panel") &&
+          !panel.hasAttribute("hidden");
+        if (!splashOn) revealInstalledLoginGate();
+      }, 1200);
+      // Длинная страховка: splash завис — всё равно показать вход.
+      window.setTimeout(function () {
+        if (pendingInstalledLoginReveal) revealInstalledLoginGate();
+      }, 45000);
       return;
     }
+
+    pendingInstalledLoginReveal = false;
 
     if (gate) gate.setAttribute("hidden", "hidden");
     if (!preserveSplash) hideHomeSplashIndicator();
@@ -3966,6 +4067,16 @@
         })
         .then(function () {
           report(100, "Готово");
+          // Сохранить логин для первого запуска установленного PWA (после wipe кэшей).
+          try {
+            var prepLogin = String(localStorage.getItem(LICENSE_LOGIN_KEY) || "").trim();
+            if (prepLogin) {
+              persistLicenseIdentity(
+                prepLogin,
+                localStorage.getItem(LICENSE_AUTH_OTP_KEY) === "1"
+              );
+            }
+          } catch (e) {}
           renderReady();
           preloadLevel1ModuleSilently();
           preloadLevel3ModuleSilently();
