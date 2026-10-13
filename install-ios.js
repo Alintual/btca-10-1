@@ -2,8 +2,8 @@
   "use strict";
 
   var BTCA_BASE = "/btca-10-1/";
-  var INSTALL_CACHE = "btca10-web-10.1.91:static-install";
-  var MEDIA_CACHE = "btca10-web-10.1.91:static-media";
+  var INSTALL_CACHE = "btca10-web-10.1.92:static-install";
+  var MEDIA_CACHE = "btca10-web-10.1.92:static-media";
   var MEDIA_PROBE_RE = /offline-unpacked\/level3\/exercises\/[^/]+\.(jpe?g|png|webp|gif)$/i;
   var MEDIA_STATE_KEY = "btca10-web:static-media-state";
   var APP_READY_KEY = "btca10-web:app-ready";
@@ -96,13 +96,27 @@
   }
 
   function installedHomeFooterHtml() {
-    return "<span>BTCA-mobile v.10.1 © 2026 Alint&apos;s R.lab</span>";
+    return (
+      '<div class="footer__row">' +
+      '<span class="footer__side footer__side--left">BTCA-mobile v.10.1</span>' +
+      '<button type="button" class="footer__support-btn" aria-label="Служба поддержки" aria-expanded="false" aria-controls="btca-support-line">' +
+      '<img class="footer__support-img" src="' +
+      assetPath("branding/support.png") +
+      '" alt="" width="28" height="28" decoding="async" />' +
+      "</button>" +
+      '<span class="footer__side footer__side--right">© 2026 Alint&apos;s R.lab</span>' +
+      "</div>" +
+      '<p id="btca-support-line" class="footer__support-line" hidden>Служба поддержки: interual@gmail.com</p>'
+    );
   }
 
   function applyInstalledHomeFooter() {
     var footer = document.querySelector(".footer");
     if (!footer) return;
+    footer.classList.remove("is-support-open");
+    footer.removeAttribute("data-support-wired");
     footer.innerHTML = installedHomeFooterHtml();
+    wireSupportFooter();
   }
 
   /** login — под пирамидой (после hero); menu — под «Аккаунт | Обновление» / «Есть обновление». */
@@ -3350,10 +3364,10 @@
   }
 
   var SUBSCRIPTION_INACTIVE_MSG =
-    "Подписка не активна. Для оформления или продления доступа обратитесь к автору по телефону +7 983 205 2230";
+    "Подписка не активна. Для оформления или продления доступа обратитесь в Службу поддержки.";
   var DEVICE_NOT_BOUND_MSG =
     "Это устройство не привязано к аккаунту. PWA работает только на устройстве, с которого выполнена регистрация. " +
-    "Если нужен доступ с дополнительного устройства — обратитесь к автору по телефону +7 983 205 2230";
+    "Если нужен доступ с дополнительного устройства — обратитесь в Службу поддержки.";
 
   function isSubscriptionInactiveError(message) {
     return /подписка не активна/i.test(String(message || ""));
@@ -4625,7 +4639,8 @@
 
   function wireSupportFooter() {
     var footer = document.querySelector(".footer");
-    if (!footer || footer.getAttribute("data-support-wired") === "1") return;
+    if (!footer) return;
+    if (footer.getAttribute("data-support-wired") === "1") return;
     footer.setAttribute("data-support-wired", "1");
     var btn = footer.querySelector(".footer__support-btn");
     var line = footer.querySelector(".footer__support-line");
@@ -4645,7 +4660,7 @@
       }
     }
 
-    // Наведение — через CSS :has(...:hover). Клик — закрепить строку (тач/копирование).
+    // Наведение — через CSS :has(...:hover) на загрузочной. Клик — закрепить строку.
     btn.addEventListener("click", function (event) {
       event.preventDefault();
       event.stopPropagation();

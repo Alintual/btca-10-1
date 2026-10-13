@@ -4252,30 +4252,59 @@ body.btca-level3-mode .btca-date-picker-day--selected {
   display: block !important;
 }
 
-/* Стартовый экран PWA: как в 8.1 — одна строка по центру (текст подставляет JS). */
+/* Стартовый экран PWA: как загрузочная — края + иконка; под ними резерв строки поддержки. */
 .btca-installed-mode .footer {
   position: fixed;
   right: 0;
   bottom: max(6px, env(safe-area-inset-bottom));
   left: 0;
   display: flex;
-  flex-direction: row;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: center;
-  gap: 8px 14px;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 6px;
   padding: 0 max(8px, env(safe-area-inset-right)) 0 max(8px, env(safe-area-inset-left));
   text-align: center;
 }
 
-.btca-installed-mode .footer__support-btn,
-.btca-installed-mode .footer__support-line,
-.btca-installed-mode .footer__side--right {
-  display: none !important;
+.btca-installed-mode .footer__row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  align-items: center;
+  width: 100%;
+  gap: 8px;
 }
 
-.btca-installed-mode .footer__row {
-  display: contents;
+.btca-installed-mode .footer__support-btn,
+.btca-installed-mode .footer__side--left,
+.btca-installed-mode .footer__side--right {
+  display: inline-flex;
+}
+
+.btca-installed-mode .footer__side--left,
+.btca-installed-mode .footer__side--right {
+  display: block;
+}
+
+/* Пустая строка под иконкой всегда занимает место; текст — только после клика. */
+.btca-installed-mode .footer__support-line,
+.btca-installed-mode .footer__support-line[hidden] {
+  display: block !important;
+  min-height: 1.35em;
+  visibility: hidden;
+}
+
+.btca-installed-mode .footer.is-support-open .footer__support-line,
+.btca-installed-mode .footer.is-support-open .footer__support-line[hidden] {
+  visibility: visible;
+}
+
+/* На стартовой не показывать текст по hover — только по клику. */
+.btca-installed-mode .footer:has(.footer__support-btn:hover) .footer__support-line {
+  visibility: hidden;
+}
+
+.btca-installed-mode .footer.is-support-open:has(.footer__support-btn:hover) .footer__support-line {
+  visibility: visible;
 }
 
 body.btca-desktop-browser {
