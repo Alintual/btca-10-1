@@ -1959,33 +1959,15 @@ body.btca-apple-comfort .btca-back-button {
   margin-top: calc(12rem / 17);
 }
 
-/* Splash на старте PWA: под пирамидой белых шаров (форма входа). */
-body.btca-installed-mode.btca-home-splash-under-pyramid .home__hero {
-  order: 0;
-}
-
-body.btca-installed-mode.btca-home-splash-under-pyramid #btca-static-ios-panel.btca-home-splash-panel {
-  order: 1;
+/* Стартовый PWA: splash под пирамидой (экран входа). */
+.btca-installed-mode .btca-home-splash-panel--under-pyramid {
   margin-top: calc(18rem / 17);
   margin-bottom: calc(10rem / 17);
 }
 
-body.btca-installed-mode.btca-home-splash-under-pyramid #btca-auth-gate {
-  order: 2;
-}
-
-body.btca-installed-mode.btca-home-splash-under-pyramid .platform-menu {
-  order: 3;
-}
-
-/* Splash без формы входа: под «Аккаунт | Обновление» / «Есть обновление». */
-body.btca-installed-mode.btca-home-splash-under-menu .platform-menu.btca-work-menu {
-  order: 3;
-}
-
-body.btca-installed-mode.btca-home-splash-under-menu #btca-static-ios-panel.btca-home-splash-panel {
-  order: 4;
-  margin-top: calc(10rem / 17);
+/* Стартовый PWA: splash под «Аккаунт | Обновление» / «Есть обновление». */
+.btca-installed-mode .btca-home-splash-panel--under-menu {
+  margin-top: calc(14rem / 17);
   margin-bottom: 0;
 }
 

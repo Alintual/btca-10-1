@@ -95,20 +95,40 @@
       '<span class="btca-boot-splash__pct-sym">%</span></div></div>';
   }
 
-  function setInstalledHomeFooter() {
-    var footer = document.querySelector(".footer");
-    if (!footer) return;
-    footer.innerHTML = "<span>BTCA-mobile v.10.1 © 2026 Alint&apos;s R.lab</span>";
+  function installedHomeFooterHtml() {
+    return "<span>BTCA-mobile v.10.1 © 2026 Alint&apos;s R.lab</span>";
   }
 
-  function syncHomeSplashPlacement() {
-    if (!isStandalone()) {
-      document.body.classList.remove("btca-home-splash-under-pyramid", "btca-home-splash-under-menu");
+  function applyInstalledHomeFooter() {
+    var footer = document.querySelector(".footer");
+    if (!footer) return;
+    footer.innerHTML = installedHomeFooterHtml();
+  }
+
+  /** login — под пирамидой (после hero); menu — под «Аккаунт | Обновление» / «Есть обновление». */
+  function placeHomeSplashPanel(context) {
+    var panel = getEls().panel;
+    if (!panel) return;
+    var home = document.querySelector(".home");
+    if (!home) return;
+    panel.classList.remove("btca-home-splash-panel--under-pyramid", "btca-home-splash-panel--under-menu");
+    if (context === "menu") {
+      panel.classList.add("btca-home-splash-panel--under-menu");
+      var menu = document.querySelector(".platform-menu");
+      if (menu && menu.parentNode === home) {
+        if (menu.nextSibling !== panel) home.insertBefore(panel, menu.nextSibling);
+      } else {
+        home.appendChild(panel);
+      }
       return;
     }
-    var underPyramid = !isLaunchUnlocked();
-    document.body.classList.toggle("btca-home-splash-under-pyramid", underPyramid);
-    document.body.classList.toggle("btca-home-splash-under-menu", !underPyramid);
+    panel.classList.add("btca-home-splash-panel--under-pyramid");
+    var hero = document.querySelector(".home__hero");
+    if (hero && hero.parentNode === home) {
+      if (hero.nextSibling !== panel) home.insertBefore(panel, hero.nextSibling);
+    } else {
+      home.appendChild(panel);
+    }
   }
 
   function renderHomeSplashIndicator(percent) {
@@ -119,7 +139,11 @@
       hideHomeSplashIndicator();
       return;
     }
-    syncHomeSplashPlacement();
+    var splashContext =
+      document.body.classList.contains("btca-installed-mode") && isLaunchUnlocked()
+        ? "menu"
+        : "login";
+    placeHomeSplashPanel(splashContext);
     var num = panel.querySelector("[data-btca-splash-pct-num]");
     if (num && panel.classList.contains("btca-home-splash-panel")) {
       num.textContent = String(disp);
@@ -128,7 +152,11 @@
       return;
     }
     panel.removeAttribute("hidden");
-    panel.className = "ios-panel ios-panel--open btca-home-splash-panel";
+    panel.className =
+      "ios-panel ios-panel--open btca-home-splash-panel" +
+      (splashContext === "menu"
+        ? " btca-home-splash-panel--under-menu"
+        : " btca-home-splash-panel--under-pyramid");
     panel.innerHTML =
       '<div class="btca-ios-splash-panel" aria-label="Прогресс ' + disp + '%">' +
       buildSplashIndicatorHtml(disp) +
@@ -141,7 +169,6 @@
     panel.className = "ios-panel";
     panel.innerHTML = "";
     panel.setAttribute("hidden", "hidden");
-    document.body.classList.remove("btca-home-splash-under-pyramid", "btca-home-splash-under-menu");
   }
 
   function mapBootProgress(localPct, startPct, endPct) {
@@ -3391,7 +3418,7 @@
       panel.setAttribute("hidden", "hidden");
     }
 
-    setInstalledHomeFooter();
+    applyInstalledHomeFooter();
 
     if (!isLaunchUnlocked()) {
       if (menu) {
@@ -3405,7 +3432,7 @@
         if (!panel.classList.contains("btca-home-splash-panel")) {
           renderHomeSplashIndicator(0);
         } else {
-          syncHomeSplashPlacement();
+          placeHomeSplashPanel("login");
         }
       }
       renderAuthGate(
@@ -3426,7 +3453,6 @@
 
     if (gate) gate.setAttribute("hidden", "hidden");
     if (!preserveSplash) hideHomeSplashIndicator();
-    else syncHomeSplashPlacement();
     if (menu) {
       menu.removeAttribute("hidden");
       menu.className = "platform-menu btca-work-menu";
@@ -3437,6 +3463,9 @@
         '<a class="btca-work-menu__account-link" href="' +
         escapeHtml(LOADING_PAGE_URL + (LOADING_PAGE_URL.indexOf("?") >= 0 ? "&" : "?") + "open=downloads") +
         '" target="_blank" rel="noopener noreferrer" data-btca-route="account-update">Аккаунт | Обновление</a>';
+    }
+    if (preserveSplash && panel && panel.classList.contains("btca-home-splash-panel")) {
+      placeHomeSplashPanel("menu");
     }
     ensurePhraseOneTabletMarkup();
     ensurePhraseTwoTabletMarkup();
@@ -3490,6 +3519,10 @@
         else menu.appendChild(existing);
       }
       existing.textContent = "Есть обновление от " + remoteDate;
+      var splashPanel = getEls().panel;
+      if (splashPanel && splashPanel.classList.contains("btca-home-splash-panel")) {
+        placeHomeSplashPanel("menu");
+      }
     }
 
     fetchRemoteAppShellPayload()
