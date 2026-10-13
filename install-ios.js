@@ -2,8 +2,8 @@
   "use strict";
 
   var BTCA_BASE = "/btca-10-1/";
-  var INSTALL_CACHE = "btca10-web-10.1.87:static-install";
-  var MEDIA_CACHE = "btca10-web-10.1.87:static-media";
+  var INSTALL_CACHE = "btca10-web-10.1.88:static-install";
+  var MEDIA_CACHE = "btca10-web-10.1.88:static-media";
   var MEDIA_PROBE_RE = /offline-unpacked\/level3\/exercises\/[^/]+\.(jpe?g|png|webp|gif)$/i;
   var MEDIA_STATE_KEY = "btca10-web:static-media-state";
   var APP_READY_KEY = "btca10-web:app-ready";
@@ -176,6 +176,8 @@
   var LICENSE_LAUNCH_KEY = "btca101.launchUnlocked";
   var LICENSE_DOWNLOAD_LINKS_KEY = "btca101.downloadLinks";
   var LICENSE_LOGIN_COOKIE = "btca101_login";
+  var LICENSE_PACKAGE_DATE_KEY = "btca101.packageReleaseDate";
+  var LICENSE_PACKAGE_DATE_COOKIE = "btca101_pkg_date";
 
   function hideHomeSplashIndicator(options) {
     options = options || {};
@@ -278,6 +280,54 @@
     } catch (e) {}
   }
 
+  function writePackageDateCookie(dateRu) {
+    try {
+      var clean = String(dateRu || "").trim();
+      if (!/^\d{2}\.\d{2}\.\d{4}$/.test(clean)) return;
+      var maxAge = 60 * 60 * 24 * 400;
+      document.cookie =
+        LICENSE_PACKAGE_DATE_COOKIE +
+        "=" +
+        encodeURIComponent(clean) +
+        "; path=/btca-10-1/; max-age=" +
+        maxAge +
+        "; SameSite=Lax";
+    } catch (e) {}
+  }
+
+  function readPackageDateCookie() {
+    try {
+      var parts = String(document.cookie || "").split(";");
+      for (var i = 0; i < parts.length; i++) {
+        var pair = parts[i].trim();
+        if (pair.indexOf(LICENSE_PACKAGE_DATE_COOKIE + "=") === 0) {
+          return decodeURIComponent(pair.slice(LICENSE_PACKAGE_DATE_COOKIE.length + 1)).trim();
+        }
+      }
+    } catch (e) {}
+    return "";
+  }
+
+  function persistPackageReleaseDate(dateRu) {
+    var clean = String(dateRu || "").trim();
+    if (!/^\d{2}\.\d{2}\.\d{4}$/.test(clean)) return "";
+    try {
+      localStorage.setItem(LICENSE_PACKAGE_DATE_KEY, clean);
+    } catch (e) {}
+    writePackageDateCookie(clean);
+    return clean;
+  }
+
+  function readStoredPackageReleaseDate() {
+    try {
+      var fromLs = String(localStorage.getItem(LICENSE_PACKAGE_DATE_KEY) || "").trim();
+      if (/^\d{2}\.\d{2}\.\d{4}$/.test(fromLs)) return fromLs;
+    } catch (e) {}
+    var fromCookie = readPackageDateCookie();
+    if (/^\d{2}\.\d{2}\.\d{4}$/.test(fromCookie)) return fromCookie;
+    return "";
+  }
+
   function putIdentityInCache(cacheName, body) {
     if (!("caches" in window) || !cacheName) return Promise.resolve();
     return caches
@@ -300,10 +350,13 @@
     try {
       deviceId = String(localStorage.getItem(LICENSE_DEVICE_KEY) || "").trim();
     } catch (e) {}
+    var packageDate = readStoredPackageReleaseDate() || readLocalPackageReleaseDate();
+    if (packageDate) persistPackageReleaseDate(packageDate);
     var payload = {
       login: clean,
       auth_by_email_otp: Boolean(authOtp),
       device_id: deviceId,
+      package_release_date: packageDate || "",
       saved_at: Date.now(),
     };
     try {
@@ -428,6 +481,9 @@
           var did = String(data.device_id || "").trim();
           if (did.length >= 8) localStorage.setItem(LICENSE_DEVICE_KEY, did);
         } catch (e) {}
+      }
+      if (data && data.package_release_date) {
+        persistPackageReleaseDate(data.package_release_date);
       }
       persistLicenseIdentity(login, Boolean(data && data.auth_by_email_otp));
       return login;
@@ -3015,12 +3071,14 @@
     if (!token) {
       return Promise.reject(new Error("Сессия не найдена. Войдите ещё раз."));
     }
+    var versionDate = readLocalPackageReleaseDate();
     return licensePost("/v1/downloads/claim", {
       session_token: token,
       device_id: getLicenseDeviceId(),
       platform: platform,
       app_version: PACKAGE_APP_VERSION,
       device_label: label || platform,
+      version_date: versionDate || "",
     });
   }
 
@@ -3898,45 +3956,141 @@
     var el = document.querySelector(".eyebrow--release");
     var text = el ? String(el.textContent || "") : "";
     var m = text.match(/(\d{2}\.\d{2}\.\d{4})/);
-    return m ? m[1] : "";
+    if (m) {
+      persistPackageReleaseDate(m[1]);
+      return m[1];
+    }
+    return readStoredPackageReleaseDate();
+  }
+
+  function applyUpdateAvailableHint(remoteDate, localDate) {
+    var menu = document.querySelector(".btca-work-menu");
+    var existing = document.getElementById("btca-update-available");
+    var local = String(localDate || readLocalPackageReleaseDate() || "").trim();
+    var remote = String(remoteDate || "").trim();
+    if (!remote || !local || remote === local) {
+      if (existing) existing.remove();
+      return false;
+    }
+    if (!menu) return true;
+    if (!existing) {
+      existing = document.createElement("p");
+      existing.id = "btca-update-available";
+      existing.className = "btca-work-menu__update-hint";
+      var link = menu.querySelector(".btca-work-menu__account-link");
+      if (link) link.insertAdjacentElement("afterend", existing);
+      else menu.appendChild(existing);
+    }
+    existing.textContent = "Есть обновление от " + remote;
+    var splashPanel = getEls().panel;
+    if (splashPanel && splashPanel.classList.contains("btca-home-splash-panel")) {
+      placeHomeSplashPanel("menu");
+    }
+    return true;
   }
 
   function ensureUpdateAvailableHint() {
-    if (!isStandalone() || !isLaunchUnlocked()) return;
-    var menu = document.querySelector(".btca-work-menu");
-    if (!menu) return;
+    if (!isStandalone()) return Promise.resolve(false);
     var localDate = readLocalPackageReleaseDate();
-    if (!localDate) return;
+    if (!localDate) return Promise.resolve(false);
+    return fetchRemoteAppShellPayload()
+      .then(function (payload) {
+        if (!payload) return false;
+        var remoteDate = String(payload.packageReleaseDate || "").trim();
+        return applyUpdateAvailableHint(remoteDate, localDate);
+      })
+      .catch(function () {
+        return false;
+      });
+  }
 
-    function showHint(remoteDate) {
-      var existing = document.getElementById("btca-update-available");
-      // Любое расхождение даты на стартовой (локальная PWA) и на загрузочной (remote).
-      if (!remoteDate || remoteDate === localDate) {
-        if (existing) existing.remove();
-        return;
-      }
-      if (!existing) {
-        existing = document.createElement("p");
-        existing.id = "btca-update-available";
-        existing.className = "btca-work-menu__update-hint";
-        var link = menu.querySelector(".btca-work-menu__account-link");
-        if (link) link.insertAdjacentElement("afterend", existing);
-        else menu.appendChild(existing);
-      }
-      existing.textContent = "Есть обновление от " + remoteDate;
-      var splashPanel = getEls().panel;
-      if (splashPanel && splashPanel.classList.contains("btca-home-splash-panel")) {
-        placeHomeSplashPanel("menu");
-      }
+  /**
+   * Жёсткие проверки на каждом splash (первый запуск / после смахивания):
+   * подписка + дата версии (обновление) + отчёт даты версии в админку.
+   */
+  function runSplashBootChecks() {
+    if (!isStandalone()) return Promise.resolve({ ok: true, skipped: true });
+    try {
+      renderHomeSplashIndicator(8);
+    } catch (e) {}
+    var localDate = readLocalPackageReleaseDate();
+    var updateCheck = fetchRemoteAppShellPayload()
+      .then(function (payload) {
+        var remoteDate = payload ? String(payload.packageReleaseDate || "").trim() : "";
+        applyUpdateAvailableHint(remoteDate, localDate);
+        return remoteDate;
+      })
+      .catch(function () {
+        return "";
+      });
+
+    var token = "";
+    try {
+      token = String(localStorage.getItem(LICENSE_SESSION_KEY) || "").trim();
+    } catch (e) {}
+    if (!token || token.length < 16) {
+      return updateCheck.then(function () {
+        return { ok: false, reason: "no-session" };
+      });
     }
 
-    fetchRemoteAppShellPayload()
-      .then(function (payload) {
-        if (!payload) return;
-        var remoteDate = String(payload.packageReleaseDate || "").trim();
-        showHint(remoteDate);
+    try {
+      renderHomeSplashIndicator(22);
+    } catch (e) {}
+
+    return licensePost("/v1/account", { session_token: token })
+      .then(function (data) {
+        try {
+          renderHomeSplashIndicator(45);
+        } catch (e) {}
+        if (data && data.login) {
+          persistLicenseIdentity(data.login, data.auth_by_email_otp);
+        }
+        if (data && data.subscription && data.subscription.paid_until) {
+          storePaidUntil(data.subscription.paid_until);
+        }
+        var status = data && data.subscription && data.subscription.status;
+        if (status && status !== "active") {
+          try {
+            localStorage.removeItem(LICENSE_SESSION_KEY);
+          } catch (e) {}
+          clearLaunchUnlock();
+          return { ok: false, reason: "inactive" };
+        }
+        return claimPlatformDownload("pwa", "iOS/PWA")
+          .then(function () {
+            return { ok: true };
+          })
+          .catch(function (err) {
+            var msg = localizeUserFacingError(err, "");
+            if (isSubscriptionInactiveError(msg) || /402|сессия|авториза/i.test(String(err && err.message || ""))) {
+              try {
+                localStorage.removeItem(LICENSE_SESSION_KEY);
+              } catch (e) {}
+              clearLaunchUnlock();
+              return { ok: false, reason: "claim-auth" };
+            }
+            // Лимит устройств / сеть — не блокируем уже установленный PWA.
+            return { ok: true, claimSkipped: true };
+          });
       })
-      .catch(function () {});
+      .catch(function (err) {
+        var msg = String((err && err.message) || err || "");
+        if (/401|402|сессия|недействитель|истек|не активна/i.test(msg)) {
+          try {
+            localStorage.removeItem(LICENSE_SESSION_KEY);
+          } catch (e) {}
+          clearLaunchUnlock();
+          return { ok: false, reason: "auth" };
+        }
+        // Офлайн: оставляем локальный доступ, дату версии всё равно сверили выше.
+        return { ok: true, offline: true };
+      })
+      .then(function (result) {
+        return updateCheck.then(function () {
+          return result;
+        });
+      });
   }
 
   function renderError(error) {
@@ -4330,53 +4484,54 @@
   }
 
   function bootstrapStandaloneShell(mediaReady) {
-    function showHomeUnlocked() {
-      discardStaleRuntimeModules();
-      renderInstalledHome();
-      return preloadAppModulesForHome();
-    }
-
-    // Холодный старт / после смахивания: splash полностью, затем форма входа.
-    if (!isLaunchUnlocked()) {
-      renderInstalledHome({ preserveSplash: true });
-      // Параллельно тянем login (cookie / cache / device-identity), пока крутится splash.
-      var identityWarm = ensureLicenseIdentityRestored();
-      var chain = Promise.resolve();
-      if (!mediaReady) {
-        chain = repairStandaloneShell({ deferHome: true });
-      }
-      return chain
-        .then(function () {
-          return preloadAppModulesForHome({ keepSplashUntilUnlock: true });
-        })
-        .then(function () {
-          return identityWarm.catch(function () {
-            return "";
-          });
-        })
-        .then(function () {
-          finishInstalledSplashForLogin();
-        })
-        .catch(function (error) {
-          console.warn("BTCA cold boot failed", error);
-          finishInstalledSplashForLogin();
-        });
-    }
-
+    // Холодный старт / после смахивания: splash + жёсткие проверки подписки и даты версии.
+    renderInstalledHome({ preserveSplash: true });
+    var identityWarm = ensureLicenseIdentityRestored();
+    var chain = Promise.resolve();
     if (!mediaReady) {
-      renderInstalledHome({ preserveSplash: true });
-      return repairStandaloneShell().then(function () {
+      chain = repairStandaloneShell({ deferHome: true });
+    }
+
+    return chain
+      .then(function () {
+        return runSplashBootChecks();
+      })
+      .then(function (check) {
+        return identityWarm.catch(function () {
+          return "";
+        }).then(function () {
+          return check;
+        });
+      })
+      .then(function (check) {
+        var needLogin = !isLaunchUnlocked() || (check && check.ok === false);
+        if (needLogin) {
+          pendingInstalledLoginReveal = true;
+          renderInstalledHome({ preserveSplash: true });
+          return preloadAppModulesForHome({ keepSplashUntilUnlock: true }).then(function () {
+            finishInstalledSplashForLogin();
+          });
+        }
+        if (!readAppPreparedState()) markAppPrepared();
+        discardStaleRuntimeModules();
+        renderInstalledHome({ preserveSplash: true });
+        return preloadAppModulesForHome().then(function () {
+          ensureUpdateAvailableHint();
+          refreshShellCacheQuietly();
+        });
+      })
+      .catch(function (error) {
+        console.warn("BTCA cold boot failed", error);
+        if (!isLaunchUnlocked()) {
+          pendingInstalledLoginReveal = true;
+          renderInstalledHome({ preserveSplash: true });
+          finishInstalledSplashForLogin();
+          return;
+        }
+        discardStaleRuntimeModules();
+        renderInstalledHome({});
         return preloadAppModulesForHome();
       });
-    }
-
-    if (!readAppPreparedState()) {
-      markAppPrepared();
-    }
-
-    showHomeUnlocked().then(function () {
-      refreshShellCacheQuietly();
-    });
   }
 
   function bindShellUi() {
