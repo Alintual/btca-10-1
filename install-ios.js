@@ -2,8 +2,8 @@
   "use strict";
 
   var BTCA_BASE = "/btca-10-1/";
-  var INSTALL_CACHE = "btca10-web-10.1.82:static-install";
-  var MEDIA_CACHE = "btca10-web-10.1.82:static-media";
+  var INSTALL_CACHE = "btca10-web-10.1.83:static-install";
+  var MEDIA_CACHE = "btca10-web-10.1.83:static-media";
   var MEDIA_PROBE_RE = /offline-unpacked\/level3\/exercises\/[^/]+\.(jpe?g|png|webp|gif)$/i;
   var MEDIA_STATE_KEY = "btca10-web:static-media-state";
   var APP_READY_KEY = "btca10-web:app-ready";
@@ -25,8 +25,8 @@
   var ABOUT_MAIN_TEXT = "Настоящее Приложение разработано для локальной установки (развёртывания) на смартфоне или планшете с операционными системами Android или iOS и рассчитано для обучения и тренировки учеников с уровнем подготовки «Уровень 3 — Продвинутый».";
   var ABOUT_POST_TEXT = "*****\nБТКА, это — учебно-тренировочный программный комплекс, предназначенный для комплексного обучения игре на русском бильярде, выработки и закрепления практических навыков ведения бильярдной игры в Пирамиду, как самостоятельно, так и с тренером, с применением современных методик и технологий.\nТренировочный комплекс БТКА в сочетании с уникальной Методологией обучения составляют общую Систему тренировок БТКА школы русского бильярда «Абриколь» г. Красноярск.\n<a href=\"https://cloud.mail.ru/public/sujN/mpE8mr6aW\">Методика обучения</a>\n\nВ текущей версии Приложения БТКА 10.1 доступен раздел:\n•  *Уровень 3 — Продвинутый* Упражнений – 40, Задач – 263, Полезностей – 15.\n\nВсе Приложения функционируют без использования сети Интернет.\nКаждое Приложение:\n•  Содержит специфический (соответствующий уровню подготовки) набор упражнений, задач и тестов (в графическом виде), ранжированных по принципу - \"от простого к сложному\", и сгруппированных в тематические разделы по видам тренировок;\n•  Включает необходимые инструкции, методическую и справочную информацию;\n•  Обеспечивает возможность ввода, хранения и обработки результатов прогресса выполнения учеником практических заданий для последующего статистического анализа с использованием локальной Базы данных (БД);\n•  Имеет весь необходимый функционал и автоматизацию, а также интуитивно-понятный интерфейс, что способствует осуществлению полноценного, эффективного тренировочного процесса в комфортных условиях.\n\nОТ АВТОРА. Система тренировок БТКА разработана по результатам систематизации методик обучения русскому бильярду на основе: секретов ведущих тренеров и игроков (в т.ч. В. Симонича, В. Лазарева, С. Баурова, Е. Сталева и др.), опыта «старой школы», а также современных научных и экспериментальных исследований и IT-технологий.\n<a href=\"https://cloud.mail.ru/public/Ye3r/ZYwpjB9uz\">Подробное описание комплекса БТКА</a>\n\nCopyright © Юрий Алинт (Андрей Юрьев) 2026";
   var installedHomeSnapshot = "";
-  var LEVEL1_MODULE_VERSION = "10.1.51";
-  var LEVEL3_MODULE_VERSION = "10.1.51";
+  var LEVEL1_MODULE_VERSION = "10.1.52";
+  var LEVEL3_MODULE_VERSION = "10.1.52";
 
   var CORE_REL_PATHS = [
     "",
@@ -2997,6 +2997,24 @@
     var mode = loginOnly ? "login" : savedLogin ? "login" : "register";
     var otpSentHint = "";
     var subscriptionBlocked = false;
+    var authModeReqSeq = 0;
+    var authModeTimer = null;
+    var lastAuthModeLogin = "";
+
+    function storeLoginPrefs(loginValue, otpFlagValue) {
+      savedLogin = String(loginValue || "").trim();
+      preferOtp = Boolean(otpFlagValue);
+      try {
+        localStorage.setItem(LICENSE_LOGIN_KEY, savedLogin);
+        localStorage.setItem(LICENSE_AUTH_OTP_KEY, preferOtp ? "1" : "0");
+      } catch (e) {}
+    }
+
+    function readLoginFieldValue() {
+      var loginEl = gate.querySelector('input[name="login"]');
+      if (loginEl) return String(loginEl.value || "").trim();
+      return String(savedLogin || "").trim();
+    }
 
     function finishWithSession(data) {
       markLaunchUnlocked(data.session_token);
@@ -3086,6 +3104,7 @@
         formEl.removeAttribute("data-otp-email-wired");
         wireEmailOtpCheckbox(formEl);
       }
+      if (mode === "login") scheduleAuthModeSync(0);
     }
 
     function paintSafe() {
@@ -3096,6 +3115,42 @@
           console.warn("BTCA auth paint failed", err);
         }
       }, 30);
+    }
+
+    /** По логину (кэш / автозаполнение) сразу узнать: пароль или «Получить код». */
+    function syncAuthModeFromServer(loginRaw, force) {
+      if (mode !== "login" || subscriptionBlocked) return;
+      var login = String(loginRaw || "").trim();
+      if (login.length < 3) {
+        lastAuthModeLogin = "";
+        return;
+      }
+      if (!force && login === lastAuthModeLogin) return;
+      var seq = ++authModeReqSeq;
+      licensePost("/v1/auth/mode", { login: login })
+        .then(function (modeData) {
+          if (seq !== authModeReqSeq || mode !== "login") return;
+          var nextLogin = String((modeData && modeData.login) || login).trim();
+          var useOtp = Boolean(modeData && modeData.auth_by_email_otp);
+          lastAuthModeLogin = nextLogin;
+          if (nextLogin === savedLogin && useOtp === preferOtp) return;
+          storeLoginPrefs(nextLogin, useOtp);
+          paintSafe();
+        })
+        .catch(function () {
+          /* логин ещё не зарегистрирован / сеть — оставляем текущий UI */
+        });
+    }
+
+    function scheduleAuthModeSync(delayMs) {
+      if (authModeTimer) {
+        window.clearTimeout(authModeTimer);
+        authModeTimer = null;
+      }
+      authModeTimer = window.setTimeout(function () {
+        authModeTimer = null;
+        syncAuthModeFromServer(readLoginFieldValue(), false);
+      }, delayMs == null ? 180 : delayMs);
     }
 
     function setError(message) {
@@ -3121,6 +3176,16 @@
     }
 
     paint();
+    // Кэш логина + автозаполнение браузера: несколько попыток после загрузки.
+    if (mode === "login") {
+      scheduleAuthModeSync(0);
+      window.setTimeout(function () {
+        syncAuthModeFromServer(readLoginFieldValue(), true);
+      }, 250);
+      window.setTimeout(function () {
+        syncAuthModeFromServer(readLoginFieldValue(), true);
+      }, 800);
+    }
     gate.onclick = function (event) {
       var gen = event.target && event.target.closest ? event.target.closest("[data-pw-gen]") : null;
       if (gen) {
@@ -3135,25 +3200,38 @@
       mode = tab.getAttribute("data-auth-mode") === "register" ? "register" : "login";
       otpSentHint = "";
       subscriptionBlocked = false;
+      lastAuthModeLogin = "";
       paintSafe();
     };
     gate.oninput = function (event) {
-      if (!subscriptionBlocked) return;
       if (event.target && event.target.name === "login") {
-        subscriptionBlocked = false;
-        setError("");
-        savedLogin = String(event.target.value || "");
-        paintSafe();
-        window.setTimeout(function () {
-          var loginEl = gate.querySelector('input[name="login"]');
-          if (loginEl) {
-            loginEl.focus();
-            try {
-              var len = loginEl.value.length;
-              loginEl.setSelectionRange(len, len);
-            } catch (e) {}
-          }
-        }, 40);
+        savedLogin = String(event.target.value || "").trim();
+        if (subscriptionBlocked) {
+          subscriptionBlocked = false;
+          setError("");
+          paintSafe();
+          window.setTimeout(function () {
+            var loginEl = gate.querySelector('input[name="login"]');
+            if (loginEl) {
+              loginEl.focus();
+              try {
+                var len = loginEl.value.length;
+                loginEl.setSelectionRange(len, len);
+              } catch (e) {}
+            }
+          }, 40);
+          return;
+        }
+        if (mode === "login") {
+          lastAuthModeLogin = "";
+          scheduleAuthModeSync(220);
+        }
+      }
+    };
+    gate.onchange = function (event) {
+      if (event.target && event.target.name === "login" && mode === "login") {
+        lastAuthModeLogin = "";
+        scheduleAuthModeSync(0);
       }
     };
     gate.onsubmit = function (event) {
@@ -3179,15 +3257,6 @@
       var wantOtp = Boolean(otpFlag && otpFlag.checked);
       var deviceId = getLicenseDeviceId();
       var requestMode = mode;
-
-      function storeLoginPrefs(loginValue, otpFlagValue) {
-        savedLogin = loginValue;
-        preferOtp = Boolean(otpFlagValue);
-        try {
-          localStorage.setItem(LICENSE_LOGIN_KEY, savedLogin);
-          localStorage.setItem(LICENSE_AUTH_OTP_KEY, preferOtp ? "1" : "0");
-        } catch (e) {}
-      }
 
       var chain = Promise.resolve();
       if (requestMode === "register") {
