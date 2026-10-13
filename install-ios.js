@@ -2,8 +2,8 @@
   "use strict";
 
   var BTCA_BASE = "/btca-10-1/";
-  var INSTALL_CACHE = "btca10-web-10.1.93:static-install";
-  var MEDIA_CACHE = "btca10-web-10.1.93:static-media";
+  var INSTALL_CACHE = "btca10-web-10.1.95:static-install";
+  var MEDIA_CACHE = "btca10-web-10.1.95:static-media";
   var MEDIA_PROBE_RE = /offline-unpacked\/level3\/exercises\/[^/]+\.(jpe?g|png|webp|gif)$/i;
   var MEDIA_STATE_KEY = "btca10-web:static-media-state";
   var APP_READY_KEY = "btca10-web:app-ready";
@@ -25,8 +25,8 @@
   var ABOUT_MAIN_TEXT = "Настоящее Приложение разработано для локальной установки (развёртывания) на смартфоне или планшете с операционными системами Android или iOS и рассчитано для обучения и тренировки учеников с уровнем подготовки «Уровень 3 — Продвинутый».";
   var ABOUT_POST_TEXT = "*****\nБТКА, это — учебно-тренировочный программный комплекс, предназначенный для комплексного обучения игре на русском бильярде, выработки и закрепления практических навыков ведения бильярдной игры в Пирамиду, как самостоятельно, так и с тренером, с применением современных методик и технологий.\nТренировочный комплекс БТКА в сочетании с уникальной Методологией обучения составляют общую Систему тренировок БТКА школы русского бильярда «Абриколь» г. Красноярск.\n<a href=\"https://cloud.mail.ru/public/sujN/mpE8mr6aW\">Методика обучения</a>\n\nВ текущей версии Приложения БТКА 10.1 доступен раздел:\n•  *Уровень 3 — Продвинутый* Упражнений – 40, Задач – 263, Полезностей – 15.\n\nВсе Приложения функционируют без использования сети Интернет.\nКаждое Приложение:\n•  Содержит специфический (соответствующий уровню подготовки) набор упражнений, задач и тестов (в графическом виде), ранжированных по принципу - \"от простого к сложному\", и сгруппированных в тематические разделы по видам тренировок;\n•  Включает необходимые инструкции, методическую и справочную информацию;\n•  Обеспечивает возможность ввода, хранения и обработки результатов прогресса выполнения учеником практических заданий для последующего статистического анализа с использованием локальной Базы данных (БД);\n•  Имеет весь необходимый функционал и автоматизацию, а также интуитивно-понятный интерфейс, что способствует осуществлению полноценного, эффективного тренировочного процесса в комфортных условиях.\n\nОТ АВТОРА. Система тренировок БТКА разработана по результатам систематизации методик обучения русскому бильярду на основе: секретов ведущих тренеров и игроков (в т.ч. В. Симонича, В. Лазарева, С. Баурова, Е. Сталева и др.), опыта «старой школы», а также современных научных и экспериментальных исследований и IT-технологий.\n<a href=\"https://cloud.mail.ru/public/Ye3r/ZYwpjB9uz\">Подробное описание комплекса БТКА</a>\n\nCopyright © Юрий Алинт (Андрей Юрьев) 2026";
   var installedHomeSnapshot = "";
-  var LEVEL1_MODULE_VERSION = "10.1.55";
-  var LEVEL3_MODULE_VERSION = "10.1.55";
+  var LEVEL1_MODULE_VERSION = "10.1.56";
+  var LEVEL3_MODULE_VERSION = "10.1.56";
 
   var CORE_REL_PATHS = [
     "",
@@ -2926,12 +2926,7 @@
           }
           if (!response.ok) {
             var detail = data && data.detail;
-            var message =
-              typeof detail === "string"
-                ? detail
-                : detail && typeof detail === "object"
-                  ? JSON.stringify(detail)
-                  : "Ошибка " + response.status;
+            var message = formatLicenseApiDetail(detail, response.status);
             throw new Error(message);
           }
           if (!data || typeof data !== "object") {
@@ -2970,6 +2965,45 @@
       );
   }
 
+  function formatLicenseApiDetail(detail, status) {
+    if (typeof detail === "string" && detail.trim()) return detail.trim();
+    if (Array.isArray(detail) && detail.length) {
+      var parts = [];
+      for (var i = 0; i < detail.length; i++) {
+        var item = detail[i];
+        if (!item) continue;
+        if (typeof item === "string") {
+          parts.push(item);
+          continue;
+        }
+        var locParts = Array.isArray(item.loc) ? item.loc : [];
+        var field = "";
+        for (var j = locParts.length - 1; j >= 0; j--) {
+          if (locParts[j] !== "body" && locParts[j] !== "__root__") {
+            field = String(locParts[j] || "");
+            break;
+          }
+        }
+        if (field === "code") {
+          parts.push("Введите код из 6 цифр");
+          continue;
+        }
+        if (field === "login") {
+          parts.push("Укажите логин");
+          continue;
+        }
+        if (field === "password") {
+          parts.push("Укажите пароль");
+          continue;
+        }
+        if (item.msg) parts.push(String(item.msg));
+      }
+      if (parts.length) return parts.join(". ");
+    }
+    if (detail && typeof detail === "object" && detail.msg) return String(detail.msg);
+    return "Ошибка " + (status || "запроса");
+  }
+
   function localizeUserFacingError(error, fallback) {
     var raw = error && error.message ? String(error.message) : String(error || "");
     if (!raw) return fallback || "Ошибка запроса";
@@ -2981,6 +3015,12 @@
     }
     if (/unique constraint/i.test(raw) || /integrityerror/i.test(raw)) {
       return "Повторное скачивание разрешено. Обновите страницу и нажмите ещё раз.";
+    }
+    if (/неверный код/i.test(raw)) {
+      return "Код введён неправильно. Проверьте цифры и попробуйте снова.";
+    }
+    if (/код истёк/i.test(raw)) {
+      return "Код истёк. Запросите новый.";
     }
     // Не показываем сырой английский текст браузера.
     if (/^[A-Za-z][A-Za-z0-9 _.,:;'"()%/+-]{0,120}$/.test(raw) && !/[А-Яа-яЁё]/.test(raw)) {
@@ -3442,9 +3482,23 @@
     "Подписка не активна. Для оформления или продления доступа обратитесь в Службу поддержки.";
   var DEVICE_NOT_BOUND_MSG =
     "Вход в Приложение закрыт. Это устройство не привязано к аккаунту регистрации!";
+  var DEVICE_ENROLL_HINT_MSG =
+    "Это устройство ещё не привязано. Войдите в аккаунт — если лимит устройств не исчерпан, доступ будет открыт.";
+  var DEVICE_LIMIT_MSG =
+    "Лимит устройств исчерпан. Вход на этом устройстве закрыт. Обратитесь к автору аккаунта.";
 
   function isSubscriptionInactiveError(message) {
     return /подписка не активна/i.test(String(message || ""));
+  }
+
+  function isDeviceNotAllowedError(message) {
+    var text = String(message || "");
+    return (
+      /не привязано к аккаунту/i.test(text) ||
+      /лимит устройств/i.test(text) ||
+      /только с устройства регистрации/i.test(text) ||
+      /вход в приложение закрыт/i.test(text)
+    );
   }
 
   function renderAuthGate(onUnlocked, options) {
@@ -3688,6 +3742,10 @@
       paintSafe();
     };
     gate.oninput = function (event) {
+      if (event.target && event.target.name === "otp") {
+        setError("");
+        return;
+      }
       if (event.target && event.target.name === "login") {
         savedLogin = String(event.target.value || "").trim();
         if (subscriptionBlocked) {
@@ -3820,10 +3878,16 @@
           });
         });
       } else {
+        var otpCode = otpInput ? String(otpInput.value || "").trim() : "";
+        if (!/^\d{6}$/.test(otpCode)) {
+          setError("Введите код из 6 цифр");
+          if (submitBtn) submitBtn.disabled = false;
+          return false;
+        }
         chain = licensePost("/v1/otp/verify", {
           login: savedLogin,
           device_id: deviceId,
-          code: otpInput ? String(otpInput.value || "").trim() : "",
+          code: otpCode,
         }).then(function (data) {
           return { __session: true, data: data };
         });
@@ -3844,6 +3908,10 @@
           var message = localizeUserFacingError(err, "Ошибка запроса");
           if (requestMode !== "otp" && isSubscriptionInactiveError(message)) {
             markInactive();
+            return;
+          }
+          if (isDeviceNotAllowedError(message) && isStandalone()) {
+            renderDeviceBlockedGate(DEVICE_LIMIT_MSG, { allowLogin: false });
             return;
           }
           if (message === "Введите пароль") {
@@ -3867,6 +3935,17 @@
             window.setTimeout(function () {
               setError(message);
             }, 40);
+            return;
+          }
+          if (requestMode === "otp") {
+            // Оставляем форму кода; ошибку показываем явно под полем.
+            setError(message || "Код введён неправильно. Проверьте цифры и попробуйте снова.");
+            if (otpInput) {
+              try {
+                otpInput.value = "";
+                otpInput.focus();
+              } catch (e) {}
+            }
             return;
           }
           setError(message);
@@ -4098,18 +4177,65 @@
       });
   }
 
-  function renderDeviceBlockedGate(message) {
+  function renderDeviceBlockedGate(message, options) {
+    options = options || {};
+    var allowLogin = Boolean(options.allowLogin);
     pendingInstalledLoginReveal = false;
     hideHomeSplashIndicator();
     var gate = ensureAuthGateMount();
     if (!gate) return;
     gate.removeAttribute("hidden");
-    gate.onclick = null;
+    gate.onsubmit = null;
+    gate.oninput = null;
+    gate.onchange = null;
     gate.innerHTML =
-      '<p class="auth-gate__title">Устройство не авторизовано</p>' +
+      '<p class="auth-gate__title">' +
+      escapeHtml(allowLogin ? "Новое устройство" : "Устройство не авторизовано") +
+      "</p>" +
       '<p class="auth-gate__hint auth-gate__hint--danger">' +
-      escapeHtml(message || DEVICE_NOT_BOUND_MSG) +
-      "</p>";
+      escapeHtml(message || (allowLogin ? DEVICE_ENROLL_HINT_MSG : DEVICE_NOT_BOUND_MSG)) +
+      "</p>" +
+      (allowLogin
+        ? '<button type="button" class="platform-button auth-gate__submit" data-device-enroll-login><span>Войти на этом устройстве</span></button>'
+        : "");
+    gate.onclick = function (event) {
+      var btn =
+        event.target && event.target.closest
+          ? event.target.closest("[data-device-enroll-login]")
+          : null;
+      if (!btn) return;
+      event.preventDefault();
+      ensureLicenseIdentityRestored()
+        .then(function (login) {
+          var prefill = String(login || "").trim();
+          if (!prefill) {
+            try {
+              prefill =
+                String(localStorage.getItem(LICENSE_LOGIN_KEY) || "").trim() || readLoginCookie();
+            } catch (e) {
+              prefill = readLoginCookie();
+            }
+          }
+          renderAuthGate(
+            function () {
+              hideHomeSplashIndicator();
+              if (!readAppPreparedState()) markAppPrepared();
+              renderInstalledHome({});
+            },
+            { loginOnly: true, prefillLogin: prefill }
+          );
+        })
+        .catch(function () {
+          renderAuthGate(
+            function () {
+              hideHomeSplashIndicator();
+              if (!readAppPreparedState()) markAppPrepared();
+              renderInstalledHome({});
+            },
+            { loginOnly: true }
+          );
+        });
+    };
   }
 
   /**
@@ -4626,20 +4752,25 @@
         return preloadAppModulesForHome({ keepSplashUntilUnlock: true }).then(function () {
           hideHomeSplashIndicator();
           if (check && check.reason === "inactive") {
-            renderDeviceBlockedGate(check.message || SUBSCRIPTION_INACTIVE_MSG);
+            renderDeviceBlockedGate(check.message || SUBSCRIPTION_INACTIVE_MSG, {
+              allowLogin: false,
+            });
             return;
           }
-          renderDeviceBlockedGate(
-            check && check.reason === "unbound"
-              ? DEVICE_NOT_BOUND_MSG
-              : (check && check.message) || DEVICE_NOT_BOUND_MSG
-          );
+          if (check && check.reason === "unbound") {
+            // Новое устройство: пока лимит не исчерпан — вход/привязка; лимит проверит сервер.
+            renderDeviceBlockedGate(DEVICE_ENROLL_HINT_MSG, { allowLogin: true });
+            return;
+          }
+          renderDeviceBlockedGate((check && check.message) || DEVICE_NOT_BOUND_MSG, {
+            allowLogin: false,
+          });
         });
       })
       .catch(function (error) {
         console.warn("BTCA cold boot failed", error);
         hideHomeSplashIndicator();
-        renderDeviceBlockedGate(DEVICE_NOT_BOUND_MSG);
+        renderDeviceBlockedGate(DEVICE_ENROLL_HINT_MSG, { allowLogin: true });
       });
   }
 
