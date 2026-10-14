@@ -1,4 +1,4 @@
-const CACHE_VERSION = "btca10-web-10.1.104";
+const CACHE_VERSION = "btca10-web-10.1.105";
 const APP_CACHE = `${CACHE_VERSION}:app`;
 const RUNTIME_CACHE = `${CACHE_VERSION}:runtime`;
 const BASE_PATH = "/btca-10-1";
@@ -186,63 +186,10 @@ self.addEventListener("fetch", (event) => {
     path.endsWith("/index.html");
 
   // Документ/HTML никогда не через SW — иначе Safari на iPad «роняет» загрузочную.
-  // Загрузочная всегда получает свежий index (дата версии). Установленный PWA
-  // перезаписывает дату из localStorage / device-session после старта.
   if (isDocument) return;
 
-  // Оболочка после «Загрузить» (static-install): cache-first, ignore ?v=.
-  // Иначе offline пропадают branding/up.png, baza.png и CSS/JS с сети.
-  var isShellAsset =
-    /\.(?:css|js|mjs|wasm)$/i.test(path) ||
-    /\.(?:png|jpe?g|gif|webp|svg|ico)$/i.test(path) ||
-    path.indexOf(BASE_PATH + "/branding/") === 0 ||
-    path.indexOf(BASE_PATH + "/icons/") === 0 ||
-    path === BASE_PATH + "/manifest.webmanifest";
-  if (isShellAsset) {
-    event.respondWith(
-      caches.keys().then(function (keys) {
-        var installKeys = keys.filter(function (key) {
-          return /:static-install$/.test(key);
-        });
-        if (!installKeys.length) {
-          return safeFetch(event.request).catch(function () {
-            return new Response("", { status: 503, statusText: "Service Unavailable" });
-          });
-        }
-        return installKeys
-          .reduce(function (chain, key) {
-            return chain.then(function (hit) {
-              if (hit) return hit;
-              return caches.open(key).then(function (cache) {
-                return cache.match(event.request, { ignoreSearch: true }).then(function (entry) {
-                  if (entry) return entry;
-                  return cache.keys().then(function (reqs) {
-                    for (var i = 0; i < reqs.length; i++) {
-                      try {
-                        if (new URL(reqs[i].url).pathname === path) {
-                          return cache.match(reqs[i]);
-                        }
-                      } catch (_e) {}
-                    }
-                    return null;
-                  });
-                });
-              });
-            });
-          }, Promise.resolve(null))
-          .then(function (hit) {
-            if (hit) return hit;
-            return safeFetch(event.request).catch(function () {
-              return new Response("", { status: 503, statusText: "Service Unavailable" });
-            });
-          });
-      })
-    );
-    return;
-  }
-
-  // Картинки упражнений/полезностей живут только в Cache API (после распаковки zip).
-  // На GitHub Pages пути /offline-unpacked/... нет — без SW будет пусто.
+  // Сначала media: упражнения/полезности только в :static-media (путей на Pages нет).
+  // Нельзя перехватывать их общим правилом «все .png» из оболочки.
   if (path.indexOf(BASE_PATH + "/offline-unpacked/") === 0) {
     event.respondWith(
       caches.match(event.request, { ignoreSearch: true }).then(function (cached) {
@@ -269,6 +216,54 @@ self.addEventListener("fetch", (event) => {
             });
           });
         });
+      })
+    );
+    return;
+  }
+
+  // Только branding/icons + CSS/JS оболочки из :static-install (не все картинки!).
+  var isShellAsset =
+    path.indexOf(BASE_PATH + "/branding/") === 0 ||
+    path.indexOf(BASE_PATH + "/icons/") === 0 ||
+    path === BASE_PATH + "/manifest.webmanifest" ||
+    (/\.(?:css|js|mjs|wasm)$/i.test(path) &&
+      path.indexOf(BASE_PATH + "/offline/") !== 0);
+  if (isShellAsset) {
+    event.respondWith(
+      caches.keys().then(function (keys) {
+        var installKeys = keys.filter(function (key) {
+          return /:static-install$/.test(key);
+        });
+        function fromNetwork() {
+          return safeFetch(event.request).catch(function () {
+            return new Response("", { status: 503, statusText: "Service Unavailable" });
+          });
+        }
+        if (!installKeys.length) return fromNetwork();
+        return installKeys
+          .reduce(function (chain, key) {
+            return chain.then(function (hit) {
+              if (hit) return hit;
+              return caches.open(key).then(function (cache) {
+                return cache.match(event.request, { ignoreSearch: true }).then(function (entry) {
+                  if (entry) return entry;
+                  return cache.keys().then(function (reqs) {
+                    for (var i = 0; i < reqs.length; i++) {
+                      try {
+                        if (new URL(reqs[i].url).pathname === path) {
+                          return cache.match(reqs[i]);
+                        }
+                      } catch (_e) {}
+                    }
+                    return null;
+                  });
+                });
+              });
+            });
+          }, Promise.resolve(null))
+          .then(function (hit) {
+            return hit || fromNetwork();
+          });
       })
     );
     return;
