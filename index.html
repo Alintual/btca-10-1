@@ -3,7 +3,7 @@
 
 <head>
   <meta charset="UTF-8" />
-  <meta name="btca-cache-version" content="btca10-web-10.1.102" />
+  <meta name="btca-cache-version" content="btca10-web-10.1.103" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
   <meta name="theme-color" content="#1a4854" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
@@ -22,7 +22,7 @@
     <link rel="shortcut icon" href="https://alintual.github.io/btca-10-1/favicon.ico" />
     <!-- btca-css -->
     <style>html,body{margin:0;background:#1a4854;color:#fff}</style>
-    <link rel="stylesheet" href="/btca-10-1/install-ios.css?v=btca10-web-10.1.102" />
+    <link rel="stylesheet" href="/btca-10-1/install-ios.css?v=btca10-web-10.1.103" />
     <!-- /btca-css -->
   <title>BTCA 10.1 Web</title>
   <script>
@@ -77,7 +77,7 @@
 
         <div class="home__intro">
           <p class="eyebrow">Система тренировок БТКА 10.1</p>
-          <p class="eyebrow eyebrow--release">версия от 13.10.2026</p>
+          <p class="eyebrow eyebrow--release">версия от 14.10.2026</p>
           <p class="eyebrow eyebrow--levels">
             <span>|&nbsp;&nbsp;Уровень 3 - Продвинутый&nbsp;&nbsp;|</span>
           </p>
@@ -172,14 +172,19 @@
         }).then(function (r) { return r.json(); }).then(function (data) {
           var d = data && String(data.version_date || "").trim();
           if (!/^\d{2}\.\d{2}\.\d{4}$/.test(d)) return;
-          try { localStorage.setItem("btca101.packageReleaseDate", d); } catch (e) {}
+          var existing = "";
+          try { existing = String(localStorage.getItem("btca101.packageReleaseDate") || "").trim(); } catch (e) {}
+          if (!existing) {
+            try { localStorage.setItem("btca101.packageReleaseDate", d); } catch (e) {}
+          }
+          var show = existing || d;
           var el = document.querySelector(".eyebrow--release");
-          if (el) el.textContent = "версия от " + d;
+          if (el) el.textContent = "версия от " + show;
         }).catch(function () {});
       } catch (e) {}
     })();
     </script>
-    <script src="/btca-10-1/install-ios.js?v=btca10-web-10.1.102" defer></script>
+    <script src="/btca-10-1/install-ios.js?v=btca10-web-10.1.103" defer></script>
     <!-- /btca-install -->
 </body>
 

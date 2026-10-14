@@ -2,8 +2,8 @@
   "use strict";
 
   var BTCA_BASE = "/btca-10-1/";
-  var INSTALL_CACHE = "btca10-web-10.1.102:static-install";
-  var MEDIA_CACHE = "btca10-web-10.1.102:static-media";
+  var INSTALL_CACHE = "btca10-web-10.1.103:static-install";
+  var MEDIA_CACHE = "btca10-web-10.1.103:static-media";
   var MEDIA_PROBE_RE = /offline-unpacked\/level3\/exercises\/[^/]+\.(jpe?g|png|webp|gif)$/i;
   var MEDIA_STATE_KEY = "btca10-web:static-media-state";
   var APP_READY_KEY = "btca10-web:app-ready";
@@ -25,8 +25,8 @@
   var ABOUT_MAIN_TEXT = "Настоящее Приложение разработано для локальной установки (развёртывания) на смартфоне или планшете с операционными системами Android или iOS и рассчитано для обучения и тренировки учеников с уровнем подготовки «Уровень 3 — Продвинутый».";
   var ABOUT_POST_TEXT = "*****\nБТКА, это — учебно-тренировочный программный комплекс, предназначенный для комплексного обучения игре на русском бильярде, выработки и закрепления практических навыков ведения бильярдной игры в Пирамиду, как самостоятельно, так и с тренером, с применением современных методик и технологий.\nТренировочный комплекс БТКА в сочетании с уникальной Методологией обучения составляют общую Систему тренировок БТКА школы русского бильярда «Абриколь» г. Красноярск.\n<a href=\"https://cloud.mail.ru/public/sujN/mpE8mr6aW\">Методика обучения</a>\n\nВ текущей версии Приложения БТКА 10.1 доступен раздел:\n•  *Уровень 3 — Продвинутый* Упражнений – 40, Задач – 263, Полезностей – 15.\n\nВсе Приложения функционируют без использования сети Интернет.\nКаждое Приложение:\n•  Содержит специфический (соответствующий уровню подготовки) набор упражнений, задач и тестов (в графическом виде), ранжированных по принципу - \"от простого к сложному\", и сгруппированных в тематические разделы по видам тренировок;\n•  Включает необходимые инструкции, методическую и справочную информацию;\n•  Обеспечивает возможность ввода, хранения и обработки результатов прогресса выполнения учеником практических заданий для последующего статистического анализа с использованием локальной Базы данных (БД);\n•  Имеет весь необходимый функционал и автоматизацию, а также интуитивно-понятный интерфейс, что способствует осуществлению полноценного, эффективного тренировочного процесса в комфортных условиях.\n\nОТ АВТОРА. Система тренировок БТКА разработана по результатам систематизации методик обучения русскому бильярду на основе: секретов ведущих тренеров и игроков (в т.ч. В. Симонича, В. Лазарева, С. Баурова, Е. Сталева и др.), опыта «старой школы», а также современных научных и экспериментальных исследований и IT-технологий.\n<a href=\"https://cloud.mail.ru/public/Ye3r/ZYwpjB9uz\">Подробное описание комплекса БТКА</a>\n\nCopyright © Юрий Алинт (Андрей Юрьев) 2026";
   var installedHomeSnapshot = "";
-  var LEVEL1_MODULE_VERSION = "10.1.63";
-  var LEVEL3_MODULE_VERSION = "10.1.63";
+  var LEVEL1_MODULE_VERSION = "10.1.64";
+  var LEVEL3_MODULE_VERSION = "10.1.64";
 
   var CORE_REL_PATHS = [
     "",
@@ -1272,7 +1272,10 @@
     if (!("caches" in window)) return Promise.resolve();
     return caches.keys().then(function (names) {
       return Promise.all(names.filter(function (name) {
-        return name.indexOf(CACHE_NAME_PREFIX) === 0 && !name.endsWith(":static-media");
+        if (name.indexOf(CACHE_NAME_PREFIX) !== 0) return false;
+        if (name.endsWith(":static-media")) return false;
+        if (name.endsWith(":static-install")) return false;
+        return true;
       }).map(function (name) {
         return caches.delete(name);
       }));
@@ -1305,13 +1308,10 @@
 
   function reloadShellForRemoteVersion(remote) {
     var target = String(remote || "").trim() || readMetaCacheVersion() || "unknown";
-    // Установленный PWA: подтягиваем только JS/оболочку (багфиксы), без смены даты версии в админке.
-    // Дата на старте берётся с сервера (claim); контент «О проекте» обновится вместе с оболочкой.
+    // Установленный PWA: оболочку/CSS/JS с сети НЕ подтягиваем.
+    // Новый пакет — только через кнопку загрузки на странице загрузки.
     if (isStandalone()) {
-      writeAppliedShellVersion(target);
-      return refreshShellCacheQuietly().then(function () {
-        return false;
-      });
+      return Promise.resolve(false);
     }
     var attemptKey = shellRefreshAttemptKey(target);
     try {
@@ -1388,7 +1388,9 @@
       return Promise.all(names.filter(function (name) {
         if (name.indexOf(CACHE_NAME_PREFIX) !== 0) return false;
         if (name.indexOf(generation) === 0) return false;
+        // Offline-пакет после «Загрузить» живёт до повторной загрузки — не сносить при bump cacheVersion.
         if (name.endsWith(":static-media")) return false;
+        if (name.endsWith(":static-install")) return false;
         return true;
       }).map(function (name) {
         return caches.delete(name);
@@ -1456,27 +1458,11 @@
   }
 
   function ensureShellUpToDate() {
+    // Splash / после смахивания: только сравнение дат → «Есть обновление». Без обновления кэша.
     if (!shouldRunShellUpdateCheck()) return Promise.resolve(false);
-    var swPromise = Promise.resolve();
-    if ("serviceWorker" in navigator) {
-      swPromise = navigator.serviceWorker.getRegistration(BTCA_BASE).then(function (registration) {
-        if (!registration) return;
-        return registration.update().catch(function () {}).then(function () {
-          if (registration.waiting) {
-            registration.waiting.postMessage({ type: "SKIP_WAITING" });
-          }
-        });
-      });
-    }
-    return swPromise
-      .then(function () {
-        return probeRemoteShellVersion();
-      })
-      .then(function (reloading) {
-        return ensureUpdateAvailableHint().then(function () {
-          return Boolean(reloading);
-        });
-      });
+    return ensureUpdateAvailableHint().then(function () {
+      return false;
+    });
   }
 
   function fetchRemoteAppShellPayload(attempt) {
@@ -4373,8 +4359,9 @@
         try {
           renderHomeSplashIndicator(40);
         } catch (e) {}
-        // Дата на стартовой = дата из админки (не из кэша DOM/деплоя).
-        if (data && data.version_date) {
+        // Дата на стартовой = дата пакета на устройстве (claim), не глобальный деплой.
+        // Не перетираем локальную дату датой деплоя — иначе пропадёт «Есть обновление».
+        if (data && data.version_date && !readStoredPackageReleaseDate()) {
           syncInstalledVersionDateFromServer(data.version_date);
         }
         // Сначала подписка (если аккаунт уже известен по ID), затем привязка.
@@ -4777,7 +4764,8 @@
         })
         .then(function () {
           report(8, "Очистка устаревшей оболочки...");
-          return purgeShellInstallCache().then(function () {
+          // Сносим все поколения :static-install — новый пакет целиком с сети.
+          return purgeAllInstallCaches().then(function () {
             return purgeGenerationRuntimeCache();
           });
         })
@@ -4853,9 +4841,7 @@
           discardStaleRuntimeModules();
           renderInstalledHome({ preserveSplash: true });
           return preloadAppModulesForHome().then(function () {
-            return ensureShellUpToDate().then(function () {
-              ensureUpdateAvailableHint();
-            });
+            ensureUpdateAvailableHint();
           });
         }
         return preloadAppModulesForHome({ keepSplashUntilUnlock: true }).then(function () {
@@ -4890,12 +4876,7 @@
         startIosOfflinePreparation();
       };
     }
-    if (isAppShellMode()) {
-      document.addEventListener("visibilitychange", function () {
-        if (document.visibilityState !== "visible") return;
-        ensureShellUpToDate();
-      });
-    }
+    // visibilitychange: без сетевых проверок — интернет только на cold start / после смахивания.
   }
 
   var bootOpenDownloadsOnly = false;
