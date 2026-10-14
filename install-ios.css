@@ -2213,7 +2213,8 @@ body.btca-apple-comfort .btca-l1-chart-panel {
 
 .btca-level1-titlebar__baza-icon {
   flex-shrink: 0;
-  width: calc(24rem / 17);
+  /* Было width:auto ≈ 1.44×height (~29/17 rem); делаем шире исходного. */
+  width: calc(38rem / 17);
   height: var(--btca-l1-baza-icon-h);
   margin-top: 3px;
   object-fit: fill;
