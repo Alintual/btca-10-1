@@ -2174,7 +2174,9 @@ body.btca-apple-comfort .btca-l1-chart-panel {
 }
 
 .btca-level1-titlebar__emoji--forma {
-  margin-top: 3px;
+  margin-top: 4px;
+  font-size: calc(17rem / 17);
+  line-height: calc(17rem / 17);
 }
 
 .btca-level1-titlebar__emoji--nav {
@@ -2211,9 +2213,10 @@ body.btca-apple-comfort .btca-l1-chart-panel {
 
 .btca-level1-titlebar__baza-icon {
   flex-shrink: 0;
-  width: auto;
+  width: calc(24rem / 17);
   height: var(--btca-l1-baza-icon-h);
   margin-top: 3px;
+  object-fit: fill;
 }
 
 .btca-level1-baza-menu {
