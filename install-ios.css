@@ -1171,7 +1171,9 @@ body.btca-level3-mode .btca-level1-titlebar {
 }
 
 body.btca-level3-mode .btca-l1-green-arrow__img {
-  --btca-arrow-filter: brightness(0) saturate(100%) invert(18%) sepia(95%) saturate(4500%) hue-rotate(314deg) brightness(92%) contrast(98%);
+  /* up.png уже #d31472 — как border у «Уровень 3»; без перекраски фильтром */
+  --btca-arrow-filter: none;
+  filter: none;
 }
 
 body.btca-level3-mode .btca-level1-sheet-menu__item--active {
