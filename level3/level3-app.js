@@ -3,7 +3,7 @@
 
   var DB = window.BTCA_LEVEL3_DB;
   var BAZA = window.BTCA_LEVEL3_BAZA;
-  var VERSION = "10.1.72";
+  var VERSION = "10.1.73";
   var BRANDING_UP = "branding/up.png";
   var BRANDING_BAZA = "branding/baza.png";
   var TRAILING_SLOT_W = 112;
@@ -129,28 +129,43 @@
   var FORMA_LEVEL3_DEFAULT_EXERCISE = "10";
   var NAV_SECTION_FILTER_ALL = "all";
   var NAV_TRAINING_KIND_ORDER = [
-    "Тренировка чужих прямых",
-    "Тренировка чужих на резке",
-    "Тренировка свояков",
-    "Тренировка отыгрышей",
-    "Тренировка выходов",
-    "Тренировка одиночными",
-    "Игровые тренировки",
-    "Тренировочные тесты",
+    "1. Тренировка чужих прямых",
+    "2. Тренировка чужих на резке",
+    "3. Тренировка свояков",
+    "4. Тренировка отыгрышей",
+    "5. Тренировка выходов",
+    "6. Тренировка одиночными",
+    "7. Игровые тренировки",
+    "8. Тренировочные тесты",
   ];
 
   function exerciseSectionNameL2(b5) {
-    if (typeof b5 === "string" && b5.indexOf("Тест") === 0) return "Тренировочные тесты";
+    if (typeof b5 === "string" && b5.indexOf("Тест") === 0) return "8. Тренировочные тесты";
     var n = numericB5(b5);
     if (n === null || !Number.isFinite(n)) return "—";
-    if (n >= 1 && n <= 5) return "Тренировка чужих прямых";
-    if (n >= 6 && n <= 13) return "Тренировка чужих на резке";
-    if (n >= 14 && n <= 22) return "Тренировка свояков";
-    if (n === 23) return "Тренировка отыгрышей";
-    if (n === 24) return "Тренировка выходов";
-    if (n >= 25 && n <= 30) return "Тренировка одиночными";
-    if (n >= 31 && n <= 32) return "Игровые тренировки";
-    return "Тренировочные тесты";
+    if (n >= 1 && n <= 5) return "1. Тренировка чужих прямых";
+    if (n >= 6 && n <= 13) return "2. Тренировка чужих на резке";
+    if (n >= 14 && n <= 22) return "3. Тренировка свояков";
+    if (n === 23) return "4. Тренировка отыгрышей";
+    if (n === 24) return "5. Тренировка выходов";
+    if (n >= 25 && n <= 30) return "6. Тренировка одиночными";
+    if (n >= 31 && n <= 32) return "7. Игровые тренировки";
+    return "8. Тренировочные тесты";
+  }
+
+  /** Путь к картинке упражнения в zip: chapterN/N-k.jpg */
+  function exerciseChapterForB5(b5) {
+    if (typeof b5 === "string" && b5.indexOf("Тест") === 0) return 8;
+    var n = numericB5(b5);
+    if (n === null || !Number.isFinite(n)) return 0;
+    if (n >= 1 && n <= 5) return 1;
+    if (n >= 6 && n <= 13) return 2;
+    if (n >= 14 && n <= 22) return 3;
+    if (n === 23) return 4;
+    if (n === 24) return 5;
+    if (n >= 25 && n <= 30) return 6;
+    if (n >= 31 && n <= 32) return 7;
+    return 0;
   }
 
   function test5to8(b5) {
@@ -920,12 +935,17 @@
   function exerciseImageFile(level, exerciseValue) {
     var k = String(exerciseValue || "").trim();
     var testMatch = /^Тест\s*(\d+)$/i.exec(k);
-    if (testMatch) return "test_" + testMatch[1] + ".jpg";
+    if (testMatch) {
+      var tk = testMatch[1];
+      return "chapter8/8-" + tk + ".jpg";
+    }
     var b5 = b5FromSelectValue(k);
     if (typeof b5 === "number" && Number.isFinite(b5)) {
       var n = Math.trunc(b5);
-      if (level === 1 && n >= 1 && n <= 14) return n + ".jpg";
-      if (level === 2 && n >= 1 && n <= 32) return n + ".jpg";
+      var chapter = exerciseChapterForB5(n);
+      if (!chapter) return null;
+      if (level === 1 && n >= 1 && n <= 14) return "chapter" + chapter + "/" + chapter + "-" + n + ".jpg";
+      if (level === 2 && n >= 1 && n <= 32) return "chapter" + chapter + "/" + chapter + "-" + n + ".jpg";
     }
     return null;
   }
@@ -1626,8 +1646,7 @@
 
   function deriveNavSectionLabel(exerciseFilterKey) {
     if (exerciseFilterKey === NAV_FILTER_ALL) return "Все";
-    if (exerciseFilterKey === "Тест1") return "Тренировочные тесты";
-    return "Тренировка одиночными";
+    return exerciseSectionNameL2(b5FromSelectValue(exerciseFilterKey));
   }
 
   function labelForExerciseValue(value) {
