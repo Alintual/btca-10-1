@@ -2,8 +2,8 @@
   "use strict";
 
   var BTCA_BASE = "/btca-10-1/";
-  var INSTALL_CACHE = "btca10-web-10.1.108:static-install";
-  var MEDIA_CACHE = "btca10-web-10.1.108:static-media";
+  var INSTALL_CACHE = "btca10-web-10.1.109:static-install";
+  var MEDIA_CACHE = "btca10-web-10.1.109:static-media";
   var MEDIA_PROBE_RE = /offline-unpacked\/level3\/exercises\/[^/]+\.(jpe?g|png|webp|gif)$/i;
   var MEDIA_STATE_KEY = "btca10-web:static-media-state";
   var APP_READY_KEY = "btca10-web:app-ready";
@@ -25,8 +25,8 @@
   var ABOUT_MAIN_TEXT = "Настоящее Приложение разработано для локальной установки (развёртывания) на смартфоне или планшете с операционными системами Android или iOS и рассчитано для обучения и тренировки учеников с уровнем подготовки «Уровень 3 — Продвинутый».";
   var ABOUT_POST_TEXT = "*****\nБТКА, это — учебно-тренировочный программный комплекс, предназначенный для комплексного обучения игре на русском бильярде, выработки и закрепления практических навыков ведения бильярдной игры в Пирамиду, как самостоятельно, так и с тренером, с применением современных методик и технологий.\nТренировочный комплекс БТКА в сочетании с уникальной Методологией обучения составляют общую Систему тренировок БТКА школы русского бильярда «Абриколь» г. Красноярск.\n<a href=\"https://cloud.mail.ru/public/sujN/mpE8mr6aW\">Методика обучения</a>\n\nВ текущей версии Приложения БТКА 10.1 доступен раздел:\n•  *Уровень 3 — Продвинутый* Упражнений – 40, Задач – 263, Полезностей – 15.\n\nВсе Приложения функционируют без использования сети Интернет.\nКаждое Приложение:\n•  Содержит специфический (соответствующий уровню подготовки) набор упражнений, задач и тестов (в графическом виде), ранжированных по принципу - \"от простого к сложному\", и сгруппированных в тематические разделы по видам тренировок;\n•  Включает необходимые инструкции, методическую и справочную информацию;\n•  Обеспечивает возможность ввода, хранения и обработки результатов прогресса выполнения учеником практических заданий для последующего статистического анализа с использованием локальной Базы данных (БД);\n•  Имеет весь необходимый функционал и автоматизацию, а также интуитивно-понятный интерфейс, что способствует осуществлению полноценного, эффективного тренировочного процесса в комфортных условиях.\n\nОТ АВТОРА. Система тренировок БТКА разработана по результатам систематизации методик обучения русскому бильярду на основе: секретов ведущих тренеров и игроков (в т.ч. В. Симонича, В. Лазарева, С. Баурова, Е. Сталева и др.), опыта «старой школы», а также современных научных и экспериментальных исследований и IT-технологий.\n<a href=\"https://cloud.mail.ru/public/Ye3r/ZYwpjB9uz\">Подробное описание комплекса БТКА</a>\n\nCopyright © Юрий Алинт (Андрей Юрьев) 2026";
   var installedHomeSnapshot = "";
-  var LEVEL1_MODULE_VERSION = "10.1.69";
-  var LEVEL3_MODULE_VERSION = "10.1.69";
+  var LEVEL1_MODULE_VERSION = "10.1.70";
+  var LEVEL3_MODULE_VERSION = "10.1.70";
 
   var CORE_REL_PATHS = [
     "",
@@ -58,12 +58,6 @@
     "vendor/sql-wasm.js",
     "vendor/sql-wasm.wasm",
     "btca-slide-menu.js?v=" + LEVEL1_MODULE_VERSION,
-    "level1/level1-db.js?v=" + LEVEL1_MODULE_VERSION,
-    "level1/level1-app.js?v=" + LEVEL1_MODULE_VERSION,
-    "level1/data/forma_exercise_list.json",
-    "level1/data/polezCatalog.json",
-    "level1/data/polezLinks.json",
-    "level1/data/polezDescriptions.json",
     "level3/level3-db.js?v=" + LEVEL3_MODULE_VERSION,
     "level3/level3-baza.js?v=" + LEVEL3_MODULE_VERSION,
     "level3/level3-app.js?v=" + LEVEL3_MODULE_VERSION,
@@ -636,17 +630,15 @@
 
     if (!isStandalone()) {
       discardStaleRuntimeModules();
-      preloadLevel1ModuleSilently();
       preloadLevel3ModuleSilently();
       return Promise.resolve();
     }
     discardStaleRuntimeModules();
-    if (level1ModuleFresh() && level3ModuleFresh() && slideMenuReady()) {
+    if (level3ModuleFresh() && slideMenuReady()) {
       hideHomeSplashIndicator();
       return Promise.resolve();
     }
 
-    var v1 = LEVEL1_MODULE_VERSION;
     var v2 = LEVEL3_MODULE_VERSION;
     var steps = [];
 
@@ -654,21 +646,6 @@
       steps.push({ run: function () { return loadSlideMenuScript(); } });
     }
 
-    if (!level1ModuleReady()) {
-      steps.push(
-        { run: function () { return loadDataGuardScript(); } },
-        { run: function () { return loadBazaDiagramScript(); } },
-        { run: function () { return loadBazaDialogsScript(); } },
-        { run: function () { return loadBazaScreenshotScript(); } },
-        { run: function () { return loadSlideMenuScript(); } },
-        { run: function () { return loadLevel1Script(assetPath("level1/level1-db.js?v=" + v1)); } },
-        { run: function () { return loadLevel1Script(assetPath("level1/level1-app.js?v=" + v1)); } },
-        { run: function () {
-          if (!level1ModuleReady()) throw new Error("Модуль Уровня 1 не инициализирован");
-          return window.BTCA_LEVEL1.boot();
-        } }
-      );
-    }
     if (!level3ModuleReady()) {
       steps.push(
         { run: function () { return loadDataGuardScript(); } },
@@ -1017,18 +994,6 @@
     delete window.BTCA_BAZA_SQLITE;
   }
 
-  function clearInjectedLevel1Scripts() {
-    clearInjectedDataGuardScript();
-    clearInjectedBazaDiagramScript();
-    clearInjectedBazaDialogsScript();
-    clearInjectedSlideMenuScript();
-    document.querySelectorAll("script[data-btca-level1-src]").forEach(function (node) {
-      if (node.parentNode) node.parentNode.removeChild(node);
-    });
-    delete window.BTCA_LEVEL1;
-    delete window.BTCA_LEVEL1_DB;
-  }
-
   function clearInjectedLevel3Scripts() {
     clearInjectedDataGuardScript();
     clearInjectedBazaDiagramScript();
@@ -1044,9 +1009,6 @@
   }
 
   function discardStaleRuntimeModules() {
-    if (level1ModuleReady() && !level1ModuleFresh()) {
-      clearInjectedLevel1Scripts();
-    }
     if (level3ModuleReady() && !level3ModuleFresh()) {
       clearInjectedLevel3Scripts();
     }
@@ -1147,17 +1109,12 @@
       console.warn("BTCA: skipped training DB wipe — Safari prep token missing");
       return Promise.resolve();
     }
-    return ensureLevel1Module().then(function () {
+    return ensureLevel3Module().then(function () {
       var tasks = [];
-      if (window.BTCA_LEVEL1_DB && window.BTCA_LEVEL1_DB.wipeTrainingDatabase) {
-        tasks.push(window.BTCA_LEVEL1_DB.wipeTrainingDatabase());
+      if (window.BTCA_LEVEL3_DB && window.BTCA_LEVEL3_DB.wipeTrainingDatabase) {
+        tasks.push(window.BTCA_LEVEL3_DB.wipeTrainingDatabase());
       }
-      return ensureLevel3Module().then(function () {
-        if (window.BTCA_LEVEL3_DB && window.BTCA_LEVEL3_DB.wipeTrainingDatabase) {
-          tasks.push(window.BTCA_LEVEL3_DB.wipeTrainingDatabase());
-        }
-        return Promise.all(tasks);
-      });
+      return Promise.all(tasks);
     }).catch(function (error) {
       console.warn("BTCA Safari training DB wipe failed", error);
     });
@@ -1258,9 +1215,6 @@
   function flushClientDataBeforeReload() {
     var tasks = [];
     try {
-      if (window.BTCA_LEVEL1_DB && window.BTCA_LEVEL1_DB.flushUiState) {
-        tasks.push(window.BTCA_LEVEL1_DB.flushUiState());
-      }
       if (window.BTCA_LEVEL3_DB && window.BTCA_LEVEL3_DB.flushUiState) {
         tasks.push(window.BTCA_LEVEL3_DB.flushUiState());
       }
@@ -1498,15 +1452,12 @@
     return fetchRemoteAppShellPayload().then(function (payload) {
       if (!payload) return false;
       var remote = String(payload.cacheVersion || "").trim();
-      var remoteL1 = String(payload.level1ModuleVersion || "").trim();
       var remoteL2 = String(payload.level3ModuleVersion || "").trim();
       var applied = readAppliedShellVersion();
       var shellStale = remote && (remote !== currentMeta || (applied && remote !== applied));
       var remoteModuleStale =
-        (remoteL1 && remoteL1 !== LEVEL1_MODULE_VERSION) ||
         (remoteL2 && remoteL2 !== LEVEL3_MODULE_VERSION);
       var runtimeModuleStale =
-        (level1ModuleReady() && !level1ModuleFresh()) ||
         (level3ModuleReady() && !level3ModuleFresh());
       if (!shellStale && !remoteModuleStale) {
         if (runtimeModuleStale) discardStaleRuntimeModules();
@@ -1951,18 +1902,6 @@
     }
   }
 
-  function level1ModuleReady() {
-    return Boolean(
-      window.BTCA_LEVEL1_DB &&
-      window.BTCA_LEVEL1 &&
-      window.BTCA_LEVEL1.boot
-    );
-  }
-
-  function level1ModuleFresh() {
-    return level1ModuleReady() && window.BTCA_LEVEL1.VERSION === LEVEL1_MODULE_VERSION;
-  }
-
   function removeInjectedScript(attr, src) {
     var old = document.querySelector('script[' + attr + '="' + src + '"]');
     if (old && old.parentNode) old.parentNode.removeChild(old);
@@ -2166,92 +2105,6 @@
     });
   }
 
-  function loadLevel1Script(src) {
-    return new Promise(function (resolve, reject) {
-      var isDb = src.indexOf("level1-db") >= 0;
-      var isApp = src.indexOf("level1-app") >= 0;
-
-      if (isDb && window.BTCA_LEVEL1_DB && document.querySelector('script[data-btca-level1-src="' + src + '"]')) {
-        resolve();
-        return;
-      }
-      if (isApp && level1ModuleFresh() &&
-          document.querySelector('script[data-btca-level1-src="' + src + '"]')) {
-        resolve();
-        return;
-      }
-
-      if (isDb) delete window.BTCA_LEVEL1_DB;
-      if (isApp) delete window.BTCA_LEVEL1;
-
-      fetch(src, { cache: "no-store" })
-        .then(function (response) {
-          if (!response.ok) throw new Error("Не удалось загрузить " + src + ": " + response.status);
-          return response.text();
-        })
-        .then(function (code) {
-          if (!isInjectableModuleSource(code)) {
-            throw new Error("Неверный ответ для " + src);
-          }
-          removeInjectedScript("data-btca-level1-src", src);
-          var script = document.createElement("script");
-          script.setAttribute("data-btca-level1-src", src);
-          script.textContent = code;
-          document.head.appendChild(script);
-          if (isDb && !window.BTCA_LEVEL1_DB) {
-            throw new Error("level1-db.js выполнен, но BTCA_LEVEL1_DB не найден");
-          }
-          if (isApp && (!window.BTCA_LEVEL1 || !window.BTCA_LEVEL1.boot)) {
-            throw new Error("level1-app.js выполнен, но BTCA_LEVEL1.boot не найден");
-          }
-          resolve();
-        })
-        .catch(reject);
-    });
-  }
-
-  function ensureLevel1Module() {
-    if (level1ModuleFresh() && slideMenuReady()) return Promise.resolve();
-    if (level1ModuleFresh() && !slideMenuReady()) {
-      return loadSlideMenuScript();
-    }
-    if (level1ModuleReady() && !level1ModuleFresh()) {
-      clearInjectedLevel1Scripts();
-    }
-    var v = LEVEL1_MODULE_VERSION;
-    return loadDataGuardScript().then(function () {
-      return loadBazaDiagramScript();
-    }).then(function () {
-      return loadBazaDialogsScript();
-    }).then(function () {
-      return loadBazaScreenshotScript();
-    }).then(function () {
-      return loadSlideMenuScript();
-    }).then(function () {
-      return loadLevel1Script(assetPath("level1/level1-db.js?v=" + v));
-    }).then(function () {
-      return loadLevel1Script(assetPath("level1/level1-app.js?v=" + v));
-    }).then(function () {
-      if (!level1ModuleReady()) {
-        throw new Error("Модуль Уровня 1 не инициализирован");
-      }
-    });
-  }
-
-  function bootLevel1Module() {
-    return ensureLevel1Module().then(function () {
-      return window.BTCA_LEVEL1.boot();
-    });
-  }
-
-  function preloadLevel1ModuleSilently() {
-    return ensureLevel1Module().then(function () {
-      return window.BTCA_LEVEL1.boot();
-    }).catch(function (error) {
-      console.warn("BTCA Level 1 preload failed", error);
-    });
-  }
-
   function level3ModuleReady() {
     return Boolean(
       window.BTCA_LEVEL3_DB &&
@@ -2364,74 +2217,6 @@
     });
   }
 
-  function renderLevel1Screen() {
-    var root = document.getElementById("root");
-    if (!root) return;
-
-    function openLevel1Screen() {
-      installedHomeSnapshot = installedHomeSnapshot || root.innerHTML;
-      document.body.classList.add("btca-level1-mode");
-      document.body.classList.remove("btca-installed-mode", "btca-screen-mode", "btca-level3-mode");
-      root.innerHTML =
-        '<main class="btca-level1-screen">' +
-        '<header class="btca-level1-nav">' +
-        '<button class="btca-back-button" type="button" data-btca-level1-back aria-label="Назад">←</button>' +
-        '<strong class="btca-level1-nav__title">Уровень 1 — Начальный</strong>' +
-        '<button class="btca-level1-menu-button" type="button" data-btca-level1-menu aria-label="Меню листов"><span></span><span></span><span></span></button>' +
-        "</header>" +
-        '<section class="btca-level1-titlebar" data-btca-level1-titlebar></section>' +
-        '<section class="btca-level1-content" data-btca-level1-content></section>' +
-        '<div class="btca-level1-menu-layer" data-btca-level1-menu-layer hidden></div>' +
-        '<div class="btca-level1-menu-layer" data-btca-level1-picker hidden></div>' +
-        '<div class="btca-level1-menu-layer" data-btca-level1-baza-menu-layer hidden></div>' +
-        '<div class="btca-level1-menu-layer" data-btca-level1-baza-id-layer hidden></div>' +
-        '<div class="btca-level1-menu-layer" data-btca-level1-baza-delete-layer hidden></div>' +
-        '<div class="btca-l2-baza-toast-host" data-btca-level1-baza-toast hidden></div>' +
-        "</main>";
-
-      var back = document.querySelector("[data-btca-level1-back]");
-      if (back) {
-        back.addEventListener("click", function () {
-          if (window.BTCA_LEVEL1 && window.BTCA_LEVEL1.unmount) window.BTCA_LEVEL1.unmount();
-          root.innerHTML = installedHomeSnapshot;
-          installedHomeSnapshot = "";
-          document.body.classList.remove("btca-level1-mode", "btca-level3-mode", "btca-allow-landscape");
-          renderInstalledHome();
-        });
-      }
-
-      var main = root.querySelector(".btca-level1-screen");
-      if (!main) return;
-
-      var content = root.querySelector("[data-btca-level1-content]");
-      if (content) {
-        content.innerHTML = '<p class="prepare-status prepare-status--running">Загрузка Уровня 1…</p>';
-      }
-
-      bootLevel1Module().then(function () {
-        return window.BTCA_LEVEL1.mount(main);
-      }).catch(function (error) {
-        if (content) {
-          content.innerHTML = '<p class="btca-l1-error">' + escapeHtml(error && (error.message || error)) + "</p>";
-        }
-      }).then(function () {
-        syncPortraitMode();
-      });
-    }
-
-    if (isAppPreparedSync()) {
-      openLevel1Screen();
-      return;
-    }
-
-    verifyMediaCacheReady().then(function (ready) {
-      if (ready && isPreparedStateCurrent(readAppPreparedState())) markAppPrepared();
-      openLevel1Screen();
-    }).catch(function () {
-      openLevel1Screen();
-    });
-  }
-
   function renderLevel2Screen() {
     var root = document.getElementById("root");
     if (!root) return;
@@ -2505,14 +2290,6 @@
     if (!target || !document.body.classList.contains("btca-installed-mode")) return;
     event.preventDefault();
     var route = target.getAttribute("data-btca-route");
-    if (route === "level1") {
-      try {
-        renderLevel1Screen();
-      } catch (error) {
-        console.error("BTCA Level 1 open failed", error);
-      }
-      return;
-    }
     if (route === "level3") {
       try {
         renderLevel2Screen();
@@ -4794,7 +4571,6 @@
             }
           } catch (e) {}
           renderReady();
-          preloadLevel1ModuleSilently();
           preloadLevel3ModuleSilently();
         });
     })
