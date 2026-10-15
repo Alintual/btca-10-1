@@ -3,7 +3,7 @@
 
   var DB = window.BTCA_LEVEL3_DB;
   var BAZA = window.BTCA_LEVEL3_BAZA;
-  var VERSION = "10.1.73";
+  var VERSION = "10.1.74";
   var BRANDING_UP = "branding/up.png";
   var BRANDING_BAZA = "branding/baza.png";
   var TRAILING_SLOT_W = 112;
@@ -437,7 +437,13 @@
   }
 
   function exerciseOptionLabel(b5) {
-    return typeof b5 === "string" && b5.indexOf("Тест") === 0 ? b5 : String(b5);
+    var testMatch = typeof b5 === "string" ? /^Тест\s*(\d+)$/i.exec(b5) : null;
+    if (testMatch) return "8-" + testMatch[1];
+    var n = numericB5(b5);
+    if (n === null || !Number.isFinite(n)) return String(b5);
+    var chapter = exerciseChapterForB5(n);
+    if (!chapter) return String(Math.trunc(n));
+    return chapter + "-" + Math.trunc(n);
   }
 
   function optionValueForB5(b5) {
@@ -1651,7 +1657,8 @@
 
   function labelForExerciseValue(value) {
     var item = state.data.exercises.filter(function (it) { return it.value === value; })[0];
-    return item ? item.label : value;
+    if (item && item.label) return item.label;
+    return exerciseOptionLabel(b5FromSelectValue(value));
   }
 
   function polezRowsForLevel1() {
