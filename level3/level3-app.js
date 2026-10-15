@@ -3,7 +3,7 @@
 
   var DB = window.BTCA_LEVEL3_DB;
   var BAZA = window.BTCA_LEVEL3_BAZA;
-  var VERSION = "10.1.74";
+  var VERSION = "10.1.75";
   var BRANDING_UP = "branding/up.png";
   var BRANDING_BAZA = "branding/baza.png";
   var TRAILING_SLOT_W = 112;
@@ -73,7 +73,14 @@
   var state = {
     root: null,
     ui: null,
-    data: { exercises: [], polezCatalog: [], polezLinks: [], polezDescriptions: {} },
+    data: {
+      exercises: [],
+      polezCatalog: [],
+      polezNavCatalog: { sections: [] },
+      polezSourceIndex: {},
+      polezLinks: [],
+      polezDescriptions: {},
+    },
     formaFlags: {},
     bazaStats: { empty: true, fillText: "пуста", hasOwn: false, hasForeign: false },
     bazaRows: [],
@@ -1663,6 +1670,99 @@
 
   function polezRowsForLevel1() {
     return state.data.polezCatalog.slice();
+  }
+
+  function polezNavSections() {
+    var cat = state.data.polezNavCatalog;
+    return cat && Array.isArray(cat.sections) ? cat.sections : [];
+  }
+
+  function polezNavItemByHot(hotKey) {
+    var hot = String(hotKey || "");
+    var sections = polezNavSections();
+    for (var s = 0; s < sections.length; s += 1) {
+      var items = sections[s].items || [];
+      for (var i = 0; i < items.length; i += 1) {
+        if (String(items[i].hot) === hot) return items[i];
+      }
+    }
+    return null;
+  }
+
+  function polezFigRow(figKey) {
+    if (!figKey || figKey === "links") return null;
+    return polezRowsForLevel1().filter(function (r) { return r.key === figKey; })[0] || null;
+  }
+
+  function polezCatalogLabelForKey(catalogKey) {
+    if (catalogKey === POLEZ_ALL) return "Весь список";
+    var item = polezNavItemByHot(catalogKey);
+    if (!item) return "Весь список";
+    return item.hot + " " + item.title;
+  }
+
+  function normalizePolezSearch(s) {
+    return String(s || "")
+      .toLowerCase()
+      .replace(/\u00a0/g, " ")
+      .replace(/[\u2013\u2014\u2212\u2010]/g, "-")
+      .replace(/[-:.,;!?()/\\[\]{}«»"'`]+/g, " ")
+      .replace(/\s+/g, " ")
+      .trim();
+  }
+
+  function polezItemMatchesSearch(item, sectionTitle, searchRaw) {
+    var q = String(searchRaw || "").trim();
+    if (!q) return true;
+    if (/^\d+$/.test(q)) return String(item.hot) === q || String(item.hot).indexOf(q) === 0;
+    var nq = normalizePolezSearch(q);
+    if (!nq) return true;
+    var hay = normalizePolezSearch(item.hot + " " + item.title + " " + (sectionTitle || ""));
+    var words = nq.split(" ").filter(Boolean);
+    return words.every(function (w) { return hay.indexOf(w) >= 0; });
+  }
+
+  function buildPolezCatalogOptions(searchRaw) {
+    var options = [{ value: POLEZ_ALL, label: "Весь список" }];
+    var sections = polezNavSections();
+    var q = String(searchRaw || "").trim();
+    for (var s = 0; s < sections.length; s += 1) {
+      var sec = sections[s];
+      var sectionTitle = sec.title || "";
+      var matched = (sec.items || []).filter(function (it) {
+        return polezItemMatchesSearch(it, sectionTitle, q);
+      });
+      var sectionMatches = !q || normalizePolezSearch(sectionTitle).indexOf(normalizePolezSearch(q)) >= 0;
+      if (!matched.length && !sectionMatches) continue;
+      var itemsToShow = matched.length ? matched : (sec.items || []);
+      if (sectionMatches && q && !matched.length) {
+        itemsToShow = sec.items || [];
+      }
+      options.push({
+        value: "__section:" + sec.id,
+        label: sectionTitle,
+        groupHeader: true,
+        sectionHeader: true,
+      });
+      itemsToShow.forEach(function (it) {
+        options.push({
+          value: String(it.hot),
+          label: it.hot + " " + it.title,
+        });
+      });
+    }
+    return options;
+  }
+
+  function polezSourceText(hotKey) {
+    var entry = state.data.polezSourceIndex[String(hotKey || "")];
+    return entry && entry.text ? String(entry.text) : "";
+  }
+
+  function selectPolezCatalogKey(value, content) {
+    state.ui.polez.catalogKey = value;
+    applyUiPatch({ polez: { catalogKey: value } });
+    renderPolezTab(content);
   }
 
   function sheetByKey(key) {
@@ -3272,14 +3372,49 @@
     scheduleNavCardsScroll(content);
   }
 
+  function renderPolezBodyHtml(catalogKey) {
+    if (catalogKey === POLEZ_ALL) return "";
+    var item = polezNavItemByHot(catalogKey);
+    if (!item) return "";
+    if (item.figKey === "links") {
+      return '<section class="btca-l1-links-panel"><h3>Ссылки, документы, литература, видео</h3>' +
+        state.data.polezLinks.map(function (line) {
+          return '<a class="btca-l1-link" href="' + escapeHtml(line.href) + '" target="_blank" rel="noopener">' +
+            escapeHtml(line.num + " " + line.title) + "</a>";
+        }).join("") + "</section>";
+    }
+    if (item.figKey) {
+      var row = polezFigRow(item.figKey);
+      var label = row ? row.label : item.title;
+      var img = row && row.file ? polezImageUrl(row.file) : "";
+      var imageHtml = img
+        ? '<img src="' + escapeHtml(img) + '" alt="' + escapeHtml(label) + '" loading="lazy" draggable="false">'
+        : '<div class="btca-l1-card-placeholder">' + escapeHtml(label) + "</div>";
+      var frameClass = "btca-l1-polez-card-frame" + (img ? " btca-l1-nav-card-frame--swipe" : "");
+      var frameAttr = img ? ' data-btca-polez-image-swipe="' + escapeHtml(String(item.hot)) + '"' : "";
+      return '<article class="btca-l1-polez-card">' +
+        '<div class="btca-l1-polez-card-inner">' +
+        '<div class="btca-l1-nav-card-top">' +
+        '<button type="button" class="btca-l1-pick" data-btca-polez-desc="' + escapeHtml(String(item.hot)) + '">' +
+        '<span class="btca-l1-pick__icon" aria-hidden="true">📖</span>' +
+        '<span class="btca-l1-pick__text">Описание</span></button></div>' +
+        '<div class="' + frameClass + '"' + frameAttr + ">" + imageHtml + "</div></div></article>";
+    }
+    var text = polezSourceText(item.hot);
+    return '<section class="btca-l1-polez-source" data-btca-polez-source>' +
+      '<h3 class="btca-l1-polez-source__title">' + escapeHtml(item.hot + " " + item.title) + "</h3>" +
+      '<div class="btca-l1-polez-source__body">' + formatPolezBody(text) + "</div></section>";
+  }
+
   function renderPolezTab(content) {
-    var catalogKey = state.ui.polez.catalogKey;
-    var rows = polezRowsForLevel1();
-    var visible = catalogKey === POLEZ_ALL ? rows : rows.filter(function (r) { return r.key === catalogKey; });
-    var catalogOptions = [{ value: POLEZ_ALL, label: "Весь список" }].concat(rows.map(function (r) {
-      return { value: r.key, label: r.label };
-    }));
-    var catalogLabel = catalogKey === POLEZ_ALL ? "Весь список" : (rows.filter(function (r) { return r.key === catalogKey; })[0] || {}).label || "Весь список";
+    var catalogKey = state.ui.polez.catalogKey || POLEZ_ALL;
+    if (catalogKey !== POLEZ_ALL && !polezNavItemByHot(catalogKey)) {
+      catalogKey = POLEZ_ALL;
+      state.ui.polez.catalogKey = POLEZ_ALL;
+    }
+    var searchQuery = typeof state.ui.polez.searchQuery === "string" ? state.ui.polez.searchQuery : "";
+    var catalogOptions = buildPolezCatalogOptions(searchQuery);
+    var catalogLabel = polezCatalogLabelForKey(catalogKey);
 
     var polezRoot = content.querySelector("[data-btca-polez-root]");
     if (!polezRoot) {
@@ -3296,6 +3431,13 @@
       '<div class="btca-l1-polez-catalog-col">' +
       '<span class="btca-l1-field-label btca-l1-field-label--center">Каталог</span>' +
       filterFaceHtml(catalogLabel, { wide: true, dataAttr: "data-btca-polez-catalog" }) +
+      "</div></div>" +
+      '<div class="btca-l1-toolbar btca-l1-toolbar--polez-search">' +
+      '<div class="btca-l1-polez-search-col">' +
+      '<span class="btca-l1-field-label btca-l1-field-label--center">Поиск</span>' +
+      '<input type="search" class="btca-l1-polez-search" data-btca-polez-search' +
+      ' placeholder="раздел, название или номер" value="' + escapeHtml(searchQuery) + '"' +
+      ' enterkeyhint="search" autocomplete="off" spellcheck="false">' +
       "</div></div>";
 
     var cardsHost = polezRoot.querySelector("[data-btca-polez-cards]");
@@ -3303,54 +3445,54 @@
     if (!cardsHost || prevKey !== String(catalogKey)) {
       cardsHost = remountPolezCardsHost(polezRoot, catalogKey);
     }
-    cardsHost.innerHTML = visible.map(function (row) {
-        if (row.key === "links") {
-          return '<section class="btca-l1-links-panel"><h3>Ссылки, документы, литература, видео</h3>' +
-            state.data.polezLinks.map(function (line) {
-              return '<a class="btca-l1-link" href="' + escapeHtml(line.href) + '" target="_blank" rel="noopener">' +
-                escapeHtml(line.num + " " + line.title) + "</a>";
-            }).join("") + "</section>";
-        }
-        var img = polezImageUrl(row.file);
-        var hasDesc = row.key !== POLEZ_ALL && row.key !== "links";
-        var single = catalogKey !== POLEZ_ALL;
-        var imageHtml = img
-          ? (single
-            ? '<img src="' + escapeHtml(img) + '" alt="' + escapeHtml(row.label) + '" loading="lazy" draggable="false">'
-            : '<button type="button" class="btca-l1-card-image-btn" data-btca-polez-image="' + escapeHtml(row.key) + '">' +
-            '<img src="' + escapeHtml(img) + '" alt="' + escapeHtml(row.label) + '" loading="lazy"></button>')
-          : '<div class="btca-l1-card-placeholder">' + escapeHtml(row.label) + "</div>";
-        var frameClass = "btca-l1-polez-card-frame" + (single && img ? " btca-l1-nav-card-frame--swipe" : "");
-        var frameAttr = single && img ? ' data-btca-polez-image-swipe="' + escapeHtml(row.key) + '"' : "";
-        return '<article class="btca-l1-polez-card">' +
-          '<div class="btca-l1-polez-card-inner">' +
-          (single && hasDesc
-            ? '<div class="btca-l1-nav-card-top">' +
-            '<button type="button" class="btca-l1-pick" data-btca-polez-desc="' + escapeHtml(row.key) + '">' +
-            '<span class="btca-l1-pick__icon" aria-hidden="true">📖</span>' +
-            '<span class="btca-l1-pick__text">Описание</span></button></div>'
-            : "") +
-          '<div class="' + frameClass + '"' + frameAttr + ">" + imageHtml + "</div></div></article>";
-      }).join("");
+    cardsHost.innerHTML = renderPolezBodyHtml(catalogKey);
+    if (catalogKey === POLEZ_ALL) {
+      cardsHost.classList.add("btca-l1-polez-cards--empty");
+    } else {
+      cardsHost.classList.remove("btca-l1-polez-cards--empty");
+    }
 
     content.querySelector("[data-btca-polez-catalog]").addEventListener("click", function (event) {
-      openPicker("Каталог", catalogOptions, catalogKey, function (value) {
-        state.ui.polez.catalogKey = value;
-        applyUiPatch({ polez: { catalogKey: value } });
-        renderPolezTab(content);
+      var opts = buildPolezCatalogOptions(state.ui.polez.searchQuery || "");
+      openPicker("Каталог", opts, catalogKey, function (value) {
+        selectPolezCatalogKey(value, content);
       }, event.currentTarget, { catalogList: true });
     });
+
+    var searchInput = content.querySelector("[data-btca-polez-search]");
+    if (searchInput) {
+      searchInput.addEventListener("input", function () {
+        var val = String(searchInput.value || "");
+        state.ui.polez.searchQuery = val;
+        applyUiPatch({ polez: { searchQuery: val } });
+        var exact = val.trim();
+        if (/^\d+$/.test(exact) && polezNavItemByHot(exact) && exact !== String(state.ui.polez.catalogKey)) {
+          var caret = searchInput.selectionStart;
+          selectPolezCatalogKey(exact, content);
+          var again = content.querySelector("[data-btca-polez-search]");
+          if (again) {
+            again.focus();
+            try { again.setSelectionRange(caret, caret); } catch (e) { /* ignore */ }
+          }
+        }
+      });
+      searchInput.addEventListener("keydown", function (event) {
+        if (event.key !== "Enter") return;
+        event.preventDefault();
+        var exact = String(searchInput.value || "").trim();
+        if (/^\d+$/.test(exact) && polezNavItemByHot(exact)) {
+          selectPolezCatalogKey(exact, content);
+          return;
+        }
+        var opts = buildPolezCatalogOptions(exact);
+        var first = opts.filter(function (o) { return !o.groupHeader && o.value !== POLEZ_ALL; })[0];
+        if (first) selectPolezCatalogKey(first.value, content);
+      });
+    }
+
     content.querySelectorAll("[data-btca-polez-desc]").forEach(function (btn) {
       btn.addEventListener("click", function () {
         openPolezDescription(btn.getAttribute("data-btca-polez-desc"));
-      });
-    });
-    content.querySelectorAll("[data-btca-polez-image]").forEach(function (btn) {
-      btn.addEventListener("click", function () {
-        var key = btn.getAttribute("data-btca-polez-image");
-        state.ui.polez.catalogKey = key;
-        applyUiPatch({ polez: { catalogKey: key } });
-        renderPolezTab(content);
       });
     });
     content.querySelectorAll("[data-btca-polez-image-swipe]").forEach(function (frame) {
@@ -3494,9 +3636,24 @@
     );
   }
 
-  function openPolezDescription(catalogKey) {
-    var desc = state.data.polezDescriptions[catalogKey];
-    if (!desc) return;
+  function resolvePolezFigKey(hotOrFig) {
+    var key = String(hotOrFig || "");
+    if (key.indexOf("fig") === 0 || key === "links") return key;
+    var item = polezNavItemByHot(key);
+    return item && item.figKey ? item.figKey : "";
+  }
+
+  function openPolezDescription(hotOrFig) {
+    var figKey = resolvePolezFigKey(hotOrFig);
+    var desc = figKey ? state.data.polezDescriptions[figKey] : null;
+    if (!desc) {
+      // Нет карточки описания рисунка — показать первоисточник
+      var hot = String(hotOrFig || "");
+      var item = polezNavItemByHot(hot);
+      var text = polezSourceText(hot);
+      if (!item || !text) return;
+      desc = { title: item.hot + " " + item.title, body: text };
+    }
     document.body.classList.add("btca-screen-mode");
     var overlay = document.createElement("div");
     overlay.className = "btca-polez-desc-root";
@@ -3512,8 +3669,9 @@
     });
   }
 
-  function openPolezImagePortrait(catalogKey) {
-    var row = polezRowsForLevel1().filter(function (r) { return r.key === catalogKey; })[0];
+  function openPolezImagePortrait(hotOrFig) {
+    var figKey = resolvePolezFigKey(hotOrFig);
+    var row = polezFigRow(figKey);
     if (!row || !row.file) return;
     var url = polezImageUrl(row.file);
     if (!url) return;
@@ -3535,7 +3693,7 @@
     }
     function openLandscape() {
       overlay.remove();
-      openPolezImageLandscape(catalogKey);
+      openPolezImageLandscape(hotOrFig);
     }
 
     overlay.querySelector("[data-btca-polez-img-close]").addEventListener("click", closePortrait);
@@ -3547,8 +3705,9 @@
     });
   }
 
-  function openPolezImageLandscape(catalogKey) {
-    var row = polezRowsForLevel1().filter(function (r) { return r.key === catalogKey; })[0];
+  function openPolezImageLandscape(hotOrFig) {
+    var figKey = resolvePolezFigKey(hotOrFig);
+    var row = polezFigRow(figKey);
     if (!row || !row.file) return;
     var url = polezImageUrl(row.file);
     var overlay = document.createElement("div");
@@ -3648,6 +3807,8 @@
       fetchJsonCached(assetPath("level3/data/polezCatalog.json")),
       fetchJsonCached(assetPath("level3/data/polezLinks.json")),
       fetchJsonCached(assetPath("level3/data/polezDescriptions.json")),
+      fetchJsonCached(assetPath("level3/data/polezNavCatalog.json")),
+      fetchJsonCached(assetPath("level3/data/polezSourceIndex.json")),
     ]).then(function (parts) {
       var list = parts[0];
       state.data.exercises = list.map(function (r) {
@@ -3669,6 +3830,8 @@
       state.data.polezCatalog = parts[1];
       state.data.polezLinks = parts[2];
       state.data.polezDescriptions = parts[3];
+      state.data.polezNavCatalog = parts[4] && parts[4].sections ? parts[4] : { sections: [] };
+      state.data.polezSourceIndex = parts[5] && typeof parts[5] === "object" ? parts[5] : {};
     });
   }
 

@@ -2712,6 +2712,73 @@ body.btca-apple-comfort .btca-l1-chart-panel {
   max-width: 100%;
 }
 
+.btca-l1-toolbar--polez-search {
+  margin-top: 8px;
+}
+
+.btca-l1-polez-search-col {
+  flex: 1 1 100%;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+}
+
+.btca-l1-polez-search {
+  display: block;
+  box-sizing: border-box;
+  width: 100%;
+  height: var(--btca-l1-field-h);
+  min-height: var(--btca-l1-field-h);
+  max-height: var(--btca-l1-field-h);
+  padding: 0 12px;
+  border: 1px solid rgba(255, 255, 255, 0.28);
+  border-radius: 8px;
+  background: rgba(0, 0, 0, 0.22);
+  color: #fff;
+  font: inherit;
+  font-size: 1rem;
+  line-height: 1.2;
+  outline: none;
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+.btca-l1-polez-search::placeholder {
+  color: rgba(255, 255, 255, 0.45);
+}
+
+.btca-l1-polez-search:focus {
+  border-color: rgba(10, 177, 10, 0.75);
+}
+
+.btca-l1-polez-cards--empty {
+  min-height: 12rem;
+}
+
+.btca-l1-polez-source {
+  margin-top: 8px;
+  padding: 12px 14px 16px;
+  border-radius: 8px;
+  background: rgba(0, 0, 0, 0.18);
+  color: rgba(255, 255, 255, 0.95);
+  overflow: auto;
+  max-height: 100%;
+}
+
+.btca-l1-polez-source__title {
+  margin: 0 0 10px;
+  font-size: 1.05rem;
+  font-weight: 600;
+  line-height: 1.3;
+}
+
+.btca-l1-polez-source__body {
+  font-size: 0.98rem;
+  line-height: 1.45;
+  white-space: normal;
+  word-break: break-word;
+}
+
 .btca-l1-nav-section {
   width: var(--btca-l1-section-w);
   max-width: 100%;
