@@ -2718,26 +2718,37 @@ body.btca-apple-comfort .btca-l1-chart-panel {
 
 .btca-l1-polez-source {
   margin-top: 8px;
-  padding: 12px 14px 16px;
-  border-radius: 8px;
-  background: rgba(0, 0, 0, 0.18);
-  color: rgba(255, 255, 255, 0.95);
+  padding: 14px 12px 16px;
+  border-radius: 12px;
+  background: #c5d9dc;
+  color: #111111;
   overflow: auto;
   max-height: 100%;
 }
 
 .btca-l1-polez-source__title {
   margin: 0 0 10px;
-  font-size: 1.05rem;
+  color: #0a0a0a;
+  font-size: 1rem;
   font-weight: 600;
-  line-height: 1.3;
+  letter-spacing: 0.2px;
+  line-height: calc(26rem / 17);
+  text-align: center;
 }
 
 .btca-l1-polez-source__body {
-  font-size: 0.98rem;
-  line-height: 1.45;
+  color: #111111;
+  font-size: 1rem;
+  line-height: calc(26rem / 17);
   white-space: normal;
   word-break: break-word;
+}
+
+.btca-l1-polez-source__body .btca-l1-link,
+.btca-l1-polez-source .btca-l1-link {
+  color: #06038b;
+  text-decoration: underline;
+  font-weight: 400;
 }
 
 .btca-l1-nav-section {
@@ -3307,20 +3318,7 @@ body.btca-apple-comfort .btca-l1-ok-input {
 }
 
 .btca-l1-links-panel {
-  padding: 14px 12px;
-  border-radius: 12px;
-  color: #111827;
-  background: #c4d9dc;
-}
-
-.btca-l1-links-panel h3 {
-  margin: 0 0 10px;
-  color: #0a0a0a;
-  font-size: 1rem;
-  font-weight: 600;
-  letter-spacing: 0.2px;
-  line-height: calc(26rem / 17);
-  text-align: center;
+  /* фон/типографика — как у .btca-l1-polez-source / Описание */
 }
 
 .btca-l1-link {
@@ -3395,7 +3393,7 @@ body.btca-apple-comfort .btca-l1-ok-input {
   min-height: var(--btca-l1-field-h);
   max-height: var(--btca-l1-field-h);
   padding: 0 12px;
-  border: 1px solid rgba(255, 255, 255, 0.28);
+  border: 1px solid #9aa4a8;
   border-radius: var(--btca-l1-radius);
   background: rgba(0, 0, 0, 0.28);
   color: #ffffff;
@@ -3412,31 +3410,42 @@ body.btca-apple-comfort .btca-l1-ok-input {
 }
 
 .btca-level1-picker__search-input:focus {
-  border-color: rgba(10, 177, 10, 0.85);
+  border-color: #7a8589;
 }
 
 .btca-level1-picker__search-btn {
   flex: 0 0 auto;
+  display: inline-flex;
   box-sizing: border-box;
   height: var(--btca-l1-field-h);
   min-height: var(--btca-l1-field-h);
-  padding: 0 14px;
-  border: 1px solid rgba(255, 255, 255, 0.35);
+  align-items: center;
+  justify-content: center;
+  gap: calc(4rem / 17);
+  padding: 0 calc(10rem / 17);
+  border: 0;
   border-radius: var(--btca-l1-radius);
-  background: #0ab10a;
-  color: #ffffff;
+  color: #000000;
+  background: #d0e0e3;
   font: inherit;
   font-size: var(--btca-l1-font);
   font-weight: 600;
   line-height: 1;
   white-space: nowrap;
   touch-action: manipulation;
+  cursor: pointer;
   -webkit-appearance: none;
   appearance: none;
+  -webkit-tap-highlight-color: transparent;
 }
 
 .btca-level1-picker__search-btn:active {
-  background: #099609;
+  background: #c2d2d5;
+}
+
+.btca-level1-picker__search-btn-icon,
+.btca-level1-picker__search-btn-label {
+  pointer-events: none;
 }
 
 .btca-level1-picker--sheet {

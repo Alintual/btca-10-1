@@ -3,7 +3,7 @@
 
   var DB = window.BTCA_LEVEL3_DB;
   var BAZA = window.BTCA_LEVEL3_BAZA;
-  var VERSION = "10.1.76";
+  var VERSION = "10.1.77";
   var BRANDING_UP = "branding/up.png";
   var BRANDING_BAZA = "branding/baza.png";
   var TRAILING_SLOT_W = 112;
@@ -54,7 +54,7 @@
   var SHEETS = [
     { key: "forma", label: "Форма", title: "Форма ввода", emoji: "📊" },
     { key: "baza", label: "База", title: "База данных", emoji: "" },
-    { key: "nav", label: "Упражнения", title: "Упражнения", emoji: "🔎" },
+    { key: "nav", label: "Упражнения", title: "Упражнения", emoji: "♻️" },
     { key: "polez", label: "Полезности", title: "Полезности", emoji: "📚" },
   ];
 
@@ -1698,7 +1698,7 @@
     if (catalogKey === POLEZ_ALL) return "Весь список";
     var item = polezNavItemByHot(catalogKey);
     if (!item) return "Весь список";
-    return item.hot + " " + item.title;
+    return item.hot + " # " + item.title;
   }
 
   function normalizePolezSearch(s) {
@@ -1747,7 +1747,7 @@
       itemsToShow.forEach(function (it) {
         options.push({
           value: String(it.hot),
-          label: it.hot + " " + it.title,
+          label: it.hot + " # " + it.title,
         });
       });
     }
@@ -1895,9 +1895,11 @@
     var searchHtml = pickerOpts.searchable
       ? '<div class="btca-level1-picker__search" data-btca-picker-search-bar>' +
         '<input type="search" class="btca-level1-picker__search-input" data-btca-picker-search' +
-        ' placeholder="раздел, название или номер" value="' + escapeHtml(searchDraft) + '"' +
+        ' placeholder="Ваш поисковый запрос..." value="' + escapeHtml(searchDraft) + '"' +
         ' enterkeyhint="search" autocomplete="off" spellcheck="false">' +
-        '<button type="button" class="btca-level1-picker__search-btn" data-btca-picker-search-go>Найти</button>' +
+        '<button type="button" class="btca-level1-picker__search-btn" data-btca-picker-search-go>' +
+        '<span class="btca-level1-picker__search-btn-icon" aria-hidden="true">🔎</span>' +
+        '<span class="btca-level1-picker__search-btn-label">Найти</span></button>' +
         "</div>"
       : "";
     var liveOptions = options;
@@ -3442,12 +3444,20 @@
     scheduleNavCardsScroll(content);
   }
 
+  function renderPolezSourcePanel(item) {
+    var text = polezSourceText(item.hot);
+    return '<section class="btca-l1-polez-source" data-btca-polez-source>' +
+      '<h3 class="btca-l1-polez-source__title">' + escapeHtml(item.title) + "</h3>" +
+      '<div class="btca-l1-polez-source__body">' + formatPolezSourceBody(text, item.docId) + "</div></section>";
+  }
+
   function renderPolezBodyHtml(catalogKey) {
     if (catalogKey === POLEZ_ALL) return "";
     var item = polezNavItemByHot(catalogKey);
     if (!item) return "";
     if (item.figKey === "links") {
-      return '<section class="btca-l1-links-panel"><h3>Ссылки, документы, литература, видео</h3>' +
+      return '<section class="btca-l1-polez-source btca-l1-links-panel" data-btca-polez-source>' +
+        '<h3 class="btca-l1-polez-source__title">Ссылки, документы, литература, видео</h3>' +
         state.data.polezLinks.map(function (line) {
           return '<a class="btca-l1-link" href="' + escapeHtml(line.href) + '" target="_blank" rel="noopener">' +
             escapeHtml(line.num + " " + line.title) + "</a>";
@@ -3457,11 +3467,10 @@
       var row = polezFigRow(item.figKey);
       var label = row ? row.label : item.title;
       var img = row && row.file ? polezImageUrl(row.file) : "";
-      var imageHtml = img
-        ? '<img src="' + escapeHtml(img) + '" alt="' + escapeHtml(label) + '" loading="lazy" draggable="false">'
-        : '<div class="btca-l1-card-placeholder">' + escapeHtml(label) + "</div>";
-      var frameClass = "btca-l1-polez-card-frame" + (img ? " btca-l1-nav-card-frame--swipe" : "");
-      var frameAttr = img ? ' data-btca-polez-image-swipe="' + escapeHtml(String(item.hot)) + '"' : "";
+      if (!img) return renderPolezSourcePanel(item);
+      var imageHtml = '<img src="' + escapeHtml(img) + '" alt="' + escapeHtml(label) + '" loading="lazy" draggable="false">';
+      var frameClass = "btca-l1-polez-card-frame btca-l1-nav-card-frame--swipe";
+      var frameAttr = ' data-btca-polez-image-swipe="' + escapeHtml(String(item.hot)) + '"';
       return '<article class="btca-l1-polez-card">' +
         '<div class="btca-l1-polez-card-inner">' +
         '<div class="btca-l1-nav-card-top">' +
@@ -3470,10 +3479,7 @@
         '<span class="btca-l1-pick__text">Описание</span></button></div>' +
         '<div class="' + frameClass + '"' + frameAttr + ">" + imageHtml + "</div></div></article>";
     }
-    var text = polezSourceText(item.hot);
-    return '<section class="btca-l1-polez-source" data-btca-polez-source>' +
-      '<h3 class="btca-l1-polez-source__title">' + escapeHtml(item.hot + " " + item.title) + "</h3>" +
-      '<div class="btca-l1-polez-source__body">' + formatPolezBody(text) + "</div></section>";
+    return renderPolezSourcePanel(item);
   }
 
   function renderPolezTab(content) {
@@ -3548,6 +3554,7 @@
         onSwipeRight: function () { openPolezImagePortrait(key); },
       });
     });
+    bindPolezSourceLinks(cardsHost, content);
     schedulePolezCardsScroll(content);
   }
 
@@ -3692,19 +3699,30 @@
 
   function openPolezDescription(hotOrFig) {
     var figKey = resolvePolezFigKey(hotOrFig);
-    var desc = figKey ? state.data.polezDescriptions[figKey] : null;
+    var desc = figKey && figKey !== "links" ? state.data.polezDescriptions[figKey] : null;
+    var sourceItem = null;
     if (!desc) {
-      // Нет карточки описания рисунка — показать первоисточник
       var hot = String(hotOrFig || "");
-      var item = polezNavItemByHot(hot);
+      sourceItem = polezNavItemByHot(hot);
       var text = polezSourceText(hot);
-      if (!item || !text) return;
-      desc = { title: item.hot + " " + item.title, body: text };
+      if (!sourceItem || !text) return;
+      desc = { title: sourceItem.title, body: text, fromSource: true, docId: sourceItem.docId };
     }
     document.body.classList.add("btca-screen-mode");
     var overlay = document.createElement("div");
     overlay.className = "btca-polez-desc-root";
-    overlay.innerHTML = polezDescriptionScreenHtml(desc);
+    var bodyHtml = desc.fromSource
+      ? formatPolezSourceBody(desc.body || "", desc.docId)
+      : formatPolezBody(desc.body || "");
+    overlay.innerHTML =
+      '<main class="btca-about-screen">' +
+      '<header class="btca-screen-header">' +
+      '<button type="button" class="btca-back-button" data-btca-overlay-close aria-label="Назад">←</button>' +
+      '<span aria-hidden="true"></span>' +
+      '<span aria-hidden="true"></span>' +
+      "</header>" +
+      '<section class="btca-about-content"><h1>' + escapeHtml(desc.title || "") + "</h1>" +
+      "<p>" + bodyHtml + "</p></section></main>";
     state.root.appendChild(overlay);
     function closeOverlay() {
       document.body.classList.remove("btca-screen-mode");
@@ -3714,6 +3732,8 @@
     bindHorizontalSwipe(overlay, {
       onSwipeLeft: closeOverlay,
     });
+    var content = state.root.querySelector("[data-btca-level3-content]");
+    bindPolezSourceLinks(overlay, content);
   }
 
   function openPolezImagePortrait(hotOrFig) {
@@ -3775,6 +3795,12 @@
     bindHorizontalSwipe(overlay, { onSwipeLeft: closeOverlay });
   }
 
+  function polezFootnotesForDoc(docId) {
+    var meta = state.data.polezSourceIndex && state.data.polezSourceIndex.__footnotes;
+    if (!meta || !docId) return {};
+    return meta[docId] || {};
+  }
+
   function formatPolezBody(body) {
     return escapeHtml(body)
       .replace(/&lt;b&gt;([\s\S]*?)&lt;\/b&gt;/g, "<strong>$1</strong>")
@@ -3784,6 +3810,66 @@
         '<a href="$1" target="_blank" rel="noopener noreferrer">$4</a>',
       )
       .replace(/\n/g, "<br>");
+  }
+
+  function formatPolezSourceBody(body, docId) {
+    var footnotes = polezFootnotesForDoc(docId);
+    var html = escapeHtml(body || "");
+    html = html
+      .replace(/&lt;b&gt;([\s\S]*?)&lt;\/b&gt;/g, "<strong>$1</strong>")
+      .replace(/&lt;i&gt;([\s\S]*?)&lt;\/i&gt;/g, "<em>$1</em>");
+    // Уже готовые <a> из источника
+    html = html.replace(
+      /&lt;a\s+href=&quot;(https?:\/\/[^&]+)&quot;(\s+target=&quot;_blank&quot;)?(\s+rel=&quot;noopener noreferrer&quot;)?&gt;([\s\S]*?)&lt;\/a&gt;/g,
+      '<a class="btca-l1-link" href="$1" target="_blank" rel="noopener noreferrer">$4</a>',
+    );
+    // Голые URL
+    html = html.replace(
+      /(https?:\/\/[^\s&<]+)/g,
+      function (_m, url) {
+        var clean = String(url).replace(/[.,;:)\]»]+$/u, "");
+        var trail = String(url).slice(clean.length);
+        return '<a class="btca-l1-link" href="' + clean + '" target="_blank" rel="noopener noreferrer">' +
+          clean + "</a>" + trail;
+      },
+    );
+    // {125} → переход к пункту каталога
+    html = html.replace(/\{(\d+)\}/g, function (_m, num) {
+      return '<a class="btca-l1-link btca-l1-polez-hotref" href="#" data-btca-polez-hotref="' + num + '">{' +
+        num + "}</a>";
+    });
+    // [1] → сноска / URL
+    html = html.replace(/\[(\d+)\]/g, function (_m, num) {
+      var fn = footnotes[num];
+      if (fn && fn.href) {
+        return '<a class="btca-l1-link" href="' + escapeHtml(fn.href) +
+          '" target="_blank" rel="noopener noreferrer" title="' + escapeHtml(fn.text || "") + '">[' + num + "]</a>";
+      }
+      if (fn && fn.text) {
+        return '<a class="btca-l1-link btca-l1-polez-fn" href="#" data-btca-polez-fn="' + num +
+          '" title="' + escapeHtml(fn.text) + '">[' + num + "]</a>";
+      }
+      return '<a class="btca-l1-link btca-l1-polez-fn" href="#" data-btca-polez-fn="' + num + '">[' + num + "]</a>";
+    });
+    return html.replace(/\n/g, "<br>");
+  }
+
+  function bindPolezSourceLinks(root, content) {
+    if (!root) return;
+    root.querySelectorAll("[data-btca-polez-hotref]").forEach(function (el) {
+      el.addEventListener("click", function (event) {
+        event.preventDefault();
+        var hot = el.getAttribute("data-btca-polez-hotref");
+        if (hot && polezNavItemByHot(hot)) selectPolezCatalogKey(hot, content);
+      });
+    });
+    root.querySelectorAll("[data-btca-polez-fn]").forEach(function (el) {
+      el.addEventListener("click", function (event) {
+        event.preventDefault();
+        var title = el.getAttribute("title");
+        if (title) window.alert(title);
+      });
+    });
   }
 
   function renderActiveTab() {
