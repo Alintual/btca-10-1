@@ -2,8 +2,8 @@
   "use strict";
 
   var BTCA_BASE = "/btca-10-1/";
-  var INSTALL_CACHE = "btca10-web-10.1.110:static-install";
-  var MEDIA_CACHE = "btca10-web-10.1.110:static-media";
+  var INSTALL_CACHE = "btca10-web-10.1.111:static-install";
+  var MEDIA_CACHE = "btca10-web-10.1.111:static-media";
   var MEDIA_PROBE_RE = /offline-unpacked\/level3\/exercises\/[^/]+\.(jpe?g|png|webp|gif)$/i;
   var MEDIA_STATE_KEY = "btca10-web:static-media-state";
   var APP_READY_KEY = "btca10-web:app-ready";
@@ -25,8 +25,8 @@
   var ABOUT_MAIN_TEXT = "Настоящее Приложение разработано для локальной установки (развёртывания) на смартфоне или планшете с операционными системами Android или iOS и рассчитано для обучения и тренировки учеников с уровнем подготовки «Уровень 3 — Продвинутый».";
   var ABOUT_POST_TEXT = "*****\nБТКА, это — учебно-тренировочный программный комплекс, предназначенный для комплексного обучения игре на русском бильярде, выработки и закрепления практических навыков ведения бильярдной игры в Пирамиду, как самостоятельно, так и с тренером, с применением современных методик и технологий.\nТренировочный комплекс БТКА в сочетании с уникальной Методологией обучения составляют общую Систему тренировок БТКА школы русского бильярда «Абриколь» г. Красноярск.\n<a href=\"https://cloud.mail.ru/public/sujN/mpE8mr6aW\">Методика обучения</a>\n\nВ текущей версии Приложения БТКА 10.1 доступен раздел:\n•  *Уровень 3 — Продвинутый* Упражнений – 40, Задач – 263, Полезностей – 15.\n\nВсе Приложения функционируют без использования сети Интернет.\nКаждое Приложение:\n•  Содержит специфический (соответствующий уровню подготовки) набор упражнений, задач и тестов (в графическом виде), ранжированных по принципу - \"от простого к сложному\", и сгруппированных в тематические разделы по видам тренировок;\n•  Включает необходимые инструкции, методическую и справочную информацию;\n•  Обеспечивает возможность ввода, хранения и обработки результатов прогресса выполнения учеником практических заданий для последующего статистического анализа с использованием локальной Базы данных (БД);\n•  Имеет весь необходимый функционал и автоматизацию, а также интуитивно-понятный интерфейс, что способствует осуществлению полноценного, эффективного тренировочного процесса в комфортных условиях.\n\nОТ АВТОРА. Система тренировок БТКА разработана по результатам систематизации методик обучения русскому бильярду на основе: секретов ведущих тренеров и игроков (в т.ч. В. Симонича, В. Лазарева, С. Баурова, Е. Сталева и др.), опыта «старой школы», а также современных научных и экспериментальных исследований и IT-технологий.\n<a href=\"https://cloud.mail.ru/public/Ye3r/ZYwpjB9uz\">Подробное описание комплекса БТКА</a>\n\nCopyright © Юрий Алинт (Андрей Юрьев) 2026";
   var installedHomeSnapshot = "";
-  var LEVEL1_MODULE_VERSION = "10.1.71";
-  var LEVEL3_MODULE_VERSION = "10.1.71";
+  var LEVEL1_MODULE_VERSION = "10.1.72";
+  var LEVEL3_MODULE_VERSION = "10.1.72";
 
   var CORE_REL_PATHS = [
     "",
@@ -188,6 +188,13 @@
   var LICENSE_BROWSER_COOKIE = "btca101_browser";
   var LICENSE_PACKAGE_DATE_KEY = "btca101.packageReleaseDate";
   var LICENSE_PACKAGE_DATE_COOKIE = "btca101_pkg_date";
+  /** Непрерывная сессия PWA без смахивания (sessionStorage сбрасывается при kill/swipe). */
+  var PWA_SESSION_STARTED_KEY = "btca101.pwaSessionStartedAt";
+  var PWA_SESSION_EXPIRED_KEY = "btca101.pwaSessionExpired";
+  var PWA_SESSION_MAX_MS = 12 * 60 * 60 * 1000;
+  var PWA_SESSION_EXPIRED_MSG =
+    "Сессия завершена (более 12 часов без перезапуска). Смахните приложение и откройте снова — так проверяются подписка и обновления.";
+  var pwaSessionWatchTimer = 0;
 
   function hideHomeSplashIndicator(options) {
     options = options || {};
@@ -2528,8 +2535,108 @@
     return /Safari/i.test(ua) && !/Chrome|CriOS|Chromium|Edg|EdgiOS|OPR|Firefox|FxiOS|Android/i.test(ua);
   }
 
+  function readPwaSessionStartedAt() {
+    try {
+      var n = Number(sessionStorage.getItem(PWA_SESSION_STARTED_KEY) || 0);
+      return n > 0 ? n : 0;
+    } catch (e) {
+      return 0;
+    }
+  }
+
+  function isPwaSessionExpiredFlag() {
+    try {
+      return sessionStorage.getItem(PWA_SESSION_EXPIRED_KEY) === "1";
+    } catch (e) {
+      return false;
+    }
+  }
+
+  function isPwaSessionTimedOut() {
+    if (!isStandalone()) return false;
+    if (isPwaSessionExpiredFlag()) return true;
+    var started = readPwaSessionStartedAt();
+    if (!started) return false;
+    return Date.now() - started >= PWA_SESSION_MAX_MS;
+  }
+
+  /** Старт часов сессии после успешного splash (online или offline-unlock). */
+  function markPwaSessionStarted() {
+    if (!isStandalone()) return;
+    try {
+      sessionStorage.removeItem(PWA_SESSION_EXPIRED_KEY);
+      if (!readPwaSessionStartedAt()) {
+        sessionStorage.setItem(PWA_SESSION_STARTED_KEY, String(Date.now()));
+      }
+    } catch (e) {}
+  }
+
+  function renderSessionExpiredGate() {
+    pendingInstalledLoginReveal = false;
+    hideHomeSplashIndicator();
+    try {
+      if (window.BTCA_LEVEL3 && window.BTCA_LEVEL3.unmount) window.BTCA_LEVEL3.unmount();
+    } catch (e) {}
+    document.body.classList.remove("btca-level1-mode", "btca-level3-mode", "btca-allow-landscape");
+    document.body.classList.add("btca-installed-mode");
+    var root = document.getElementById("root");
+    if (root) {
+      root.innerHTML =
+        '<main class="app btca-session-expired" aria-live="assertive">' +
+        '<section class="auth-gate" style="display:block;padding:2rem 1.25rem;max-width:28rem;margin:20vh auto 0;text-align:center">' +
+        '<p class="auth-gate__title">Сессия завершена</p>' +
+        '<p class="auth-gate__hint auth-gate__hint--danger">' +
+        escapeHtml(PWA_SESSION_EXPIRED_MSG) +
+        "</p></section></main>";
+    }
+    try {
+      window.close();
+    } catch (e) {}
+  }
+
+  function lockPwaSessionExpired() {
+    if (!isStandalone()) return;
+    try {
+      sessionStorage.setItem(PWA_SESSION_EXPIRED_KEY, "1");
+    } catch (e) {}
+    clearLaunchUnlock();
+    renderSessionExpiredGate();
+  }
+
+  function enforcePwaSessionLimit() {
+    if (!isStandalone()) return false;
+    if (!isPwaSessionTimedOut()) return false;
+    lockPwaSessionExpired();
+    return true;
+  }
+
+  function startPwaSessionWatch() {
+    if (!isStandalone()) return;
+    if (pwaSessionWatchTimer) return;
+    enforcePwaSessionLimit();
+    pwaSessionWatchTimer = window.setInterval(function () {
+      enforcePwaSessionLimit();
+    }, 60000);
+    document.addEventListener(
+      "visibilitychange",
+      function () {
+        if (document.visibilityState === "visible") enforcePwaSessionLimit();
+      },
+      false
+    );
+    window.addEventListener(
+      "pageshow",
+      function () {
+        enforcePwaSessionLimit();
+      },
+      false
+    );
+  }
+
   function isLaunchUnlocked() {
     try {
+      // Лимит 12 ч без смахивания: дальше только ручной перезапуск.
+      if (isStandalone() && isPwaSessionTimedOut()) return false;
       // Вкладка после успешного входа (sessionStorage сбрасывается при закрытии вкладки / перезагрузке в Safari).
       if (sessionStorage.getItem(LICENSE_LAUNCH_KEY) === "1") return true;
       // Только установленный PWA: можно восстановить по session token без повторного входа.
@@ -4612,6 +4719,9 @@
       })
       .then(function (check) {
         if (check && check.ok) {
+          markPwaSessionStarted();
+          startPwaSessionWatch();
+          if (enforcePwaSessionLimit()) return;
           if (!readAppPreparedState()) markAppPrepared();
           discardStaleRuntimeModules();
           renderInstalledHome({ preserveSplash: true });
@@ -4651,7 +4761,8 @@
         startIosOfflinePreparation();
       };
     }
-    // visibilitychange: без сетевых проверок — интернет только на cold start / после смахивания.
+    // visibilitychange: без сетевых проверок лицензии — только лимит сессии 12 ч.
+    if (isStandalone()) startPwaSessionWatch();
   }
 
   var bootOpenDownloadsOnly = false;
