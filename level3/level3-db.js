@@ -170,19 +170,8 @@
         sectionKey: typeof navRaw.sectionKey === "string" ? navRaw.sectionKey : base.nav.sectionKey,
         exerciseFilterKey: typeof navRaw.exerciseFilterKey === "string" ? navRaw.exerciseFilterKey : base.nav.exerciseFilterKey,
       },
-      polez: {
-        catalogKey: sanitizePolezCatalogKey(polezRaw.catalogKey, base.polez.catalogKey),
-        searchQuery: typeof polezRaw.searchQuery === "string" ? polezRaw.searchQuery : base.polez.searchQuery,
-      },
+      polez: { catalogKey: typeof polezRaw.catalogKey === "string" ? polezRaw.catalogKey : base.polez.catalogKey },
     };
-  }
-
-  function sanitizePolezCatalogKey(raw, fallback) {
-    if (typeof raw !== "string" || !raw.trim()) return fallback;
-    if (raw === "all") return "all";
-    // Новый каталог: горячий номер; старые fig*/links сбрасываем
-    if (/^\d+$/.test(raw)) return raw;
-    return fallback;
   }
 
   var uiCache = null;

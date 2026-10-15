@@ -3,7 +3,7 @@
 
   var DB = window.BTCA_LEVEL3_DB;
   var BAZA = window.BTCA_LEVEL3_BAZA;
-  var VERSION = "10.1.75";
+  var VERSION = "10.1.76";
   var BRANDING_UP = "branding/up.png";
   var BRANDING_BAZA = "branding/baza.png";
   var TRAILING_SLOT_W = 112;
@@ -1835,15 +1835,51 @@
     if (layer) layer.setAttribute("hidden", "hidden");
   }
 
-  function openPicker(title, options, current, onSelect, anchorEl, pickerOpts) {
+  function renderPickerOptionsHtml(options, current, pickerOpts) {
     pickerOpts = pickerOpts || {};
     var currentSource = pickerOpts.currentSource || null;
+    var itemExtraClass = pickerOpts.itemClass || "";
+    return options.map(function (opt) {
+      if (opt.groupHeader) {
+        var groupClass = "btca-level1-picker__group";
+        if (opt.sectionHeader) groupClass += " btca-level1-picker__group--section";
+        if (opt.importHeader) groupClass += " btca-level1-picker__group--import";
+        if (opt.disabledHeader) groupClass += " btca-level1-picker__group--disabled";
+        if (opt.importHeader) {
+          return (
+            '<div class="' + groupClass + '">' +
+            '<span class="btca-level1-picker__group-line">--- ИМПОРТ ---</span>' +
+            '<span class="btca-level1-picker__group-line">' + escapeHtml(String(opt.importId || "")) + "</span>" +
+            "</div>"
+          );
+        }
+        return '<div class="' + groupClass + '">' + escapeHtml(opt.label) + "</div>";
+      }
+      var optSource = opt.source || "own";
+      var pickerCurrent = bazaExercisePickerValue(current, currentSource || "own");
+      var active = pickerOpts.showAllMode
+        ? !opt.groupHeader && (opt.value === "all" || opt.value === "__foreign_data__")
+        : opt.value === pickerCurrent;
+      var itemClass = "btca-level1-picker__item";
+      if (pickerOpts.catalogList) itemClass += " btca-level1-picker__item--catalog";
+      if (itemExtraClass) itemClass += itemExtraClass;
+      return '<button type="button" class="' + itemClass +
+        (active ? " btca-level1-picker__item--active" : "") +
+        '" data-btca-picker-value="' + escapeHtml(opt.value) +
+        '" data-btca-picker-source="' + escapeHtml(optSource) +
+        '"><span class="btca-level1-picker__text">' +
+        escapeHtml(opt.label) + "</span></button>";
+    }).join("");
+  }
+
+  function openPicker(title, options, current, onSelect, anchorEl, pickerOpts) {
+    pickerOpts = pickerOpts || {};
     var layer = state.root.querySelector("[data-btca-level3-picker]");
     if (!layer) return;
     layer.removeAttribute("hidden");
     var rowHeight = pickerOpts.rowHeight || PICKER_ROW_SIMPLE;
-    var itemExtraClass = pickerOpts.itemClass || "";
     var pickerClass = "btca-level1-picker btca-level1-picker--anchored";
+    if (pickerOpts.searchable) pickerClass += " btca-level1-picker--with-search";
     var pickerStyle = "";
     var layout =
       pickerOpts.anchorLayout ||
@@ -1853,46 +1889,80 @@
         ' style="position:fixed;top:' + layout.top + "px;left:" + layout.left + "px;width:" + layout.width +
         "px;height:" + layout.height + 'px;right:auto;"';
     }
+    var searchDraft = typeof pickerOpts.searchValue === "string"
+      ? pickerOpts.searchValue
+      : (typeof state.ui.polez.searchQuery === "string" ? state.ui.polez.searchQuery : "");
+    var searchHtml = pickerOpts.searchable
+      ? '<div class="btca-level1-picker__search" data-btca-picker-search-bar>' +
+        '<input type="search" class="btca-level1-picker__search-input" data-btca-picker-search' +
+        ' placeholder="раздел, название или номер" value="' + escapeHtml(searchDraft) + '"' +
+        ' enterkeyhint="search" autocomplete="off" spellcheck="false">' +
+        '<button type="button" class="btca-level1-picker__search-btn" data-btca-picker-search-go>Найти</button>' +
+        "</div>"
+      : "";
+    var liveOptions = options;
     layer.innerHTML =
       '<button class="btca-level1-menu-backdrop" type="button" data-btca-picker-close aria-label="Закрыть"></button>' +
       '<div class="' + pickerClass + '" role="dialog" aria-label="' + escapeHtml(title) + '"' + pickerStyle + ">" +
+      searchHtml +
       '<div class="btca-level1-picker__list" data-btca-picker-list>' +
-      options.map(function (opt) {
-        if (opt.groupHeader) {
-          var groupClass = "btca-level1-picker__group";
-          if (opt.sectionHeader) groupClass += " btca-level1-picker__group--section";
-          if (opt.importHeader) groupClass += " btca-level1-picker__group--import";
-          if (opt.disabledHeader) groupClass += " btca-level1-picker__group--disabled";
-          if (opt.importHeader) {
-            return (
-              '<div class="' + groupClass + '">' +
-              '<span class="btca-level1-picker__group-line">--- ИМПОРТ ---</span>' +
-              '<span class="btca-level1-picker__group-line">' + escapeHtml(String(opt.importId || "")) + "</span>" +
-              "</div>"
-            );
-          }
-          return '<div class="' + groupClass + '">' + escapeHtml(opt.label) + "</div>";
-        }
-        var optSource = opt.source || "own";
-        var pickerCurrent = bazaExercisePickerValue(current, currentSource || "own");
-        var active = pickerOpts.showAllMode
-          ? !opt.groupHeader && (opt.value === "all" || opt.value === "__foreign_data__")
-          : opt.value === pickerCurrent;
-        var itemClass = "btca-level1-picker__item";
-        if (pickerOpts.catalogList) itemClass += " btca-level1-picker__item--catalog";
-        if (itemExtraClass) itemClass += itemExtraClass;
-        return '<button type="button" class="' + itemClass +
-          (active ? " btca-level1-picker__item--active" : "") +
-          '" data-btca-picker-value="' + escapeHtml(opt.value) +
-          '" data-btca-picker-source="' + escapeHtml(optSource) +
-          '"><span class="btca-level1-picker__text">' +
-          escapeHtml(opt.label) + "</span></button>";
-      }).join("") +
+      renderPickerOptionsHtml(liveOptions, current, pickerOpts) +
       "</div></div>";
     var listEl = layer.querySelector("[data-btca-picker-list]");
-    scrollPickerToActive(listEl, options, current, rowHeight);
+    scrollPickerToActive(listEl, liveOptions, current, rowHeight);
+
+    function applyPickerSearch() {
+      var input = layer.querySelector("[data-btca-picker-search]");
+      var q = input ? String(input.value || "") : "";
+      if (typeof pickerOpts.onSearchChange === "function") pickerOpts.onSearchChange(q);
+      var exact = q.trim();
+      if (pickerOpts.selectExactHot && /^\d+$/.test(exact) && polezNavItemByHot(exact)) {
+        closePicker();
+        onSelect(exact, "own");
+        return;
+      }
+      liveOptions = typeof pickerOpts.getOptions === "function"
+        ? pickerOpts.getOptions(q)
+        : liveOptions;
+      listEl.innerHTML = renderPickerOptionsHtml(liveOptions, current, pickerOpts);
+      scrollPickerToActive(listEl, liveOptions, current, rowHeight);
+      if (input) {
+        input.focus();
+        try {
+          var len = input.value.length;
+          input.setSelectionRange(len, len);
+        } catch (e) { /* ignore */ }
+      }
+    }
+
+    if (pickerOpts.searchable) {
+      var searchInput = layer.querySelector("[data-btca-picker-search]");
+      var searchBtn = layer.querySelector("[data-btca-picker-search-go]");
+      if (searchBtn) {
+        searchBtn.addEventListener("click", function (event) {
+          event.preventDefault();
+          event.stopPropagation();
+          applyPickerSearch();
+        });
+      }
+      if (searchInput) {
+        searchInput.addEventListener("keydown", function (event) {
+          if (event.key !== "Enter") return;
+          event.preventDefault();
+          applyPickerSearch();
+        });
+        searchInput.addEventListener("click", function (event) {
+          event.stopPropagation();
+        });
+        setTimeout(function () {
+          if (searchInput.isConnected) searchInput.focus();
+        }, 0);
+      }
+    }
+
     layer.onclick = function (event) {
       if (event.target.closest("[data-btca-picker-close]")) { closePicker(); return; }
+      if (event.target.closest("[data-btca-picker-search-bar]")) return;
       var btn = event.target.closest("[data-btca-picker-value]");
       if (!btn) return;
       var value = btn.getAttribute("data-btca-picker-value");
@@ -3412,8 +3482,6 @@
       catalogKey = POLEZ_ALL;
       state.ui.polez.catalogKey = POLEZ_ALL;
     }
-    var searchQuery = typeof state.ui.polez.searchQuery === "string" ? state.ui.polez.searchQuery : "";
-    var catalogOptions = buildPolezCatalogOptions(searchQuery);
     var catalogLabel = polezCatalogLabelForKey(catalogKey);
 
     var polezRoot = content.querySelector("[data-btca-polez-root]");
@@ -3431,13 +3499,6 @@
       '<div class="btca-l1-polez-catalog-col">' +
       '<span class="btca-l1-field-label btca-l1-field-label--center">Каталог</span>' +
       filterFaceHtml(catalogLabel, { wide: true, dataAttr: "data-btca-polez-catalog" }) +
-      "</div></div>" +
-      '<div class="btca-l1-toolbar btca-l1-toolbar--polez-search">' +
-      '<div class="btca-l1-polez-search-col">' +
-      '<span class="btca-l1-field-label btca-l1-field-label--center">Поиск</span>' +
-      '<input type="search" class="btca-l1-polez-search" data-btca-polez-search' +
-      ' placeholder="раздел, название или номер" value="' + escapeHtml(searchQuery) + '"' +
-      ' enterkeyhint="search" autocomplete="off" spellcheck="false">' +
       "</div></div>";
 
     var cardsHost = polezRoot.querySelector("[data-btca-polez-cards]");
@@ -3453,42 +3514,28 @@
     }
 
     content.querySelector("[data-btca-polez-catalog]").addEventListener("click", function (event) {
-      var opts = buildPolezCatalogOptions(state.ui.polez.searchQuery || "");
-      openPicker("Каталог", opts, catalogKey, function (value) {
-        selectPolezCatalogKey(value, content);
-      }, event.currentTarget, { catalogList: true });
+      var savedSearch = typeof state.ui.polez.searchQuery === "string" ? state.ui.polez.searchQuery : "";
+      openPicker(
+        "Каталог",
+        buildPolezCatalogOptions(savedSearch),
+        catalogKey,
+        function (value) {
+          selectPolezCatalogKey(value, content);
+        },
+        event.currentTarget,
+        {
+          catalogList: true,
+          searchable: true,
+          selectExactHot: true,
+          searchValue: savedSearch,
+          getOptions: function (q) { return buildPolezCatalogOptions(q); },
+          onSearchChange: function (q) {
+            state.ui.polez.searchQuery = q;
+            applyUiPatch({ polez: { searchQuery: q } });
+          },
+        }
+      );
     });
-
-    var searchInput = content.querySelector("[data-btca-polez-search]");
-    if (searchInput) {
-      searchInput.addEventListener("input", function () {
-        var val = String(searchInput.value || "");
-        state.ui.polez.searchQuery = val;
-        applyUiPatch({ polez: { searchQuery: val } });
-        var exact = val.trim();
-        if (/^\d+$/.test(exact) && polezNavItemByHot(exact) && exact !== String(state.ui.polez.catalogKey)) {
-          var caret = searchInput.selectionStart;
-          selectPolezCatalogKey(exact, content);
-          var again = content.querySelector("[data-btca-polez-search]");
-          if (again) {
-            again.focus();
-            try { again.setSelectionRange(caret, caret); } catch (e) { /* ignore */ }
-          }
-        }
-      });
-      searchInput.addEventListener("keydown", function (event) {
-        if (event.key !== "Enter") return;
-        event.preventDefault();
-        var exact = String(searchInput.value || "").trim();
-        if (/^\d+$/.test(exact) && polezNavItemByHot(exact)) {
-          selectPolezCatalogKey(exact, content);
-          return;
-        }
-        var opts = buildPolezCatalogOptions(exact);
-        var first = opts.filter(function (o) { return !o.groupHeader && o.value !== POLEZ_ALL; })[0];
-        if (first) selectPolezCatalogKey(first.value, content);
-      });
-    }
 
     content.querySelectorAll("[data-btca-polez-desc]").forEach(function (btn) {
       btn.addEventListener("click", function () {
