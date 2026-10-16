@@ -3,7 +3,7 @@
 
   var DB = window.BTCA_LEVEL3_DB;
   var BAZA = window.BTCA_LEVEL3_BAZA;
-  var VERSION = "10.1.82";
+  var VERSION = "10.1.83";
   var BRANDING_UP = "branding/up.png";
   var BRANDING_BAZA = "branding/baza.png";
   var TRAILING_SLOT_W = 112;
@@ -3491,18 +3491,25 @@
     if (isPolezSheetFigureItem(item)) {
       var row = polezFigRow(item.figKey);
       var label = row ? row.label : item.title;
-      var img = row && row.file ? polezImageUrl(row.file) : "";
-      if (!img) return renderPolezSourcePanel(item);
-      var imageHtml = '<img src="' + escapeHtml(img) + '" alt="' + escapeHtml(label) + '" loading="lazy" draggable="false">';
-      var frameClass = "btca-l1-polez-card-frame btca-l1-nav-card-frame--swipe";
-      var frameAttr = ' data-btca-polez-image-swipe="' + escapeHtml(String(item.hot)) + '"';
+      var media = row && row.file ? polezImageUrl(row.file) : "";
+      if (!media) return renderPolezSourcePanel(item);
+      var isVideo = /\.(mp4|webm|mov)(\?|$)/i.test(String(row.file || "")) || row.kind === "video";
+      var mediaHtml = isVideo
+        ? '<video class="btca-l1-polez-video" src="' + escapeHtml(media) +
+          '" controls playsinline preload="metadata"></video>'
+        : '<img src="' + escapeHtml(media) + '" alt="' + escapeHtml(label) +
+          '" loading="lazy" draggable="false">';
+      var frameClass = "btca-l1-polez-card-frame" + (isVideo ? "" : " btca-l1-nav-card-frame--swipe");
+      var frameAttr = isVideo
+        ? ""
+        : ' data-btca-polez-image-swipe="' + escapeHtml(String(item.hot)) + '"';
       return '<article class="btca-l1-polez-card">' +
         '<div class="btca-l1-polez-card-inner">' +
         '<div class="btca-l1-nav-card-top">' +
         '<button type="button" class="btca-l1-pick" data-btca-polez-desc="' + escapeHtml(String(item.hot)) + '">' +
         '<span class="btca-l1-pick__icon" aria-hidden="true">📖</span>' +
         '<span class="btca-l1-pick__text">Описание</span></button></div>' +
-        '<div class="' + frameClass + '"' + frameAttr + ">" + imageHtml + "</div></div></article>";
+        '<div class="' + frameClass + '"' + frameAttr + ">" + mediaHtml + "</div></div></article>";
     }
     return renderPolezSourcePanel(item);
   }

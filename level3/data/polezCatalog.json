@@ -120,6 +120,12 @@
     "file": "1.4/24.jpg"
   },
   {
+    "key": "video1",
+    "label": "Видео 1",
+    "file": "1.4/peredacha_vintov_video_1_4_1.mp4",
+    "kind": "video"
+  },
+  {
     "key": "2_1_2_1",
     "label": "Рис. 1 ... Расстановка шаров",
     "file": "2.1.2/1.jpg"
