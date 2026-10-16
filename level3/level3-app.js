@@ -3,7 +3,7 @@
 
   var DB = window.BTCA_LEVEL3_DB;
   var BAZA = window.BTCA_LEVEL3_BAZA;
-  var VERSION = "10.1.79";
+  var VERSION = "10.1.80";
   var BRANDING_UP = "branding/up.png";
   var BRANDING_BAZA = "branding/baza.png";
   var TRAILING_SLOT_W = 112;
@@ -3842,11 +3842,27 @@
       .replace(/\n/g, "<br>");
   }
 
+  function gluePolezLinkNewlines(text) {
+    var s = String(text || "");
+    // Разрывы внутри маркеров: {\n120\n} / [\n1\n]
+    s = s.replace(/\{\s*\n+\s*/g, "{").replace(/\n+\s*\}/g, "}");
+    s = s.replace(/\[\s*\n+\s*/g, "[").replace(/\n+\s*\]/g, "]");
+    // Перенос сразу перед/после {N} / [N]
+    s = s.replace(/\n+\s*(?=\{\d+\})/g, " ");
+    s = s.replace(/(\{\d+\})\s*\n+/g, "$1 ");
+    s = s.replace(/\n+\s*(?=\[\d+\])/g, " ");
+    s = s.replace(/(\[\d+\])\s*\n+/g, "$1 ");
+    // Перенос сразу перед/после URL (хвостовая пунктуация остаётся с URL)
+    s = s.replace(/\n+\s*(?=https?:\/\/)/gi, " ");
+    s = s.replace(/(https?:\/\/[^\s\n]+)([.,;:)\]»"']*)\s*\n+/gi, "$1$2 ");
+    return s;
+  }
+
   function stripPolezBotPointRefs(text) {
     var s = String(text || "");
     s = s.replace(/п\.\s*\n+\s*/gi, "п. ");
     s = s.replace(/см\.\s*\n+\s*/gi, "см. ");
-    s = s.replace(/\{\s*\n+\s*/g, "{").replace(/\n+\s*\}/g, "}");
+    s = gluePolezLinkNewlines(s);
     s = s.replace(/см\.\s*п\.\s*\d+(?:\.\d+)+\s*(?=\{)/gi, "см. ");
     s = s.replace(/п\.\s*\d+(?:\.\d+)+\s*(?=\{)/gi, "");
     s = s.replace(/п\.\s*\d+(?:\.\d+)+/gi, "");
@@ -3857,7 +3873,7 @@
 
   function formatPolezSourceBody(body, docId) {
     var footnotes = polezFootnotesForDoc(docId);
-    // Сначала склеиваем маркеры, разбитые переносами: { 125 } / {\n125\n}
+    // Сначала склеиваем маркеры и переносы вокруг { } / [ ] / https
     var raw = stripPolezBotPointRefs(String(body || ""))
       .replace(/\{\s*(\d+)\s*\}/g, "{$1}")
       .replace(/\[\s*(\d+)\s*\]/g, "[$1]");
