@@ -3,7 +3,7 @@
 
   var DB = window.BTCA_LEVEL3_DB;
   var BAZA = window.BTCA_LEVEL3_BAZA;
-  var VERSION = "10.1.77";
+  var VERSION = "10.1.78";
   var BRANDING_UP = "branding/up.png";
   var BRANDING_BAZA = "branding/baza.png";
   var TRAILING_SLOT_W = 112;
@@ -3444,11 +3444,36 @@
     scheduleNavCardsScroll(content);
   }
 
+  function polezSourceEntry(hotKey) {
+    return state.data.polezSourceIndex[String(hotKey || "")] || null;
+  }
+
+  function polezInlineFiguresHtml(figures) {
+    if (!figures || !figures.length) return "";
+    return figures.map(function (fig) {
+      var url = polezImageUrl(fig.file);
+      if (!url) return "";
+      return '<figure class="btca-l1-polez-inline-fig">' +
+        '<img src="' + escapeHtml(url) + '" alt="' + escapeHtml(fig.caption || "") + '" loading="lazy" draggable="false">' +
+        '<figcaption>' + escapeHtml(fig.caption || "") + "</figcaption></figure>";
+    }).join("");
+  }
+
+  /** Рисунок на листе — только для 1.4 (figKey). 2.x → текст Описания с рисунками внизу. */
+  function isPolezSheetFigureItem(item) {
+    return !!(item && item.docId === "1.4" && item.figKey && item.figKey !== "links");
+  }
+
   function renderPolezSourcePanel(item) {
-    var text = polezSourceText(item.hot);
+    var entry = polezSourceEntry(item.hot);
+    var text = entry && entry.text ? String(entry.text) : polezSourceText(item.hot);
+    var figures = entry && Array.isArray(entry.figures) ? entry.figures : [];
     return '<section class="btca-l1-polez-source" data-btca-polez-source>' +
       '<h3 class="btca-l1-polez-source__title">' + escapeHtml(item.title) + "</h3>" +
-      '<div class="btca-l1-polez-source__body">' + formatPolezSourceBody(text, item.docId) + "</div></section>";
+      '<div class="btca-l1-polez-source__body">' +
+      formatPolezSourceBody(text, item.docId) +
+      polezInlineFiguresHtml(figures) +
+      "</div></section>";
   }
 
   function renderPolezBodyHtml(catalogKey) {
@@ -3463,7 +3488,7 @@
             escapeHtml(line.num + " " + line.title) + "</a>";
         }).join("") + "</section>";
     }
-    if (item.figKey) {
+    if (isPolezSheetFigureItem(item)) {
       var row = polezFigRow(item.figKey);
       var label = row ? row.label : item.title;
       var img = row && row.file ? polezImageUrl(row.file) : "";
@@ -3698,22 +3723,27 @@
   }
 
   function openPolezDescription(hotOrFig) {
-    var figKey = resolvePolezFigKey(hotOrFig);
-    var desc = figKey && figKey !== "links" ? state.data.polezDescriptions[figKey] : null;
-    var sourceItem = null;
-    if (!desc) {
-      var hot = String(hotOrFig || "");
-      sourceItem = polezNavItemByHot(hot);
-      var text = polezSourceText(hot);
-      if (!sourceItem || !text) return;
-      desc = { title: sourceItem.title, body: text, fromSource: true, docId: sourceItem.docId };
+    // Описания всегда из первоисточника (*_structured.txt), не из polezDescriptions.json
+    var hot = String(hotOrFig || "");
+    var item = polezNavItemByHot(hot);
+    if (!item && String(hotOrFig || "").indexOf("fig") === 0) {
+      // fallback: найти пункт по figKey
+      var sections = polezNavSections();
+      for (var s = 0; s < sections.length && !item; s += 1) {
+        var items = sections[s].items || [];
+        for (var i = 0; i < items.length; i += 1) {
+          if (items[i].figKey === hotOrFig) { item = items[i]; hot = String(item.hot); break; }
+        }
+      }
     }
+    var entry = polezSourceEntry(hot);
+    var text = entry && entry.text ? String(entry.text) : "";
+    if (!item || !text) return;
+    var figures = entry && Array.isArray(entry.figures) ? entry.figures : [];
     document.body.classList.add("btca-screen-mode");
     var overlay = document.createElement("div");
     overlay.className = "btca-polez-desc-root";
-    var bodyHtml = desc.fromSource
-      ? formatPolezSourceBody(desc.body || "", desc.docId)
-      : formatPolezBody(desc.body || "");
+    var bodyHtml = formatPolezSourceBody(text, item.docId) + polezInlineFiguresHtml(figures);
     overlay.innerHTML =
       '<main class="btca-about-screen">' +
       '<header class="btca-screen-header">' +
@@ -3721,8 +3751,8 @@
       '<span aria-hidden="true"></span>' +
       '<span aria-hidden="true"></span>' +
       "</header>" +
-      '<section class="btca-about-content"><h1>' + escapeHtml(desc.title || "") + "</h1>" +
-      "<p>" + bodyHtml + "</p></section></main>";
+      '<section class="btca-about-content"><h1>' + escapeHtml(item.title) + "</h1>" +
+      "<div>" + bodyHtml + "</div></section></main>";
     state.root.appendChild(overlay);
     function closeOverlay() {
       document.body.classList.remove("btca-screen-mode");
@@ -3814,7 +3844,11 @@
 
   function formatPolezSourceBody(body, docId) {
     var footnotes = polezFootnotesForDoc(docId);
-    var html = escapeHtml(body || "");
+    // Сначала склеиваем маркеры, разбитые переносами: { 125 } / {\n125\n}
+    var raw = String(body || "")
+      .replace(/\{\s*(\d+)\s*\}/g, "{$1}")
+      .replace(/\[\s*(\d+)\s*\]/g, "[$1]");
+    var html = escapeHtml(raw);
     html = html
       .replace(/&lt;b&gt;([\s\S]*?)&lt;\/b&gt;/g, "<strong>$1</strong>")
       .replace(/&lt;i&gt;([\s\S]*?)&lt;\/i&gt;/g, "<em>$1</em>");
@@ -3823,7 +3857,7 @@
       /&lt;a\s+href=&quot;(https?:\/\/[^&]+)&quot;(\s+target=&quot;_blank&quot;)?(\s+rel=&quot;noopener noreferrer&quot;)?&gt;([\s\S]*?)&lt;\/a&gt;/g,
       '<a class="btca-l1-link" href="$1" target="_blank" rel="noopener noreferrer">$4</a>',
     );
-    // Голые URL
+    // Голые URL (до замены переносов на <br>)
     html = html.replace(
       /(https?:\/\/[^\s&<]+)/g,
       function (_m, url) {
@@ -3833,13 +3867,13 @@
           clean + "</a>" + trail;
       },
     );
-    // {125} → переход к пункту каталога
-    html = html.replace(/\{(\d+)\}/g, function (_m, num) {
+    // {125} → переход к пункту каталога (и после escape возможны пробелы/переносы)
+    html = html.replace(/\{\s*(\d+)\s*\}/g, function (_m, num) {
       return '<a class="btca-l1-link btca-l1-polez-hotref" href="#" data-btca-polez-hotref="' + num + '">{' +
         num + "}</a>";
     });
     // [1] → сноска / URL
-    html = html.replace(/\[(\d+)\]/g, function (_m, num) {
+    html = html.replace(/\[\s*(\d+)\s*\]/g, function (_m, num) {
       var fn = footnotes[num];
       if (fn && fn.href) {
         return '<a class="btca-l1-link" href="' + escapeHtml(fn.href) +
@@ -3851,6 +3885,7 @@
       }
       return '<a class="btca-l1-link btca-l1-polez-fn" href="#" data-btca-polez-fn="' + num + '">[' + num + "]</a>";
     });
+    // Переносы строк — в самом конце, чтобы не ломать { } / [ ]
     return html.replace(/\n/g, "<br>");
   }
 
