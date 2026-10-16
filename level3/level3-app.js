@@ -3,7 +3,7 @@
 
   var DB = window.BTCA_LEVEL3_DB;
   var BAZA = window.BTCA_LEVEL3_BAZA;
-  var VERSION = "10.1.80";
+  var VERSION = "10.1.81";
   var BRANDING_UP = "branding/up.png";
   var BRANDING_BAZA = "branding/baza.png";
   var TRAILING_SLOT_W = 112;
@@ -3752,7 +3752,7 @@
       '<span aria-hidden="true"></span>' +
       "</header>" +
       '<section class="btca-about-content"><h1>' + escapeHtml(item.title) + "</h1>" +
-      "<div>" + bodyHtml + "</div></section></main>";
+      '<div class="btca-l1-polez-source__body">' + bodyHtml + "</div></section></main>";
     state.root.appendChild(overlay);
     function closeOverlay() {
       document.body.classList.remove("btca-screen-mode");
@@ -3847,14 +3847,14 @@
     // Разрывы внутри маркеров: {\n120\n} / [\n1\n]
     s = s.replace(/\{\s*\n+\s*/g, "{").replace(/\n+\s*\}/g, "}");
     s = s.replace(/\[\s*\n+\s*/g, "[").replace(/\n+\s*\]/g, "]");
-    // Перенос сразу перед/после {N} / [N]
+    // Перенос сразу перед {N} / [N] / https
     s = s.replace(/\n+\s*(?=\{\d+\})/g, " ");
-    s = s.replace(/(\{\d+\})\s*\n+/g, "$1 ");
     s = s.replace(/\n+\s*(?=\[\d+\])/g, " ");
-    s = s.replace(/(\[\d+\])\s*\n+/g, "$1 ");
-    // Перенос сразу перед/после URL (хвостовая пунктуация остаётся с URL)
     s = s.replace(/\n+\s*(?=https?:\/\/)/gi, " ");
-    s = s.replace(/(https?:\/\/[^\s\n]+)([.,;:)\]»"']*)\s*\n+/gi, "$1$2 ");
+    // {214}\n{227} / URL\n{214} — одна фраза; абзацы после URL не трогаем
+    s = s.replace(/(\{\d+\})\s*\n+(?=\{)/g, "$1 ");
+    s = s.replace(/(\[\d+\])\s*\n+(?=\[)/g, "$1 ");
+    s = s.replace(/(https?:\/\/[^\s\n]+)([.,;:)\]»"']*)\s*\n+(?=[\{\[])/gi, "$1$2 ");
     return s;
   }
 

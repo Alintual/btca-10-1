@@ -2744,11 +2744,21 @@ body.btca-apple-comfort .btca-l1-chart-panel {
   word-break: break-word;
 }
 
+/* В тексте Описания {N}/[N]/URL — inline (как в доке 1.4).
+   .btca-l1-link сам по себе display:block для списка ссылок. */
 .btca-l1-polez-source__body .btca-l1-link,
-.btca-l1-polez-source .btca-l1-link {
+.btca-about-content .btca-l1-polez-source__body .btca-l1-link {
+  display: inline;
+  margin-bottom: 0;
   color: #06038b;
   text-decoration: underline;
   font-weight: 400;
+  word-break: break-all;
+}
+
+.btca-l1-links-panel > .btca-l1-link {
+  display: block;
+  margin-bottom: 8px;
 }
 
 .btca-l1-polez-inline-fig {
