@@ -3405,7 +3405,8 @@ body.btca-apple-comfort .btca-l1-ok-input {
   box-sizing: border-box;
   padding: 8px;
   border-bottom: 1px solid rgba(17, 24, 39, 0.18);
-  background: #2f4a3a;
+  /* как подложка под заголовком «Каталог» на листе */
+  background: #1f4f5c;
 }
 
 .btca-level1-picker__search-input {

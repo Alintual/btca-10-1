@@ -3,7 +3,7 @@
 
   var DB = window.BTCA_LEVEL3_DB;
   var BAZA = window.BTCA_LEVEL3_BAZA;
-  var VERSION = "10.1.78";
+  var VERSION = "10.1.79";
   var BRANDING_UP = "branding/up.png";
   var BRANDING_BAZA = "branding/baza.png";
   var TRAILING_SLOT_W = 112;
@@ -3842,10 +3842,23 @@
       .replace(/\n/g, "<br>");
   }
 
+  function stripPolezBotPointRefs(text) {
+    var s = String(text || "");
+    s = s.replace(/п\.\s*\n+\s*/gi, "п. ");
+    s = s.replace(/см\.\s*\n+\s*/gi, "см. ");
+    s = s.replace(/\{\s*\n+\s*/g, "{").replace(/\n+\s*\}/g, "}");
+    s = s.replace(/см\.\s*п\.\s*\d+(?:\.\d+)+\s*(?=\{)/gi, "см. ");
+    s = s.replace(/п\.\s*\d+(?:\.\d+)+\s*(?=\{)/gi, "");
+    s = s.replace(/п\.\s*\d+(?:\.\d+)+/gi, "");
+    s = s.replace(/[^\S\n]{2,}/g, " ");
+    s = s.replace(/\(\s+/g, "(").replace(/\s+\)/g, ")");
+    return s;
+  }
+
   function formatPolezSourceBody(body, docId) {
     var footnotes = polezFootnotesForDoc(docId);
     // Сначала склеиваем маркеры, разбитые переносами: { 125 } / {\n125\n}
-    var raw = String(body || "")
+    var raw = stripPolezBotPointRefs(String(body || ""))
       .replace(/\{\s*(\d+)\s*\}/g, "{$1}")
       .replace(/\[\s*(\d+)\s*\]/g, "[$1]");
     var html = escapeHtml(raw);
@@ -3872,21 +3885,22 @@
       return '<a class="btca-l1-link btca-l1-polez-hotref" href="#" data-btca-polez-hotref="' + num + '">{' +
         num + "}</a>";
     });
-    // [1] → сноска / URL
+    // [1] → переход к «250 # Список литературы» (title — текст сноски для подсказки)
     html = html.replace(/\[\s*(\d+)\s*\]/g, function (_m, num) {
       var fn = footnotes[num];
-      if (fn && fn.href) {
-        return '<a class="btca-l1-link" href="' + escapeHtml(fn.href) +
-          '" target="_blank" rel="noopener noreferrer" title="' + escapeHtml(fn.text || "") + '">[' + num + "]</a>";
-      }
-      if (fn && fn.text) {
-        return '<a class="btca-l1-link btca-l1-polez-fn" href="#" data-btca-polez-fn="' + num +
-          '" title="' + escapeHtml(fn.text) + '">[' + num + "]</a>";
-      }
-      return '<a class="btca-l1-link btca-l1-polez-fn" href="#" data-btca-polez-fn="' + num + '">[' + num + "]</a>";
+      var titleAttr = fn && fn.text ? ' title="' + escapeHtml(fn.text) + '"' : "";
+      return '<a class="btca-l1-link btca-l1-polez-fn" href="#" data-btca-polez-fn="' + num + '"' +
+        titleAttr + ">[" + num + "]</a>";
     });
     // Переносы строк — в самом конце, чтобы не ломать { } / [ ]
     return html.replace(/\n/g, "<br>");
+  }
+
+  function closePolezDescriptionOverlay() {
+    var overlay = state.root && state.root.querySelector(".btca-polez-desc-root");
+    if (!overlay) return;
+    document.body.classList.remove("btca-screen-mode");
+    overlay.remove();
   }
 
   function bindPolezSourceLinks(root, content) {
@@ -3895,14 +3909,17 @@
       el.addEventListener("click", function (event) {
         event.preventDefault();
         var hot = el.getAttribute("data-btca-polez-hotref");
-        if (hot && polezNavItemByHot(hot)) selectPolezCatalogKey(hot, content);
+        if (!hot || !polezNavItemByHot(hot)) return;
+        closePolezDescriptionOverlay();
+        selectPolezCatalogKey(hot, content);
       });
     });
+    // [N] → пункт «250 # Список литературы»
     root.querySelectorAll("[data-btca-polez-fn]").forEach(function (el) {
       el.addEventListener("click", function (event) {
         event.preventDefault();
-        var title = el.getAttribute("title");
-        if (title) window.alert(title);
+        closePolezDescriptionOverlay();
+        if (polezNavItemByHot("250")) selectPolezCatalogKey("250", content);
       });
     });
   }
