@@ -3243,6 +3243,16 @@ body.btca-apple-comfort .btca-l1-ok-input {
   margin-top: 9px;
 }
 
+.btca-l1-polez-card-frame .btca-l1-polez-video,
+.btca-l1-image-view .btca-l1-polez-video {
+  display: block;
+  width: 100%;
+  height: auto;
+  max-height: 70vh;
+  border-radius: 8px;
+  background: #000;
+}
+
 .btca-l1-nav-card-top {
   display: flex;
   justify-content: flex-end;
@@ -3254,18 +3264,11 @@ body.btca-apple-comfort .btca-l1-ok-input {
   margin-top: 9px;
 }
 
-.btca-l1-nav-card-frame img,
-.btca-l1-polez-card-frame img,
-.btca-l1-polez-card-frame .btca-l1-polez-video {
+.btca-l1-nav-card-frame img {
   display: block;
   width: 100%;
   height: auto;
   border-radius: 8px;
-}
-
-.btca-l1-polez-card-frame .btca-l1-polez-video {
-  background: #000;
-  max-height: 70vh;
 }
 
 .btca-l1-pick {

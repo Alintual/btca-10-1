@@ -231,7 +231,7 @@
     gate.setAttribute("hidden", "hidden");
     try {
       gate.innerHTML = "";
-    } catch (e) {}
+    } catch (e) { }
   }
 
   function revealInstalledLoginGate() {
@@ -269,7 +269,7 @@
             input.value = prefill;
             try {
               input.setAttribute("value", prefill);
-            } catch (e) {}
+            } catch (e) { }
           }
         }, 80);
       }
@@ -285,7 +285,7 @@
           return decodeURIComponent(pair.slice(LICENSE_LOGIN_COOKIE.length + 1)).trim();
         }
       }
-    } catch (e) {}
+    } catch (e) { }
     return "";
   }
 
@@ -301,7 +301,7 @@
         "; path=/btca-10-1/; max-age=" +
         maxAge +
         "; SameSite=Lax";
-    } catch (e) {}
+    } catch (e) { }
   }
 
   function readPathCookie(name) {
@@ -313,7 +313,7 @@
           return decodeURIComponent(pair.slice(name.length + 1)).trim();
         }
       }
-    } catch (e) {}
+    } catch (e) { }
     return "";
   }
 
@@ -334,7 +334,7 @@
     if (clean.length < 6) return "";
     try {
       localStorage.setItem(LICENSE_DEVICE_KEY, clean);
-    } catch (e) {}
+    } catch (e) { }
     writeDeviceCookie(clean);
     return clean;
   }
@@ -354,13 +354,13 @@
       if (fromCookie && fromCookie.length >= 8) {
         try {
           localStorage.setItem(LICENSE_BROWSER_KEY, fromCookie);
-        } catch (e) {}
+        } catch (e) { }
         return fromCookie;
       }
       var existing = "";
       try {
         existing = String(localStorage.getItem(LICENSE_BROWSER_KEY) || "").trim();
-      } catch (e) {}
+      } catch (e) { }
       if (existing.length >= 8) {
         writeBrowserCookie(existing);
         return existing;
@@ -371,7 +371,7 @@
           : "b-" + Date.now().toString(36) + "-" + Math.random().toString(36).slice(2, 10);
       try {
         localStorage.setItem(LICENSE_BROWSER_KEY, id);
-      } catch (e) {}
+      } catch (e) { }
       writeBrowserCookie(id);
       return id;
     } catch (e) {
@@ -391,7 +391,7 @@
         "; path=/btca-10-1/; max-age=" +
         maxAge +
         "; SameSite=Lax";
-    } catch (e) {}
+    } catch (e) { }
   }
 
   function readPackageDateCookie() {
@@ -403,7 +403,7 @@
           return decodeURIComponent(pair.slice(LICENSE_PACKAGE_DATE_COOKIE.length + 1)).trim();
         }
       }
-    } catch (e) {}
+    } catch (e) { }
     return "";
   }
 
@@ -412,7 +412,7 @@
     if (!/^\d{2}\.\d{2}\.\d{4}$/.test(clean)) return "";
     try {
       localStorage.setItem(LICENSE_PACKAGE_DATE_KEY, clean);
-    } catch (e) {}
+    } catch (e) { }
     writePackageDateCookie(clean);
     return clean;
   }
@@ -421,7 +421,7 @@
     try {
       var fromLs = String(localStorage.getItem(LICENSE_PACKAGE_DATE_KEY) || "").trim();
       if (/^\d{2}\.\d{2}\.\d{4}$/.test(fromLs)) return fromLs;
-    } catch (e) {}
+    } catch (e) { }
     var fromCookie = readPackageDateCookie();
     if (/^\d{2}\.\d{2}\.\d{4}$/.test(fromCookie)) return fromCookie;
     return "";
@@ -439,7 +439,7 @@
           })
         );
       })
-      .catch(function () {});
+      .catch(function () { });
   }
 
   function persistLicenseIdentity(login, authOtp) {
@@ -459,7 +459,7 @@
       localStorage.setItem(LICENSE_LOGIN_KEY, clean);
       localStorage.setItem(LICENSE_AUTH_OTP_KEY, authOtp ? "1" : "0");
       localStorage.setItem("btca101.identityJson", JSON.stringify(payload));
-    } catch (e) {}
+    } catch (e) { }
     writeLoginCookie(clean);
     var body = JSON.stringify(payload);
     putIdentityInCache(IDENTITY_CACHE, body);
@@ -476,9 +476,9 @@
           var db = req.result;
           var tx = db.transaction("identity", "readwrite");
           tx.objectStore("identity").put(payload, "current");
-        } catch (e) {}
+        } catch (e) { }
       };
-    } catch (e) {}
+    } catch (e) { }
   }
 
   function readIdentityFromAnyCache() {
@@ -562,7 +562,7 @@
     try {
       existing = String(localStorage.getItem(LICENSE_LOGIN_KEY) || "").trim();
       otpFlag = localStorage.getItem(LICENSE_AUTH_OTP_KEY) === "1";
-    } catch (e) {}
+    } catch (e) { }
     if (!existing) existing = readLoginCookie();
     if (existing) {
       persistLicenseIdentity(existing, otpFlag);
@@ -585,7 +585,7 @@
     var fromJson = null;
     try {
       fromJson = JSON.parse(localStorage.getItem("btca101.identityJson") || "null");
-    } catch (e) {}
+    } catch (e) { }
     if (fromJson && fromJson.login) {
       return Promise.resolve(applyData(fromJson));
     }
@@ -593,16 +593,16 @@
     var token = "";
     try {
       token = String(localStorage.getItem(LICENSE_SESSION_KEY) || "").trim();
-    } catch (e) {}
+    } catch (e) { }
 
     var accountPromise = token
       ? licensePost("/v1/account", { session_token: token })
-          .then(function (data) {
-            return applyData(data);
-          })
-          .catch(function () {
-            return "";
-          })
+        .then(function (data) {
+          return applyData(data);
+        })
+        .catch(function () {
+          return "";
+        })
       : Promise.resolve("");
 
     return accountPromise.then(function (login) {
@@ -616,7 +616,7 @@
           var deviceId = "";
           try {
             deviceId = String(localStorage.getItem(LICENSE_DEVICE_KEY) || "").trim();
-          } catch (e) {}
+          } catch (e) { }
           if (deviceId.length < 8) return "";
           return licensePost("/v1/auth/device-identity", { device_id: deviceId })
             .then(function (data) {
@@ -670,10 +670,12 @@
         { run: function () { return loadLevel3Script(assetPath("level3/level3-db.js?v=" + v2)); } },
         { run: function () { return loadLevel3Script(assetPath("level3/level3-baza.js?v=" + v2)); } },
         { run: function () { return loadLevel3Script(assetPath("level3/level3-app.js?v=" + v2)); } },
-        { run: function () {
-          if (!level3ModuleReady()) throw new Error("Модуль Уровня 3 не инициализирован");
-          return window.BTCA_LEVEL3.boot();
-        } }
+        {
+          run: function () {
+            if (!level3ModuleReady()) throw new Error("Модуль Уровня 3 не инициализирован");
+            return window.BTCA_LEVEL3.boot();
+          }
+        }
       );
     }
 
@@ -739,7 +741,7 @@
       if (window.matchMedia("(display-mode: standalone)").matches) return true;
       if (window.matchMedia("(display-mode: fullscreen)").matches) return true;
       if (window.matchMedia("(display-mode: minimal-ui)").matches) return true;
-    } catch (_) {}
+    } catch (_) { }
     return Boolean(navigator.standalone);
   }
 
@@ -760,13 +762,13 @@
       url.searchParams.delete("ios-pwa");
       var q = url.searchParams.toString();
       window.history.replaceState(null, "", url.pathname + (q ? "?" + q : "") + url.hash);
-    } catch (_) {}
+    } catch (_) { }
   }
 
   function isPersistedLaunchUnlocked() {
     try {
       if (localStorage.getItem(LICENSE_LAUNCH_KEY) === "1") return true;
-    } catch (_) {}
+    } catch (_) { }
     return isAppPreparedSync();
   }
 
@@ -795,7 +797,7 @@
   function writeAppliedShellVersion(version) {
     try {
       if (version) localStorage.setItem(APPLIED_SHELL_KEY, String(version));
-    } catch (_) {}
+    } catch (_) { }
   }
 
   function slideMenuReady() {
@@ -816,7 +818,7 @@
     try {
       if (active) sessionStorage.setItem(OFFLINE_PREP_SESSION_KEY, "1");
       else sessionStorage.removeItem(OFFLINE_PREP_SESSION_KEY);
-    } catch (_) {}
+    } catch (_) { }
   }
 
   function shouldRunShellUpdateCheck() {
@@ -939,9 +941,9 @@
             window.location.replace(url.pathname + url.search);
           });
       }
-    } catch (e) {}
+    } catch (e) { }
     if (isAppShellMode()) {
-      return registerOfflineServiceWorker().catch(function () {});
+      return registerOfflineServiceWorker().catch(function () { });
     }
     // Загрузочная: снять SW со всего /btca-10-1/, иначе старый cacheFirst
     // вешает Safari и страница «не открывается». Offline — только /offline/.
@@ -954,7 +956,7 @@
           return reg.unregister();
         })
       );
-    }).catch(function () {});
+    }).catch(function () { });
   }
 
   function readPreparedModuleVersions(state) {
@@ -1048,20 +1050,20 @@
           localStorage.setItem(MEDIA_STATE_KEY, JSON.stringify(mediaState));
         }
       }
-    } catch (_) {}
+    } catch (_) { }
   }
 
   function invalidatePreparedClientState() {
     try {
       localStorage.removeItem(APP_READY_KEY);
       localStorage.removeItem(MEDIA_STATE_KEY);
-    } catch (_) {}
+    } catch (_) { }
     window.__BTCA_APP_BOOT_READY__ = false;
   }
 
   function purgeGenerationRuntimeCache() {
     if (!("caches" in window)) return Promise.resolve();
-    return caches.delete(getCacheGeneration() + ":runtime").catch(function () {});
+    return caches.delete(getCacheGeneration() + ":runtime").catch(function () { });
   }
 
   function readInstallSession() {
@@ -1079,7 +1081,7 @@
         INSTALL_SESSION_KEY,
         String(Date.now()) + "-" + Math.random().toString(36).slice(2, 10)
       );
-    } catch (_) {}
+    } catch (_) { }
   }
 
   function resolvePwaShortcutName() {
@@ -1100,13 +1102,13 @@
     try {
       localStorage.removeItem(APP_READY_KEY);
       localStorage.removeItem(MEDIA_STATE_KEY);
-    } catch (_) {}
+    } catch (_) { }
   }
 
   function clearInstallSessionMarker() {
     try {
       localStorage.removeItem(INSTALL_SESSION_KEY);
-    } catch (_) {}
+    } catch (_) { }
   }
 
   function clearAllInstallMarkers() {
@@ -1151,7 +1153,7 @@
         level3ModuleVersion: LEVEL3_MODULE_VERSION,
         preparedAt: new Date().toISOString(),
       }));
-    } catch (_) {}
+    } catch (_) { }
     window.__BTCA_APP_BOOT_READY__ = true;
   }
 
@@ -1222,7 +1224,7 @@
       }).map(function (name) {
         return caches.delete(name);
       }));
-    }).catch(function () {});
+    }).catch(function () { });
   }
 
   function flushClientDataBeforeReload() {
@@ -1231,8 +1233,8 @@
       if (window.BTCA_LEVEL3_DB && window.BTCA_LEVEL3_DB.flushUiState) {
         tasks.push(window.BTCA_LEVEL3_DB.flushUiState());
       }
-    } catch (_) {}
-    return Promise.all(tasks).catch(function () {});
+    } catch (_) { }
+    return Promise.all(tasks).catch(function () { });
   }
 
   function purgeAllShellCachesExceptMedia() {
@@ -1246,7 +1248,7 @@
       }).map(function (name) {
         return caches.delete(name);
       }));
-    }).catch(function () {});
+    }).catch(function () { });
   }
 
   function purgeAllInstallCaches() {
@@ -1257,15 +1259,15 @@
       }).map(function (name) {
         return caches.delete(name);
       }));
-    }).catch(function () {});
+    }).catch(function () { });
   }
 
   function purgeShellServiceWorkerCaches() {
     if (!("caches" in window)) return Promise.resolve();
     var generation = getCacheGeneration();
     return Promise.all([
-      caches.delete(generation + ":app").catch(function () {}),
-      caches.delete(generation + ":runtime").catch(function () {}),
+      caches.delete(generation + ":app").catch(function () { }),
+      caches.delete(generation + ":runtime").catch(function () { }),
     ]);
   }
 
@@ -1288,7 +1290,7 @@
         return Promise.resolve(false);
       }
       sessionStorage.setItem(attemptKey, "1");
-    } catch (_) {}
+    } catch (_) { }
 
     discardStaleRuntimeModules();
     return purgeAllShellCachesExceptMedia()
@@ -1299,7 +1301,7 @@
           if (registration.waiting) {
             registration.waiting.postMessage({ type: "SKIP_WAITING" });
           }
-          return registration.update().catch(function () {});
+          return registration.update().catch(function () { });
         });
       })
       .then(function () {
@@ -1316,7 +1318,7 @@
 
   function refreshShellCacheQuietly() {
     if (!("caches" in window)) return Promise.resolve();
-    return cacheCoreAssets(function () {}, 0, 0).catch(function () {});
+    return cacheCoreAssets(function () { }, 0, 0).catch(function () { });
   }
 
   function clearStaleClientState() {
@@ -1333,7 +1335,7 @@
         sessionStorage.removeItem(shellRefreshAttemptKey(shellParam));
         writeAppliedShellVersion(shellParam);
       }
-    } catch (_) {}
+    } catch (_) { }
 
     if (metaGen && !readAppliedShellVersion()) {
       writeAppliedShellVersion(metaGen);
@@ -1362,12 +1364,12 @@
       }).map(function (name) {
         return caches.delete(name);
       }));
-    }).catch(function () {});
+    }).catch(function () { });
   }
 
   function purgeShellInstallCache() {
     if (!("caches" in window)) return Promise.resolve();
-    return caches.delete(INSTALL_CACHE).catch(function () {});
+    return caches.delete(INSTALL_CACHE).catch(function () { });
   }
 
   function unregisterOfflineServiceWorker() {
@@ -1376,7 +1378,7 @@
       return Promise.all((regs || []).map(function (registration) {
         return registration.unregister();
       }));
-    }).catch(function () {});
+    }).catch(function () { });
   }
 
   function deleteAllBtcaCaches() {
@@ -1387,7 +1389,7 @@
       }).map(function (name) {
         return caches.delete(name);
       }));
-    }).catch(function () {});
+    }).catch(function () { });
   }
 
   function resetSafariInstallEnvironment() {
@@ -1407,7 +1409,7 @@
           return response;
         });
       })
-      .catch(function () {});
+      .catch(function () { });
   }
 
   function ensureFreshShellAfterDeploy() {
@@ -1416,12 +1418,12 @@
 
     navigator.serviceWorker.getRegistration(BTCA_BASE).then(function (registration) {
       if (!registration || !shouldRunShellUpdateCheck()) return;
-      registration.update().catch(function () {});
+      registration.update().catch(function () { });
       if (registration.waiting) {
         registration.waiting.postMessage({ type: "SKIP_WAITING" });
       }
       // Не reload на controllerchange: на iPad это роняет Safari после ярлыка.
-    }).catch(function () {});
+    }).catch(function () { });
   }
 
   function ensureShellUpToDate() {
@@ -1481,7 +1483,7 @@
         }
         try {
           if (remote) sessionStorage.removeItem(shellRefreshAttemptKey(remote));
-        } catch (_) {}
+        } catch (_) { }
         if (remote) writeAppliedShellVersion(remote);
         return false;
       }
@@ -1512,7 +1514,7 @@
         }
         navigator.serviceWorker.addEventListener("controllerchange", onControllerChange);
       });
-    }).catch(function () {});
+    }).catch(function () { });
   }
 
   function cacheHasUnpackedLevel1Media(cache) {
@@ -2146,7 +2148,7 @@
         return;
       }
       if (isApp && level3ModuleFresh() &&
-          document.querySelector('script[data-btca-level3-src="' + src + '"]')) {
+        document.querySelector('script[data-btca-level3-src="' + src + '"]')) {
         resolve();
         return;
       }
@@ -2458,7 +2460,7 @@
         for (var i = 0; i < 12; i++) out += alphabet[arr[i] % alphabet.length];
         return out;
       }
-    } catch (e) {}
+    } catch (e) { }
     for (var j = 0; j < 12; j++) out += alphabet[Math.floor(Math.random() * alphabet.length)];
     return out;
   }
@@ -2468,12 +2470,12 @@
       name === "new_password" || name === "password" ? "new-password" : "current-password";
     var genHtml = withGenerator
       ? '<button type="button" class="auth-gate__pw-gen" data-pw-gen="' +
-        name +
-        '" title="Сгенерировать пароль" aria-label="Сгенерировать пароль">' +
-        '<img class="auth-gate__pw-gen-img" src="' +
-        assetPath("branding/generate.png") +
-        '" alt="" width="40" height="20" decoding="async" />' +
-        "</button>"
+      name +
+      '" title="Сгенерировать пароль" aria-label="Сгенерировать пароль">' +
+      '<img class="auth-gate__pw-gen-img" src="' +
+      assetPath("branding/generate.png") +
+      '" alt="" width="40" height="20" decoding="async" />' +
+      "</button>"
       : "";
     return (
       '<label class="auth-gate__field"><span>' +
@@ -2575,7 +2577,7 @@
       if (!readPwaSessionStartedAt()) {
         sessionStorage.setItem(PWA_SESSION_STARTED_KEY, String(Date.now()));
       }
-    } catch (e) {}
+    } catch (e) { }
   }
 
   function renderSessionExpiredGate() {
@@ -2583,7 +2585,7 @@
     hideHomeSplashIndicator();
     try {
       if (window.BTCA_LEVEL3 && window.BTCA_LEVEL3.unmount) window.BTCA_LEVEL3.unmount();
-    } catch (e) {}
+    } catch (e) { }
     document.body.classList.remove("btca-level1-mode", "btca-level3-mode", "btca-allow-landscape");
     document.body.classList.add("btca-installed-mode");
     var root = document.getElementById("root");
@@ -2598,14 +2600,14 @@
     }
     try {
       window.close();
-    } catch (e) {}
+    } catch (e) { }
   }
 
   function lockPwaSessionExpired() {
     if (!isStandalone()) return;
     try {
       sessionStorage.setItem(PWA_SESSION_EXPIRED_KEY, "1");
-    } catch (e) {}
+    } catch (e) { }
     clearLaunchUnlock();
     renderSessionExpiredGate();
   }
@@ -2670,7 +2672,7 @@
     try {
       sessionStorage.removeItem(LICENSE_LAUNCH_KEY);
       localStorage.removeItem(LICENSE_LAUNCH_KEY);
-    } catch (e) {}
+    } catch (e) { }
   }
 
   function markLaunchUnlocked(token) {
@@ -2681,7 +2683,7 @@
       if (login) {
         persistLicenseIdentity(login, localStorage.getItem(LICENSE_AUTH_OTP_KEY) === "1");
       }
-    } catch (e) {}
+    } catch (e) { }
   }
 
   function wantsOpenDownloads() {
@@ -2699,7 +2701,7 @@
       url.searchParams.delete("open");
       var q = url.searchParams.toString();
       window.history.replaceState(null, "", url.pathname + (q ? "?" + q : "") + url.hash);
-    } catch (_) {}
+    } catch (_) { }
   }
 
   function mintDownloadLinksForSession() {
@@ -2709,7 +2711,7 @@
       var links = (data && data.download_links) || {};
       try {
         sessionStorage.setItem(LICENSE_DOWNLOAD_LINKS_KEY, JSON.stringify(links));
-      } catch (e) {}
+      } catch (e) { }
       if (data && data.paid_until) storePaidUntil(data.paid_until);
       return links;
     });
@@ -2733,11 +2735,11 @@
         probe.click();
         probe.remove();
         return;
-      } catch (e) {}
+      } catch (e) { }
       try {
         var opened = window.open(url, "_blank", "noopener,noreferrer");
         if (opened) return;
-      } catch (e2) {}
+      } catch (e2) { }
     }
     try {
       window.open(url, "_blank", "noopener,noreferrer");
@@ -2766,7 +2768,7 @@
   function storePaidUntil(value) {
     try {
       if (value) localStorage.setItem(PAID_UNTIL_KEY, String(value));
-    } catch (e) {}
+    } catch (e) { }
   }
 
   /** Серверный короткий ID после claim. Пусто — устройство ещё не привязано. */
@@ -2776,7 +2778,7 @@
       if (fromCookie && fromCookie.length >= 6) {
         try {
           localStorage.setItem(LICENSE_DEVICE_KEY, fromCookie);
-        } catch (e) {}
+        } catch (e) { }
         return fromCookie;
       }
       var existing = localStorage.getItem(LICENSE_DEVICE_KEY);
@@ -2789,7 +2791,7 @@
         if (fromJson && fromJson.device_id && String(fromJson.device_id).trim().length >= 6) {
           return persistLicenseDeviceId(String(fromJson.device_id).trim());
         }
-      } catch (e) {}
+      } catch (e) { }
       return "";
     } catch (e) {
       return "";
@@ -2806,7 +2808,7 @@
     var current = "";
     try {
       current = String(localStorage.getItem(LICENSE_DEVICE_KEY) || "").trim();
-    } catch (e) {}
+    } catch (e) { }
     if (current.length >= 6) {
       writeDeviceCookie(current);
       return Promise.resolve(current);
@@ -2837,7 +2839,7 @@
     var timer = window.setTimeout(function () {
       try {
         if (ctrl) ctrl.abort();
-      } catch (e) {}
+      } catch (e) { }
     }, 20000);
     // Cross-origin с github.io: без cookies (иначе Safari режет CORS * + credentials).
     return fetch(LICENSE_API_BASE + path, {
@@ -3095,7 +3097,7 @@
       sessionStorage.removeItem(LICENSE_DOWNLOAD_LINKS_KEY);
       sessionStorage.removeItem(LICENSE_LAUNCH_KEY);
       localStorage.removeItem(LICENSE_SESSION_KEY);
-    } catch (e) {}
+    } catch (e) { }
     clearLaunchUnlock();
     ensurePlatformDownloadHint(false);
     clearDownloadLimitWarning();
@@ -3117,7 +3119,7 @@
     var shownAt = 0;
     try {
       shownAt = Number(sessionStorage.getItem(DOWNLOAD_MENU_SHOWN_KEY) || 0);
-    } catch (e) {}
+    } catch (e) { }
     if (!shownAt) return;
     var left = shownAt + 3600000 - Date.now();
     if (left <= 0) {
@@ -3153,7 +3155,7 @@
         if (login) {
           persistLicenseIdentity(login, localStorage.getItem(LICENSE_AUTH_OTP_KEY) === "1");
         }
-      } catch (e) {}
+      } catch (e) { }
       return data;
     });
   }
@@ -3196,7 +3198,7 @@
       '<label class="account-modal__field"><span>Активный пароль</span><input name="current_password" type="text" autocomplete="current-password" minlength="6" maxlength="128" placeholder="Введите текущий для смены"/></label>' +
       passwordFieldHtml("new_password", "Новый пароль", false, true).replace(/auth-gate__/g, "account-modal__") +
       '<label class="account-modal__field"><span>E-mail</span><input name="email" type="email" autocomplete="email" maxlength="255"/></label>' +
-          emailOtpCheckboxHtml(false, true).replace(/auth-gate__/g, "account-modal__") +
+      emailOtpCheckboxHtml(false, true).replace(/auth-gate__/g, "account-modal__") +
       '<label class="account-modal__field"><span>Подписка</span><input name="subscription" readonly tabindex="-1"/></label>' +
       '<p class="account-modal__error" data-account-error hidden></p>' +
       '<button class="platform-button account-modal__save" type="submit"><span>Сохранить</span></button>' +
@@ -3254,9 +3256,9 @@
               else {
                 try {
                   localStorage.setItem(LICENSE_AUTH_OTP_KEY, data.auth_by_email_otp ? "1" : "0");
-                } catch (e) {}
+                } catch (e) { }
               }
-            } catch (e) {}
+            } catch (e) { }
             if (data.subscription && data.subscription.paid_until) {
               storePaidUntil(data.subscription.paid_until);
             }
@@ -3420,7 +3422,7 @@
       if (!sessionStorage.getItem(DOWNLOAD_MENU_SHOWN_KEY)) {
         sessionStorage.setItem(DOWNLOAD_MENU_SHOWN_KEY, String(Date.now()));
       }
-    } catch (e) {}
+    } catch (e) { }
     wirePlatformMenuWithDownloadLinks();
     scheduleDownloadMenuExpiry();
   }
@@ -3467,7 +3469,7 @@
     if (savedLogin) {
       try {
         localStorage.setItem(LICENSE_LOGIN_KEY, savedLogin);
-      } catch (e) {}
+      } catch (e) { }
     }
     var mode = loginOnly ? "login" : savedLogin ? "login" : "register";
     var otpSentHint = "";
@@ -3496,11 +3498,11 @@
       try {
         sessionStorage.removeItem(DOWNLOAD_MENU_SHOWN_KEY);
         sessionStorage.setItem(DOWNLOAD_MENU_SHOWN_KEY, String(Date.now()));
-      } catch (e) {}
+      } catch (e) { }
       var links = (data && data.download_links) || {};
       try {
         sessionStorage.setItem(LICENSE_DOWNLOAD_LINKS_KEY, JSON.stringify(links));
-      } catch (e) {}
+      } catch (e) { }
       return activatePwaDownloadCookie(links.pwa).then(function () {
         gate.setAttribute("hidden", "hidden");
         onUnlocked();
@@ -3512,7 +3514,7 @@
       try {
         var active = document.activeElement;
         if (active && active.blur) active.blur();
-      } catch (e) {}
+      } catch (e) { }
       var title =
         mode === "register" ? "Регистрация" : mode === "otp" ? "Код подтверждения" : "Вход";
       var showSubmit = !(mode === "login" && subscriptionBlocked);
@@ -3527,13 +3529,13 @@
       var tabsHtml = loginOnly
         ? ""
         : '<div class="auth-gate__tabs" role="tablist">' +
-          '<button type="button" class="auth-gate__tab' +
-          (mode !== "register" ? " auth-gate__tab--active" : "") +
-          '" data-auth-mode="login">Вход</button>' +
-          '<button type="button" class="auth-gate__tab' +
-          (mode === "register" ? " auth-gate__tab--active" : "") +
-          '" data-auth-mode="register">Регистрация</button>' +
-          "</div>";
+        '<button type="button" class="auth-gate__tab' +
+        (mode !== "register" ? " auth-gate__tab--active" : "") +
+        '" data-auth-mode="login">Вход</button>' +
+        '<button type="button" class="auth-gate__tab' +
+        (mode === "register" ? " auth-gate__tab--active" : "") +
+        '" data-auth-mode="register">Регистрация</button>' +
+        "</div>";
       var bodyHtml = "";
       if (mode === "register") {
         bodyHtml =
@@ -3569,8 +3571,8 @@
         "</p>" +
         (showSubmit
           ? '<button class="platform-button auth-gate__submit" type="submit"><span>' +
-            submitLabel +
-            "</span></button>"
+          submitLabel +
+          "</span></button>"
           : "") +
         "</form>";
       var formEl = gate.querySelector(".auth-gate__form");
@@ -3585,7 +3587,7 @@
           loginForce.value = savedLogin;
           try {
             loginForce.setAttribute("value", savedLogin);
-          } catch (e) {}
+          } catch (e) { }
         }
         scheduleAuthModeSync(0);
       }
@@ -3705,7 +3707,7 @@
               try {
                 var len = loginEl.value.length;
                 loginEl.setSelectionRange(len, len);
-              } catch (e) {}
+              } catch (e) { }
             }
           }, 40);
           return;
@@ -3733,7 +3735,7 @@
       if (submitBtn) submitBtn.disabled = true;
       try {
         if (document.activeElement && document.activeElement.blur) document.activeElement.blur();
-      } catch (e) {}
+      } catch (e) { }
       var loginInput = form.querySelector('input[name="login"]');
       var passwordInput = form.querySelector('input[name="password"]');
       var emailInput = form.querySelector('input[name="email"]');
@@ -3880,7 +3882,7 @@
             preferOtp = /вход по коду на e-mail|Получить код/i.test(message);
             try {
               localStorage.setItem(LICENSE_AUTH_OTP_KEY, preferOtp ? "1" : "0");
-            } catch (e) {}
+            } catch (e) { }
             paintSafe();
             window.setTimeout(function () {
               setError(message);
@@ -3895,7 +3897,7 @@
               try {
                 otpInput.value = "";
                 otpInput.focus();
-              } catch (e) {}
+              } catch (e) { }
             }
             return;
           }
@@ -3921,13 +3923,13 @@
     try {
       pendingAccess = sessionStorage.getItem("btca101.pendingPwaAccess") === "1";
       if (pendingAccess) sessionStorage.removeItem("btca101.pendingPwaAccess");
-    } catch (e) {}
+    } catch (e) { }
 
     function showAuthGateFresh() {
       try {
         sessionStorage.removeItem(LICENSE_DOWNLOAD_LINKS_KEY);
         sessionStorage.removeItem(DOWNLOAD_MENU_SHOWN_KEY);
-      } catch (e) {}
+      } catch (e) { }
       if (downloadMenuExpireTimer) {
         window.clearTimeout(downloadMenuExpireTimer);
         downloadMenuExpireTimer = null;
@@ -3947,7 +3949,7 @@
         });
         try {
           window.scrollTo(0, 0);
-        } catch (e) {}
+        } catch (e) { }
       }
       // Загрузочная (в т.ч. Safari): перезагрузка всегда → «Вход в систему».
       showLoginForm();
@@ -4074,7 +4076,7 @@
         if (ready) return;
         return repairStandaloneShell({ deferHome: true });
       })
-      .catch(function () {});
+      .catch(function () { });
   }
 
   function parseDateRuValue(value) {
@@ -4223,7 +4225,7 @@
     if (!isStandalone()) return Promise.resolve({ ok: true, skipped: true });
     try {
       renderHomeSplashIndicator(8);
-    } catch (e) {}
+    } catch (e) { }
     var updateCheck = fetchRemoteAppShellPayload()
       .then(function (payload) {
         var remoteDate = remoteLatestVersionDate(payload);
@@ -4236,7 +4238,7 @@
 
     try {
       renderHomeSplashIndicator(18);
-    } catch (e) {}
+    } catch (e) { }
 
     return licensePost("/v1/auth/device-session", {
       device_id: getLicenseDeviceId() || "",
@@ -4248,7 +4250,7 @@
       .then(function (data) {
         try {
           renderHomeSplashIndicator(40);
-        } catch (e) {}
+        } catch (e) { }
         // Дата на стартовой = дата пакета на устройстве (claim), не глобальный деплой.
         // Не перетираем локальную дату датой деплоя — иначе пропадёт «Есть обновление».
         if (data && data.version_date && !readStoredPackageReleaseDate()) {
@@ -4259,7 +4261,7 @@
           clearLaunchUnlock();
           try {
             localStorage.removeItem(LICENSE_SESSION_KEY);
-          } catch (e) {}
+          } catch (e) { }
           return {
             ok: false,
             reason: "inactive",
@@ -4271,7 +4273,7 @@
           clearLaunchUnlock();
           try {
             localStorage.removeItem(LICENSE_SESSION_KEY);
-          } catch (e) {}
+          } catch (e) { }
           return {
             ok: false,
             reason: "unbound",
@@ -4377,8 +4379,8 @@
           return Promise.all(
             (regs || []).map(function (reg) {
               var scope = String((reg && reg.scope) || "");
-              if (/\/offline\/?$/.test(scope.replace(/\/+$/, "/") )) {
-                return reg.unregister().catch(function () {});
+              if (/\/offline\/?$/.test(scope.replace(/\/+$/, "/"))) {
+                return reg.unregister().catch(function () { });
               }
               return null;
             })
@@ -4397,7 +4399,7 @@
     var end = pctEnd == null ? 15 : pctEnd;
     var emitProgress = typeof onProgress === "function"
       ? onProgress
-      : (start !== end ? resolveProgressCallback(onProgress) : function () {});
+      : (start !== end ? resolveProgressCallback(onProgress) : function () { });
     return caches.open(INSTALL_CACHE).then(function (cache) {
       var documentAssets = Array.prototype.slice
         .call(document.querySelectorAll("script[src], link[rel='stylesheet'][href], link[rel='modulepreload'][href]"))
@@ -4431,8 +4433,6 @@
     if (lower.endsWith(".webp")) return "image/webp";
     if (lower.endsWith(".avif")) return "image/avif";
     if (lower.endsWith(".mp4")) return "video/mp4";
-    if (lower.endsWith(".webm")) return "video/webm";
-    if (lower.endsWith(".mov")) return "video/quicktime";
     if (lower.endsWith(".json")) return "application/json; charset=utf-8";
     return "application/octet-stream";
   }
@@ -4477,7 +4477,7 @@
         });
       });
     }).catch(function (error) {
-      return reader.close().catch(function () {}).then(function () {
+      return reader.close().catch(function () { }).then(function () {
         throw error;
       });
     });
@@ -4685,7 +4685,7 @@
                 localStorage.getItem(LICENSE_AUTH_OTP_KEY) === "1"
               );
             }
-          } catch (e) {}
+          } catch (e) { }
           renderReady();
           preloadLevel3ModuleSilently();
         });
@@ -4847,7 +4847,7 @@
     // Browser nonce для входа/OTP; серверный device_id появится только после claim.
     try {
       getBrowserClientId();
-    } catch (e) {}
+    } catch (e) { }
     // iPad: Cache/SW могут не resolve — UI сразу, иначе «зависает».
     paintBootUi();
     bindShellUi();

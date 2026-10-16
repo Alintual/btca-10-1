@@ -983,6 +983,18 @@
     return file ? mediaUrl("level3/polez", file) : "";
   }
 
+  function isPolezVideoFile(file) {
+    return /\.mp4$/i.test(String(file || ""));
+  }
+
+  function polezSheetMediaHtml(url, label, file) {
+    if (isPolezVideoFile(file)) {
+      return '<video class="btca-l1-polez-video" src="' + escapeHtml(url) +
+        '" controls playsinline preload="metadata" title="' + escapeHtml(label) + '"></video>';
+    }
+    return '<img src="' + escapeHtml(url) + '" alt="' + escapeHtml(label) + '" loading="lazy" draggable="false">';
+  }
+
   function brandingUrl(name) {
     return assetPath(name);
   }
@@ -3491,25 +3503,19 @@
     if (isPolezSheetFigureItem(item)) {
       var row = polezFigRow(item.figKey);
       var label = row ? row.label : item.title;
-      var media = row && row.file ? polezImageUrl(row.file) : "";
+      var mediaFile = row && row.file ? row.file : "";
+      var media = mediaFile ? polezImageUrl(mediaFile) : "";
       if (!media) return renderPolezSourcePanel(item);
-      var isVideo = /\.(mp4|webm|mov)(\?|$)/i.test(String(row.file || "")) || row.kind === "video";
-      var mediaHtml = isVideo
-        ? '<video class="btca-l1-polez-video" src="' + escapeHtml(media) +
-          '" controls playsinline preload="metadata"></video>'
-        : '<img src="' + escapeHtml(media) + '" alt="' + escapeHtml(label) +
-          '" loading="lazy" draggable="false">';
-      var frameClass = "btca-l1-polez-card-frame" + (isVideo ? "" : " btca-l1-nav-card-frame--swipe");
-      var frameAttr = isVideo
-        ? ""
-        : ' data-btca-polez-image-swipe="' + escapeHtml(String(item.hot)) + '"';
+      var imageHtml = polezSheetMediaHtml(media, label, mediaFile);
+      var frameClass = "btca-l1-polez-card-frame btca-l1-nav-card-frame--swipe";
+      var frameAttr = ' data-btca-polez-image-swipe="' + escapeHtml(String(item.hot)) + '"';
       return '<article class="btca-l1-polez-card">' +
         '<div class="btca-l1-polez-card-inner">' +
         '<div class="btca-l1-nav-card-top">' +
         '<button type="button" class="btca-l1-pick" data-btca-polez-desc="' + escapeHtml(String(item.hot)) + '">' +
         '<span class="btca-l1-pick__icon" aria-hidden="true">📖</span>' +
         '<span class="btca-l1-pick__text">Описание</span></button></div>' +
-        '<div class="' + frameClass + '"' + frameAttr + ">" + mediaHtml + "</div></div></article>";
+        '<div class="' + frameClass + '"' + frameAttr + ">" + imageHtml + "</div></div></article>";
     }
     return renderPolezSourcePanel(item);
   }
@@ -3788,7 +3794,7 @@
       greenArrowHtml({ dataAttr: 'data-btca-polez-img-landscape aria-label="Просмотр в альбомной ориентации"' }) +
       "</header>" +
       '<div class="btca-l1-image-view" data-btca-polez-img-swipe>' +
-      '<img src="' + escapeHtml(url) + '" alt="' + escapeHtml(row.label) + '"></div>';
+      polezSheetMediaHtml(url, row.label, row.file) + "</div>";
     state.root.appendChild(overlay);
 
     function closePortrait() {
@@ -3820,7 +3826,7 @@
       '<header class="btca-l1-overlay__header btca-l1-overlay__header--forma-image btca-l1-overlay__header--compact">' +
       '<button type="button" class="btca-back-button" data-btca-overlay-close aria-label="Назад">←</button>' +
       "</header>" +
-      '<div class="btca-l1-image-view"><img src="' + escapeHtml(url) + '" alt="' + escapeHtml(row.label) + '"></div>';
+      '<div class="btca-l1-image-view">' + polezSheetMediaHtml(url, row.label, row.file) + "</div>";
     state.root.appendChild(overlay);
     function closeOverlay() {
       setBazaTableLandscape(false);
