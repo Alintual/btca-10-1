@@ -3,7 +3,7 @@
 
   var DB = window.BTCA_LEVEL3_DB;
   var BAZA = window.BTCA_LEVEL3_BAZA;
-  var VERSION = "10.1.89";
+  var VERSION = "10.1.90";
   var BRANDING_UP = "branding/up.png";
   var BRANDING_BAZA = "branding/baza.png";
   var BRANDING_INFO = "branding/info.png";
@@ -1909,9 +1909,11 @@
   function polezItemMatchesSearch(item, searchRaw) {
     var q = String(searchRaw || "").trim();
     if (!q) return true;
-    // Словарь: совпадения по всему тексту Описания (термины + определения)
+    // Словарь: название пункта + весь текст Описания; подсветка — только в Описании
     if (isPolezDictionaryItem(item)) {
       if (/^\d+$/.test(q)) return false;
+      var nqDict = normalizePolezSearch(q);
+      if (nqDict && normalizePolezSearch(item.title).indexOf(nqDict) >= 0) return true;
       return polezDictionaryContentMatch(item, q);
     }
     // Только по горячему номеру (точное совпадение) или по фразе целиком в названии пункта
@@ -4083,12 +4085,10 @@
     document.body.classList.add("btca-screen-mode");
     var overlay = document.createElement("div");
     overlay.className = "btca-polez-desc-root";
+    // Подсветка поиска — только в Описании Словаря
     var bodyHtml = isPolezDictionaryItem(item)
       ? formatPolezDictionaryBody(text, searchQ)
-      : highlightInHtmlText(
-          formatPolezSourceBody(text, item.docId) + polezInlineFiguresHtml(figures),
-          searchQ,
-        );
+      : formatPolezSourceBody(text, item.docId) + polezInlineFiguresHtml(figures);
     var hotHtml = isPolezDictionaryItem(item) || item.hot == null || item.hot === ""
       ? '<span aria-hidden="true"></span>'
       : '<span class="btca-polez-desc-header__hot">' + escapeHtml(formatPolezHotDisplay(item.hot)) + " 🔥</span>";
@@ -4112,8 +4112,8 @@
     });
     var content = state.root.querySelector("[data-btca-level3-content]");
     bindPolezSourceLinks(overlay, content);
-    if (String(searchQ || "").trim()) {
-      // Сверху вниз до первого совпадения
+    if (isPolezDictionaryItem(item) && String(searchQ || "").trim()) {
+      // Сверху вниз до первого совпадения в Словаре
       overlay.scrollTop = 0;
       window.setTimeout(function () {
         var firstHit = overlay.querySelector(".btca-l1-polez-dict-hit");
