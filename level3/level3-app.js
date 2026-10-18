@@ -3,9 +3,10 @@
 
   var DB = window.BTCA_LEVEL3_DB;
   var BAZA = window.BTCA_LEVEL3_BAZA;
-  var VERSION = "10.1.83";
+  var VERSION = "10.1.84";
   var BRANDING_UP = "branding/up.png";
   var BRANDING_BAZA = "branding/baza.png";
+  var BRANDING_INFO = "branding/info.png";
   var TRAILING_SLOT_W = 112;
   var NAV_FILTER_ALL = "all";
   var POLEZ_ALL = "all";
@@ -25,6 +26,12 @@
     var tracking = false;
     el.addEventListener("touchstart", function (event) {
       if (!event.touches || event.touches.length !== 1) return;
+      var t = event.target;
+      // Не перехватывать жесты на <video> / controls — иначе не играет медиа
+      if (t && (t.closest && (t.closest("video") || t.closest("audio")))) {
+        tracking = false;
+        return;
+      }
       startX = event.touches[0].clientX;
       startY = event.touches[0].clientY;
       tracking = true;
@@ -52,10 +59,10 @@
   }
 
   var SHEETS = [
-    { key: "forma", label: "Форма", title: "Форма ввода", emoji: "📊" },
-    { key: "baza", label: "База", title: "База данных", emoji: "" },
-    { key: "nav", label: "Упражнения", title: "Упражнения", emoji: "♻️" },
-    { key: "polez", label: "Полезности", title: "Полезности", emoji: "📚" },
+    { key: "forma", label: "Форма", title: "Форма ввода" },
+    { key: "baza", label: "База", title: "База данных" },
+    { key: "nav", label: "Упражнения", title: "Упражнения" },
+    { key: "polez", label: "Полезности", title: "Полезности" },
   ];
 
   var bootPromise = null;
@@ -990,9 +997,42 @@
   function polezSheetMediaHtml(url, label, file) {
     if (isPolezVideoFile(file)) {
       return '<video class="btca-l1-polez-video" src="' + escapeHtml(url) +
-        '" controls playsinline preload="metadata" title="' + escapeHtml(label) + '"></video>';
+        '" type="video/mp4" controls playsinline webkit-playsinline preload="metadata" ' +
+        'controlslist="nodownload" title="' + escapeHtml(label) + '"></video>';
     }
     return '<img src="' + escapeHtml(url) + '" alt="' + escapeHtml(label) + '" loading="lazy" draggable="false">';
+  }
+
+  function closeSheetInfoOverlay() {
+    var overlay = state.root && state.root.querySelector(".btca-sheet-info-root");
+    if (overlay) overlay.remove();
+  }
+
+  function openSheetInfoOverlay() {
+    var sheet = sheetByKey(state.ui.tab);
+    if (!sheet) return;
+    closeSheetInfoOverlay();
+    var overlay = document.createElement("div");
+    overlay.className = "btca-sheet-info-root";
+    overlay.innerHTML =
+      '<button type="button" class="btca-sheet-info-backdrop" data-btca-sheet-info-close aria-label="Закрыть"></button>' +
+      '<div class="btca-sheet-info-panel" role="dialog" aria-modal="true">' +
+      '<h3 class="btca-sheet-info-panel__title">' + escapeHtml(sheet.title + " - Функционал") + "</h3>" +
+      '<div class="btca-sheet-info-panel__body">В разработке...</div></div>';
+    state.root.appendChild(overlay);
+    overlay.querySelectorAll("[data-btca-sheet-info-close]").forEach(function (el) {
+      el.addEventListener("click", closeSheetInfoOverlay);
+    });
+    bindHorizontalSwipe(overlay.querySelector(".btca-sheet-info-panel") || overlay, {
+      onSwipeLeft: closeSheetInfoOverlay,
+    });
+  }
+
+  function sheetInfoIconHtml() {
+    return (
+      '<button type="button" class="btca-level1-titlebar__info" data-btca-sheet-info aria-label="Инфо">' +
+      '<img src="' + escapeHtml(brandingUrl(BRANDING_INFO)) + '" alt="" draggable="false"></button>'
+    );
   }
 
   function brandingUrl(name) {
@@ -1760,10 +1800,25 @@
         options.push({
           value: String(it.hot),
           label: it.hot + " # " + it.title,
+          catalogHot: String(it.hot),
+          catalogTitle: it.title,
         });
       });
     }
     return options;
+  }
+
+  function polezSectionTitleForItem(item) {
+    if (!item) return "";
+    if (item.sectionTitle) return String(item.sectionTitle);
+    var sections = polezNavSections();
+    for (var s = 0; s < sections.length; s += 1) {
+      var items = sections[s].items || [];
+      for (var i = 0; i < items.length; i += 1) {
+        if (String(items[i].hot) === String(item.hot)) return sections[s].title || "";
+      }
+    }
+    return "";
   }
 
   function polezSourceText(hotKey) {
@@ -1818,10 +1873,12 @@
         '<div class="btca-level1-titlebar__row btca-level1-titlebar__row--baza">' +
         '<div class="btca-level1-titlebar__title-group btca-level1-titlebar__title-group--baza">' +
         '<span class="btca-level1-titlebar__title">' + escapeHtml(sheet.title) + "</span>" +
-        '<img class="btca-level1-titlebar__baza-icon" src="' + escapeHtml(brandingUrl(BRANDING_BAZA)) +
-        '" alt="" draggable="false"></div>' +
+        sheetInfoIconHtml() +
+        "</div>" +
         '<button type="button" class="btca-level1-baza-menu" data-btca-baza-menu aria-label="Меню базы">' +
         "<span></span><span></span><span></span></button></div>";
+      var infoBtnBaza = titlebar.querySelector("[data-btca-sheet-info]");
+      if (infoBtnBaza) infoBtnBaza.addEventListener("click", openSheetInfoOverlay);
       return;
     }
 
@@ -1829,17 +1886,15 @@
       '<div class="btca-level1-titlebar__row">' +
       '<div class="btca-level1-titlebar__title-group">' +
       '<span class="btca-level1-titlebar__title">' + escapeHtml(sheet.title) + "</span>" +
-      (sheet.emoji ? '<span class="btca-level1-titlebar__emoji' +
-        (state.ui.tab === "forma" ? " btca-level1-titlebar__emoji--forma" :
-          state.ui.tab === "nav" ? " btca-level1-titlebar__emoji--nav" :
-            state.ui.tab === "polez" ? " btca-level1-titlebar__emoji--polez" : "") +
-        '" aria-hidden="true">' + sheet.emoji + "</span>" : "") +
+      sheetInfoIconHtml() +
       "</div>" +
       '<span class="btca-level1-titlebar__spacer"></span>' +
       '<span class="btca-level1-titlebar__status' +
       (status.tone === "muted" ? " btca-level1-titlebar__status--muted" : "") +
       (status.tone === "error" ? " btca-level1-titlebar__status--error" : "") +
       '">' + escapeHtml(status.text) + "</span></div>";
+    var infoBtn = titlebar.querySelector("[data-btca-sheet-info]");
+    if (infoBtn) infoBtn.addEventListener("click", openSheetInfoOverlay);
   }
 
   function closePicker() {
@@ -1865,7 +1920,8 @@
             "</div>"
           );
         }
-        return '<div class="' + groupClass + '">' + escapeHtml(opt.label) + "</div>";
+        return '<div class="' + groupClass + '"><span class="btca-level1-picker__group-text">' +
+          escapeHtml(opt.label) + "</span></div>";
       }
       var optSource = opt.source || "own";
       var pickerCurrent = bazaExercisePickerValue(current, currentSource || "own");
@@ -1875,12 +1931,20 @@
       var itemClass = "btca-level1-picker__item";
       if (pickerOpts.catalogList) itemClass += " btca-level1-picker__item--catalog";
       if (itemExtraClass) itemClass += itemExtraClass;
+      var textHtml;
+      if (pickerOpts.catalogList && opt.catalogHot != null) {
+        textHtml =
+          '<span class="btca-level1-picker__text btca-level1-picker__text--wrap">' +
+          '<span class="btca-level1-picker__hot">' + escapeHtml(String(opt.catalogHot)) + " #</span> " +
+          '<span class="btca-level1-picker__title">' + escapeHtml(String(opt.catalogTitle || "")) + "</span></span>";
+      } else {
+        textHtml = '<span class="btca-level1-picker__text">' + escapeHtml(opt.label) + "</span>";
+      }
       return '<button type="button" class="' + itemClass +
         (active ? " btca-level1-picker__item--active" : "") +
         '" data-btca-picker-value="' + escapeHtml(opt.value) +
         '" data-btca-picker-source="' + escapeHtml(optSource) +
-        '"><span class="btca-level1-picker__text">' +
-        escapeHtml(opt.label) + "</span></button>";
+        '">' + textHtml + "</button>";
     }).join("");
   }
 
@@ -3471,21 +3535,28 @@
     }).join("");
   }
 
-  /** Рисунок на листе — только для 1.4 (figKey). 2.x → текст Описания с рисунками внизу. */
+  /** Медиа на листе — 1.4 fig/video (не links). */
   function isPolezSheetFigureItem(item) {
     return !!(item && item.docId === "1.4" && item.figKey && item.figKey !== "links");
   }
 
-  function renderPolezSourcePanel(item) {
-    var entry = polezSourceEntry(item.hot);
-    var text = entry && entry.text ? String(entry.text) : polezSourceText(item.hot);
-    var figures = entry && Array.isArray(entry.figures) ? entry.figures : [];
-    return '<section class="btca-l1-polez-source" data-btca-polez-source>' +
-      '<h3 class="btca-l1-polez-source__title">' + escapeHtml(item.title) + "</h3>" +
-      '<div class="btca-l1-polez-source__body">' +
-      formatPolezSourceBody(text, item.docId) +
-      polezInlineFiguresHtml(figures) +
-      "</div></section>";
+  function renderPolezDescCard(item, mediaHtml, swipeHot) {
+    var frameClass = "btca-l1-polez-card-frame";
+    var frameAttr = "";
+    if (mediaHtml && swipeHot && !isPolezVideoFile((polezFigRow(item.figKey) || {}).file)) {
+      frameClass += " btca-l1-nav-card-frame--swipe";
+      frameAttr = ' data-btca-polez-image-swipe="' + escapeHtml(String(swipeHot)) + '"';
+    } else if (mediaHtml && swipeHot) {
+      frameAttr = ' data-btca-polez-image-swipe="' + escapeHtml(String(swipeHot)) + '"';
+    }
+    return '<article class="btca-l1-polez-card">' +
+      '<div class="btca-l1-polez-card-inner">' +
+      '<div class="btca-l1-nav-card-top">' +
+      '<button type="button" class="btca-l1-pick" data-btca-polez-desc="' + escapeHtml(String(item.hot)) + '">' +
+      '<span class="btca-l1-pick__icon" aria-hidden="true">📖</span>' +
+      '<span class="btca-l1-pick__text">Описание</span></button></div>' +
+      (mediaHtml ? '<div class="' + frameClass + '"' + frameAttr + ">" + mediaHtml + "</div>" : "") +
+      "</div></article>";
   }
 
   function renderPolezBodyHtml(catalogKey) {
@@ -3505,19 +3576,11 @@
       var label = row ? row.label : item.title;
       var mediaFile = row && row.file ? row.file : "";
       var media = mediaFile ? polezImageUrl(mediaFile) : "";
-      if (!media) return renderPolezSourcePanel(item);
-      var imageHtml = polezSheetMediaHtml(media, label, mediaFile);
-      var frameClass = "btca-l1-polez-card-frame btca-l1-nav-card-frame--swipe";
-      var frameAttr = ' data-btca-polez-image-swipe="' + escapeHtml(String(item.hot)) + '"';
-      return '<article class="btca-l1-polez-card">' +
-        '<div class="btca-l1-polez-card-inner">' +
-        '<div class="btca-l1-nav-card-top">' +
-        '<button type="button" class="btca-l1-pick" data-btca-polez-desc="' + escapeHtml(String(item.hot)) + '">' +
-        '<span class="btca-l1-pick__icon" aria-hidden="true">📖</span>' +
-        '<span class="btca-l1-pick__text">Описание</span></button></div>' +
-        '<div class="' + frameClass + '"' + frameAttr + ">" + imageHtml + "</div></div></article>";
+      if (!media) return renderPolezDescCard(item, "", "");
+      return renderPolezDescCard(item, polezSheetMediaHtml(media, label, mediaFile), item.hot);
     }
-    return renderPolezSourcePanel(item);
+    // 2.x и текстовые пункты 1.4 — кнопка Описание (текст в экране Описания)
+    return renderPolezDescCard(item, "", "");
   }
 
   function renderPolezTab(content) {
@@ -3753,16 +3816,17 @@
     var text = entry && entry.text ? String(entry.text) : "";
     if (!item || !text) return;
     var figures = entry && Array.isArray(entry.figures) ? entry.figures : [];
+    var sectionTitle = polezSectionTitleForItem(item);
     document.body.classList.add("btca-screen-mode");
     var overlay = document.createElement("div");
     overlay.className = "btca-polez-desc-root";
     var bodyHtml = formatPolezSourceBody(text, item.docId) + polezInlineFiguresHtml(figures);
     overlay.innerHTML =
       '<main class="btca-about-screen">' +
-      '<header class="btca-screen-header">' +
+      '<header class="btca-screen-header btca-polez-desc-header">' +
       '<button type="button" class="btca-back-button" data-btca-overlay-close aria-label="Назад">←</button>' +
-      '<span aria-hidden="true"></span>' +
-      '<span aria-hidden="true"></span>' +
+      '<strong class="btca-polez-desc-header__section">' + escapeHtml(sectionTitle) + "</strong>" +
+      '<span class="btca-polez-desc-header__hot">' + escapeHtml(String(item.hot)) + " 🔥</span>" +
       "</header>" +
       '<section class="btca-about-content"><h1>' + escapeHtml(item.title) + "</h1>" +
       '<div class="btca-l1-polez-source__body">' + bodyHtml + "</div></section></main>";

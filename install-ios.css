@@ -1735,9 +1735,25 @@ body.btca-apple-comfort.btca-force-landscape-table #root {
 
 .btca-level1-picker--anchored .btca-level1-picker__group--section {
   border-bottom: none;
+  height: auto;
+  min-height: var(--btca-l1-picker-group, calc(40rem / 17));
+  max-height: none;
+  padding: 8px 10px;
   color: rgba(17, 24, 39, 0.72);
   background: transparent;
   font-weight: 400;
+  white-space: normal;
+  overflow: visible;
+  text-overflow: clip;
+}
+
+.btca-level1-picker--anchored .btca-level1-picker__group-text {
+  display: block;
+  width: 100%;
+  white-space: normal;
+  overflow: visible;
+  text-align: center;
+  word-break: break-word;
 }
 
 body.btca-level3-mode .btca-level1-picker--anchored .btca-level1-picker__group--section {
@@ -1848,6 +1864,34 @@ body.btca-apple-comfort .btca-back-button {
   color: #ffffff;
   background: #1a4854;
   font-size: 1rem;
+}
+
+.btca-polez-desc-header {
+  grid-template-columns: 44px minmax(0, 1fr) auto;
+  column-gap: 6px;
+}
+
+.btca-polez-desc-header__section {
+  justify-self: center;
+  max-width: 100%;
+  overflow: hidden;
+  color: #ffffff;
+  font-size: 0.95rem;
+  font-weight: 600;
+  line-height: 1.2;
+  text-align: center;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.btca-polez-desc-header__hot {
+  justify-self: end;
+  flex-shrink: 0;
+  color: #ffffff;
+  font-size: 0.95rem;
+  font-weight: 600;
+  line-height: 1.2;
+  white-space: nowrap;
 }
 
 .btca-back-button {
@@ -2167,24 +2211,78 @@ body.btca-apple-comfort .btca-l1-chart-panel {
   white-space: nowrap;
 }
 
-.btca-level1-titlebar__emoji {
+.btca-level1-titlebar__info {
   flex-shrink: 0;
-  font-size: calc(20rem / 17);
-  line-height: calc(20rem / 17);
-}
-
-.btca-level1-titlebar__emoji--forma {
-  margin-top: 4px;
-  font-size: calc(17rem / 17);
-  line-height: calc(17rem / 17);
-}
-
-.btca-level1-titlebar__emoji--nav {
-  margin-top: 4px;
-}
-
-.btca-level1-titlebar__emoji--polez {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   margin-top: 2px;
+  margin-left: 4px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.btca-level1-titlebar__info img {
+  display: block;
+  width: calc(22rem / 17);
+  height: calc(22rem / 17);
+  object-fit: contain;
+}
+
+.btca-sheet-info-root {
+  position: absolute;
+  inset: 0;
+  z-index: 90;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  pointer-events: auto;
+}
+
+.btca-sheet-info-backdrop {
+  position: absolute;
+  inset: 0;
+  border: 0;
+  background: rgba(17, 24, 39, 0.28);
+  cursor: pointer;
+}
+
+.btca-sheet-info-panel {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  height: 50vh;
+  max-height: 50vh;
+  margin-top: 0;
+  padding: max(12px, env(safe-area-inset-top)) 14px 16px;
+  overflow: auto;
+  -webkit-overflow-scrolling: touch;
+  color: #111111;
+  background: #c5d9dc;
+  border-radius: 0 0 14px 14px;
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.18);
+}
+
+.btca-sheet-info-panel__title {
+  margin: 0 0 12px;
+  color: #0a0a0a;
+  font-size: 1rem;
+  font-weight: 600;
+  line-height: calc(26rem / 17);
+  text-align: center;
+}
+
+.btca-sheet-info-panel__body {
+  color: #111111;
+  font-size: 1rem;
+  font-weight: 400;
+  line-height: calc(26rem / 17);
+  text-align: center;
 }
 
 .btca-level1-titlebar__baza-fill {
@@ -3251,6 +3349,8 @@ body.btca-apple-comfort .btca-l1-ok-input {
   max-height: 70vh;
   border-radius: 8px;
   background: #000;
+  pointer-events: auto;
+  touch-action: manipulation;
 }
 
 .btca-l1-nav-card-top {
@@ -3562,14 +3662,36 @@ body.btca-apple-comfort .btca-l1-ok-input {
 }
 
 .btca-level1-picker--anchored .btca-level1-picker__item--catalog {
+  height: auto;
+  min-height: var(--btca-l1-picker-row, calc(40rem / 17));
+  max-height: none;
+  align-items: flex-start;
   justify-content: flex-start;
-  font-weight: 600;
+  padding-top: 8px;
+  padding-bottom: 8px;
+  font-weight: 400;
   text-align: left;
 }
 
-.btca-level1-picker--anchored .btca-level1-picker__item--catalog .btca-level1-picker__text {
+.btca-level1-picker--anchored .btca-level1-picker__item--catalog .btca-level1-picker__text,
+.btca-level1-picker--anchored .btca-level1-picker__item--catalog .btca-level1-picker__text--wrap {
+  display: block;
+  width: 100%;
+  overflow: visible;
+  text-overflow: clip;
+  white-space: normal;
   text-align: left;
-  font-weight: 600;
+  font-weight: 400;
+  line-height: var(--btca-l1-lh, calc(26rem / 17));
+  word-break: break-word;
+}
+
+.btca-level1-picker--anchored .btca-level1-picker__hot {
+  font-weight: 400;
+}
+
+.btca-level1-picker--anchored .btca-level1-picker__title {
+  font-weight: 400;
 }
 
 .btca-level1-picker--anchored .btca-level1-picker__item--catalog.btca-level1-picker__item--active {
