@@ -2879,10 +2879,13 @@ body.btca-apple-comfort .btca-l1-chart-panel {
 }
 
 .btca-l1-polez-source__body mark.btca-l1-polez-dict-hit {
-  padding: 0 1px;
+  padding: 0 2px;
   border-radius: 2px;
-  color: inherit;
-  background: #ffe566;
+  color: #111111;
+  background: #ffeb3b;
+  font-weight: 700;
+  -webkit-box-decoration-break: clone;
+  box-decoration-break: clone;
 }
 
 /* В тексте Описания {N}/[N]/URL — inline (как в доке 1.4).
@@ -3598,6 +3601,11 @@ body.btca-apple-comfort .btca-l1-ok-input {
 
 .btca-level1-picker__search-input:focus {
   border-color: #ffffff;
+}
+
+.btca-level1-picker__search-input--empty {
+  color: #ff1143;
+  font-weight: 600;
 }
 
 .btca-level1-picker__search-btn {
