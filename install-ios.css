@@ -1850,6 +1850,15 @@ body.btca-apple-comfort .btca-back-button {
 .btca-polez-desc-root > .btca-about-screen {
   width: 100%;
   min-height: 100%;
+  background: #c5d9dc;
+}
+
+.btca-polez-desc-root .btca-about-content {
+  background: #c5d9dc;
+}
+
+.btca-polez-desc-root .btca-l1-polez-source__body {
+  background: transparent;
 }
 
 .btca-screen-header {
@@ -3688,12 +3697,11 @@ body.btca-apple-comfort .btca-l1-ok-input {
   color: #000000;
 }
 
-.btca-level1-picker--anchored .btca-level1-picker__item--catalog,
-.btca-level1-picker--anchored .btca-level1-picker__item--catalog-all {
+.btca-level1-picker--anchored .btca-level1-picker__item--catalog {
   flex: 0 0 auto;
-  height: auto !important;
+  height: auto;
   min-height: var(--btca-l1-picker-row, calc(40rem / 17));
-  max-height: none !important;
+  max-height: none;
   align-items: flex-start;
   justify-content: flex-start;
   padding-top: 8px;
@@ -3701,11 +3709,7 @@ body.btca-apple-comfort .btca-l1-ok-input {
   color: #000000;
   font-weight: 400;
   text-align: left;
-  white-space: normal;
-}
-
-.btca-level1-picker--anchored .btca-level1-picker__item--catalog-all .btca-level1-picker__item-title {
-  font-weight: 600;
+  overflow: visible;
 }
 
 .btca-level1-picker--anchored .btca-level1-picker__item--catalog .btca-level1-picker__text,
@@ -3729,6 +3733,14 @@ body.btca-apple-comfort .btca-l1-ok-input {
 
 .btca-level1-picker--anchored .btca-level1-picker__item-title {
   color: #000000;
+  font-weight: 600;
+}
+
+.btca-level1-picker--anchored .btca-level1-picker__item--catalog-all {
+  font-weight: 600;
+}
+
+.btca-level1-picker--anchored .btca-level1-picker__item--catalog-all .btca-level1-picker__item-title {
   font-weight: 600;
 }
 

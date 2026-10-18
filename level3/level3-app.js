@@ -986,16 +986,8 @@
     return file ? mediaUrl("level3/exercises", file) : "";
   }
 
-  function polezVideoUrl(file) {
-    if (!file) return "";
-    var rel = String(file).replace(/^videos\//, "");
-    return assetPath("level3/videos/" + rel);
-  }
-
   function polezImageUrl(file) {
-    if (!file) return "";
-    if (isPolezVideoFile(file)) return polezVideoUrl(file);
-    return mediaUrl("level3/polez", file);
+    return file ? mediaUrl("level3/polez", file) : "";
   }
 
   function isPolezVideoFile(file) {
@@ -1004,54 +996,49 @@
 
   function polezSheetMediaHtml(url, label, file) {
     if (isPolezVideoFile(file)) {
-      var unpacked = mediaUrl("level3/polez", file);
-      return '<video class="btca-l1-polez-video" src="' + escapeHtml(url) +
-        '" controls playsinline webkit-playsinline preload="auto" ' +
-        'controlslist="nodownload" title="' + escapeHtml(label) +
-        '" data-btca-video-src="' + escapeHtml(url) +
-        '" data-btca-video-fallback="' + escapeHtml(unpacked) + '"></video>';
+      // src через blob после fetch — Safari/iOS не играет video из Cache API (нет Range)
+      return '<video class="btca-l1-polez-video" data-btca-polez-video-src="' + escapeHtml(url) +
+        '" controls playsinline webkit-playsinline preload="metadata" ' +
+        'controlslist="nodownload" title="' + escapeHtml(label) + '"></video>';
     }
     return '<img src="' + escapeHtml(url) + '" alt="' + escapeHtml(label) + '" loading="lazy" draggable="false">';
   }
 
-  /** На iOS SW/Cache часто ломает mp4 — перекладываем в blob: URL. */
-  function hydratePolezVideos(root) {
+  function bindPolezVideos(root) {
     if (!root) return;
-    root.querySelectorAll("video.btca-l1-polez-video[data-btca-video-src]").forEach(function (video) {
-      if (video.getAttribute("data-btca-video-ready") === "1") return;
-      var primary = video.getAttribute("data-btca-video-src") || "";
-      var fallback = video.getAttribute("data-btca-video-fallback") || "";
-      if (!primary && !fallback) return;
-      video.setAttribute("data-btca-video-ready", "pending");
-      function applyBlob(blob) {
-        var typed =
-          blob && blob.type && String(blob.type).indexOf("video") === 0
-            ? blob
-            : new Blob([blob], { type: "video/mp4" });
-        video.src = URL.createObjectURL(typed);
-        video.setAttribute("data-btca-video-ready", "1");
-        try {
-          video.load();
-        } catch (_e) { /* ignore */ }
+    root.querySelectorAll("video.btca-l1-polez-video[data-btca-polez-video-src]").forEach(function (video) {
+      if (video.getAttribute("data-btca-video-bound")) return;
+      video.setAttribute("data-btca-video-bound", "1");
+      var src = video.getAttribute("data-btca-polez-video-src");
+      if (!src) return;
+      // Safari: Cache API без Range → blob URL. Не revoke на emptied — иначе URL
+      // отзывается в момент назначения src и play-кнопка зачёркивается.
+      fetch(src)
+        .then(function (res) {
+          if (!res.ok) throw new Error("video HTTP " + res.status);
+          return res.arrayBuffer();
+        })
+        .then(function (buf) {
+          if (!buf || !buf.byteLength) throw new Error("video empty");
+          var objUrl = URL.createObjectURL(new Blob([buf], { type: "video/mp4" }));
+          video.setAttribute("data-btca-video-blob", objUrl);
+          video.src = objUrl;
+          try { video.load(); } catch (e) { /* ignore */ }
+        })
+        .catch(function () {
+          // Прямой src из Cache API на Safari почти всегда ломается — не ставим.
+        });
+    });
+  }
+
+  function revokePolezVideoBlobs(root) {
+    if (!root) return;
+    root.querySelectorAll("video.btca-l1-polez-video[data-btca-video-blob]").forEach(function (video) {
+      var objUrl = video.getAttribute("data-btca-video-blob");
+      if (objUrl) {
+        try { URL.revokeObjectURL(objUrl); } catch (e) { /* ignore */ }
+        video.removeAttribute("data-btca-video-blob");
       }
-      function tryFetch(url, next) {
-        if (!url) {
-          if (next) return tryFetch(next, "");
-          video.setAttribute("data-btca-video-ready", "0");
-          return;
-        }
-        fetch(url)
-          .then(function (res) {
-            if (!res.ok) throw new Error("video HTTP " + res.status);
-            return res.blob();
-          })
-          .then(applyBlob)
-          .catch(function () {
-            if (next) tryFetch(next, "");
-            else video.setAttribute("data-btca-video-ready", "0");
-          });
-      }
-      tryFetch(primary, fallback);
     });
   }
 
@@ -1663,6 +1650,7 @@
   /** Новый DOM-узел скролла — гарантированный scrollTop=0 на iOS после длинного списка. */
   function remountPolezCardsHost(polezRoot, catalogKey) {
     var prev = polezRoot.querySelector("[data-btca-polez-cards]");
+    if (prev) revokePolezVideoBlobs(prev);
     var host = document.createElement("div");
     host.className = "btca-l1-tab-body btca-l1-polez-cards";
     host.setAttribute("data-btca-polez-cards", "");
@@ -1838,10 +1826,6 @@
     return item.hot + " 🔥 " + item.title;
   }
 
-  function isPolezSection1Item(item) {
-    return !!(item && String(item.sectionId || "") === "1");
-  }
-
   function normalizePolezSearch(s) {
     return String(s || "")
       .toLowerCase()
@@ -1852,15 +1836,23 @@
       .trim();
   }
 
-  function polezItemMatchesSearch(item, sectionTitle, searchRaw) {
+  function polezItemMatchesSearch(item, searchRaw) {
     var q = String(searchRaw || "").trim();
     if (!q) return true;
-    if (/^\d+$/.test(q)) return String(item.hot) === q || String(item.hot).indexOf(q) === 0;
+    // Только по горячему номеру (точное совпадение) или по фразе целиком в названии пункта
+    if (/^\d+$/.test(q)) return String(item.hot) === q;
     var nq = normalizePolezSearch(q);
     if (!nq) return true;
-    var hay = normalizePolezSearch(item.hot + " " + item.title + " " + (sectionTitle || ""));
-    var words = nq.split(" ").filter(Boolean);
-    return words.every(function (w) { return hay.indexOf(w) >= 0; });
+    return normalizePolezSearch(item.title).indexOf(nq) >= 0;
+  }
+
+  function polezSectionMatchesSearch(sectionTitle, searchRaw) {
+    var q = String(searchRaw || "").trim();
+    if (!q) return true;
+    if (/^\d+$/.test(q)) return false;
+    var nq = normalizePolezSearch(q);
+    if (!nq) return true;
+    return normalizePolezSearch(sectionTitle).indexOf(nq) >= 0;
   }
 
   function buildPolezCatalogOptions(searchRaw) {
@@ -1871,14 +1863,13 @@
       var sec = sections[s];
       var sectionTitle = sec.title || "";
       var matched = (sec.items || []).filter(function (it) {
-        return polezItemMatchesSearch(it, sectionTitle, q);
+        return polezItemMatchesSearch(it, q);
       });
-      var sectionMatches = !q || normalizePolezSearch(sectionTitle).indexOf(normalizePolezSearch(q)) >= 0;
+      var sectionMatches = !q || polezSectionMatchesSearch(sectionTitle, q);
       if (!matched.length && !sectionMatches) continue;
-      var itemsToShow = matched.length ? matched : (sec.items || []);
-      if (sectionMatches && q && !matched.length) {
-        itemsToShow = sec.items || [];
-      }
+      // Фраза в названии раздела → весь раздел; иначе только совпавшие пункты
+      var itemsToShow = sectionMatches && !/^\d+$/.test(q) ? (sec.items || []) : matched;
+      if (!itemsToShow.length && sectionMatches) itemsToShow = sec.items || [];
       options.push({
         value: "__section:" + sec.id,
         label: sectionTitle,
@@ -1919,12 +1910,12 @@
     state.ui.polez.catalogKey = value;
     applyUiPatch({ polez: { catalogKey: value } });
     renderPolezTab(content);
-    // Вне раздела 1 — сразу экран Описания (без кнопки)
-    if (value && value !== POLEZ_ALL) {
-      var picked = polezNavItemByHot(value);
-      if (picked && !isPolezSection1Item(picked) && polezSourceText(value)) {
+    var item = polezNavItemByHot(value);
+    // Вне раздела 1 Описание открывается сразу (без кнопки)
+    if (item && String(item.sectionId || "") !== "1" && value !== POLEZ_ALL) {
+      window.setTimeout(function () {
         openPolezDescription(value);
-      }
+      }, 0);
     }
   }
 
@@ -2027,19 +2018,18 @@
       var itemClass = "btca-level1-picker__item";
       if (pickerOpts.catalogList) itemClass += " btca-level1-picker__item--catalog";
       if (itemExtraClass) itemClass += itemExtraClass;
+      var textHtml;
       if (pickerOpts.catalogList && opt.catalogAll) {
         itemClass += " btca-level1-picker__item--catalog-all";
-      }
-      var textHtml;
-      if (pickerOpts.catalogList && opt.catalogHot != null) {
-        textHtml =
-          '<span class="btca-level1-picker__text btca-level1-picker__text--wrap">' +
-          '<span class="btca-level1-picker__item-hot">' + escapeHtml(String(opt.catalogHot)) + " 🔥</span> " +
-          '<span class="btca-level1-picker__item-title">' + escapeHtml(String(opt.catalogTitle || "")) + "</span></span>";
-      } else if (pickerOpts.catalogList && opt.catalogAll) {
         textHtml =
           '<span class="btca-level1-picker__text btca-level1-picker__text--wrap">' +
           '<span class="btca-level1-picker__item-title">' + escapeHtml(opt.label) + "</span></span>";
+      } else if (pickerOpts.catalogList && opt.catalogHot != null) {
+        textHtml =
+          '<span class="btca-level1-picker__text btca-level1-picker__text--wrap">' +
+          '<span class="btca-level1-picker__item-hot">' + escapeHtml(String(opt.catalogHot)) +
+          " 🔥</span> " +
+          '<span class="btca-level1-picker__item-title">' + escapeHtml(String(opt.catalogTitle || "")) + "</span></span>";
       } else {
         textHtml = '<span class="btca-level1-picker__text">' + escapeHtml(opt.label) + "</span>";
       }
@@ -3666,8 +3656,8 @@
     if (catalogKey === POLEZ_ALL) return "";
     var item = polezNavItemByHot(catalogKey);
     if (!item) return "";
-    // Раздел 1: медиа + кнопка Описание. Остальные разделы — пусто (Описание открывается сразу).
-    if (!isPolezSection1Item(item)) return "";
+    // Вне раздела 1 Описание открывается сразу — под Каталогом пусто
+    if (String(item.sectionId || "") !== "1") return "";
     if (isPolezSheetFigureItem(item)) {
       var row = polezFigRow(item.figKey);
       var label = row ? row.label : item.title;
@@ -3676,7 +3666,7 @@
       if (!media) return renderPolezDescCard(item, "", "");
       return renderPolezDescCard(item, polezSheetMediaHtml(media, label, mediaFile), item.hot);
     }
-    // 131 / 133 и пр. без fig на листе — только кнопка Описание
+    // 133 и прочие текстовые пункты раздела 1 — кнопка Описание
     return renderPolezDescCard(item, "", "");
   }
 
@@ -3711,12 +3701,12 @@
       cardsHost = remountPolezCardsHost(polezRoot, catalogKey);
     }
     cardsHost.innerHTML = renderPolezBodyHtml(catalogKey);
-    hydratePolezVideos(cardsHost);
-    if (catalogKey === POLEZ_ALL) {
+    if (catalogKey === POLEZ_ALL || !cardsHost.innerHTML) {
       cardsHost.classList.add("btca-l1-polez-cards--empty");
     } else {
       cardsHost.classList.remove("btca-l1-polez-cards--empty");
     }
+    bindPolezVideos(cardsHost);
 
     content.querySelector("[data-btca-polez-catalog]").addEventListener("click", function (event) {
       var savedSearch = typeof state.ui.polez.searchQuery === "string" ? state.ui.polez.searchQuery : "";
@@ -3786,7 +3776,7 @@
           onSwipeRight: function () { openPolezImagePortrait(swipeKey); },
         });
       });
-      hydratePolezVideos(host);
+      bindPolezVideos(host);
     }
     schedulePolezCardsScroll(content);
   }
@@ -3959,12 +3949,15 @@
       '<div class="btca-l1-image-view" data-btca-polez-img-swipe>' +
       polezSheetMediaHtml(url, row.label, row.file) + "</div>";
     state.root.appendChild(overlay);
+    bindPolezVideos(overlay);
 
     function closePortrait() {
+      revokePolezVideoBlobs(overlay);
       overlay.remove();
       scrollPolezAfterImageClose();
     }
     function openLandscape() {
+      revokePolezVideoBlobs(overlay);
       overlay.remove();
       openPolezImageLandscape(hotOrFig);
     }
@@ -3991,7 +3984,9 @@
       "</header>" +
       '<div class="btca-l1-image-view">' + polezSheetMediaHtml(url, row.label, row.file) + "</div>";
     state.root.appendChild(overlay);
+    bindPolezVideos(overlay);
     function closeOverlay() {
+      revokePolezVideoBlobs(overlay);
       setBazaTableLandscape(false);
       overlay.remove();
       scrollPolezAfterImageClose();
@@ -4020,14 +4015,20 @@
 
   function gluePolezLinkNewlines(text) {
     var s = String(text || "");
-    // Разрывы внутри маркеров: {\n120\n} / [\n1\n]
     s = s.replace(/\{\s*\n+\s*/g, "{").replace(/\n+\s*\}/g, "}");
     s = s.replace(/\[\s*\n+\s*/g, "[").replace(/\n+\s*\]/g, "]");
-    // Перенос сразу перед {N} / https (не трогаем [N] — в 250 каждый с новой строки)
+    // Перед [N] не склеиваем — в 250 каждый [N] с новой строки
     s = s.replace(/\n+\s*(?=\{\d+\})/g, " ");
     s = s.replace(/\n+\s*(?=https?:\/\/)/gi, " ");
     s = s.replace(/(\{\d+\})\s*\n+(?=\{)/g, "$1 ");
     s = s.replace(/(https?:\/\/[^\s\n]+)([.,;:)\]»"']*)\s*\n+(?=[\{\[])/gi, "$1$2 ");
+    return s;
+  }
+
+  function softGluePolezMarkers(text) {
+    var s = String(text || "");
+    s = s.replace(/\{\s*\n+\s*/g, "{").replace(/\n+\s*\}/g, "}");
+    s = s.replace(/\[\s*\n+\s*/g, "[").replace(/\n+\s*\]/g, "]");
     return s;
   }
 
@@ -4046,14 +4047,10 @@
 
   function formatPolezSourceBody(body, docId) {
     var footnotes = polezFootnotesForDoc(docId);
-    // Сначала склеиваем маркеры и переносы вокруг { } / https
-    var raw = stripPolezBotPointRefs(String(body || ""))
+    // 1.4 — один в один с txt; остальные доки — прежняя нормализация
+    var raw = (docId === "1.4" ? softGluePolezMarkers(String(body || "")) : stripPolezBotPointRefs(String(body || "")))
       .replace(/\{\s*(\d+)\s*\}/g, "{$1}")
       .replace(/\[\s*(\d+)\s*\]/g, "[$1]");
-    // Список литературы / сноски: каждый [N] с новой строки
-    if (/\[\d+\].{0,200}\[\d+\]/.test(raw) || /^\s*\[\d+\]/.test(raw)) {
-      raw = raw.replace(/\s*(\[\d+\])/g, "\n$1").replace(/^\n+/, "");
-    }
     var html = escapeHtml(raw);
     html = html
       .replace(/&lt;b&gt;([\s\S]*?)&lt;\/b&gt;/g, "<strong>$1</strong>")
