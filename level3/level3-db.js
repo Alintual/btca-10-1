@@ -170,7 +170,10 @@
         sectionKey: typeof navRaw.sectionKey === "string" ? navRaw.sectionKey : base.nav.sectionKey,
         exerciseFilterKey: typeof navRaw.exerciseFilterKey === "string" ? navRaw.exerciseFilterKey : base.nav.exerciseFilterKey,
       },
-      polez: { catalogKey: typeof polezRaw.catalogKey === "string" ? polezRaw.catalogKey : base.polez.catalogKey },
+      polez: {
+        catalogKey: typeof polezRaw.catalogKey === "string" ? polezRaw.catalogKey : base.polez.catalogKey,
+        searchQuery: typeof polezRaw.searchQuery === "string" ? polezRaw.searchQuery : base.polez.searchQuery,
+      },
     };
   }
 

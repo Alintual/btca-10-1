@@ -3,7 +3,7 @@
 
   var DB = window.BTCA_LEVEL3_DB;
   var BAZA = window.BTCA_LEVEL3_BAZA;
-  var VERSION = "10.1.92";
+  var VERSION = "10.1.93";
   var BRANDING_UP = "branding/up.png";
   var BRANDING_BAZA = "branding/baza.png";
   var BRANDING_INFO = "branding/info.png";
@@ -2025,27 +2025,31 @@
   }
 
   function selectPolezCatalogKey(value, content, searchFromPicker) {
-    if (typeof searchFromPicker === "string") {
-      state.ui.polez.searchQuery = searchFromPicker;
-      applyUiPatch({ polez: { searchQuery: searchFromPicker } });
-    }
-    state.ui.polez.catalogKey = value;
-    applyUiPatch({ polez: { catalogKey: value } });
-    renderPolezTab(content);
-    // «Весь список» — снова открыть окно каталога со всеми пунктами
+    // «Весь список» — единственное место сброса поискового запроса
     if (value === POLEZ_ALL) {
+      state.ui.polez.catalogKey = POLEZ_ALL;
       state.ui.polez.searchQuery = "";
-      applyUiPatch({ polez: { searchQuery: "" } });
+      applyUiPatch({ polez: { catalogKey: POLEZ_ALL, searchQuery: "" } });
+      renderPolezTab(content);
       window.setTimeout(function () {
         openPolezCatalogPicker(content, "", POLEZ_ALL);
       }, 0);
       return;
     }
+    var keepSearch =
+      typeof searchFromPicker === "string"
+        ? searchFromPicker
+        : typeof state.ui.polez.searchQuery === "string"
+          ? state.ui.polez.searchQuery
+          : "";
+    state.ui.polez.catalogKey = value;
+    state.ui.polez.searchQuery = keepSearch;
+    applyUiPatch({ polez: { catalogKey: value, searchQuery: keepSearch } });
+    renderPolezTab(content);
     var item = polezNavItemByKey(value);
-    var searchQ = typeof state.ui.polez.searchQuery === "string" ? state.ui.polez.searchQuery : "";
     if (item && polezOpensDescImmediately(item)) {
       window.setTimeout(function () {
-        openPolezDescription(value, searchQ);
+        openPolezDescription(value, keepSearch);
       }, 0);
     }
   }
@@ -4141,19 +4145,64 @@
     var content = state.root.querySelector("[data-btca-level3-content]");
     bindPolezSourceLinks(overlay, content);
     if (isPolezDictionaryItem(item) && String(searchQ || "").trim()) {
-      // Сверху вниз до первого совпадения в Словаре
-      overlay.scrollTop = 0;
-      window.setTimeout(function () {
-        var firstHit = overlay.querySelector(".btca-l1-polez-dict-hit");
-        if (!firstHit || !firstHit.isConnected) return;
-        try {
-          var top = firstHit.getBoundingClientRect().top - overlay.getBoundingClientRect().top;
-          overlay.scrollTop = Math.max(0, overlay.scrollTop + top - 12);
-        } catch (e) {
-          try { firstHit.scrollIntoView({ block: "start", behavior: "smooth" }); } catch (e2) { /* ignore */ }
-        }
-      }, 80);
+      scrollPolezDictToFirstHit(overlay, searchQ);
     }
+  }
+
+  /** Подсветка через DOM (на случай если HTML-путь не сработал) + скролл к первому сверху. */
+  function applyPolezDictHighlightDom(root, searchRaw) {
+    var q = String(searchRaw || "").trim();
+    if (!q || !root) return;
+    var body = root.querySelector(".btca-l1-polez-source__body");
+    if (!body) return;
+    if (body.querySelector(".btca-l1-polez-dict-hit")) return;
+    var qLower = q.toLowerCase();
+    var walker = document.createTreeWalker(body, NodeFilter.SHOW_TEXT, null);
+    var textNodes = [];
+    var node;
+    while ((node = walker.nextNode())) {
+      if (node && node.nodeValue && String(node.nodeValue).toLowerCase().indexOf(qLower) >= 0) {
+        textNodes.push(node);
+      }
+    }
+    for (var i = 0; i < textNodes.length; i += 1) {
+      var tn = textNodes[i];
+      var raw = String(tn.nodeValue || "");
+      var lower = raw.toLowerCase();
+      var frag = document.createDocumentFragment();
+      var pos = 0;
+      var guard = 0;
+      while (pos < raw.length && guard < 200) {
+        guard += 1;
+        var hit = lower.indexOf(qLower, pos);
+        if (hit < 0) break;
+        if (hit > pos) frag.appendChild(document.createTextNode(raw.slice(pos, hit)));
+        var mark = document.createElement("span");
+        mark.className = "btca-l1-polez-dict-hit";
+        mark.style.cssText = "background-color:#ffeb3b;color:#111111;font-weight:700;padding:0 2px;border-radius:2px;";
+        mark.textContent = raw.slice(hit, hit + q.length);
+        frag.appendChild(mark);
+        pos = hit + q.length;
+      }
+      if (pos < raw.length) frag.appendChild(document.createTextNode(raw.slice(pos)));
+      if (tn.parentNode) tn.parentNode.replaceChild(frag, tn);
+    }
+  }
+
+  function scrollPolezDictToFirstHit(overlay, searchRaw) {
+    applyPolezDictHighlightDom(overlay, searchRaw);
+    overlay.scrollTop = 0;
+    window.setTimeout(function () {
+      applyPolezDictHighlightDom(overlay, searchRaw);
+      var firstHit = overlay.querySelector(".btca-l1-polez-dict-hit");
+      if (!firstHit || !firstHit.isConnected) return;
+      try {
+        var top = firstHit.getBoundingClientRect().top - overlay.getBoundingClientRect().top;
+        overlay.scrollTop = Math.max(0, overlay.scrollTop + top - 12);
+      } catch (e) {
+        try { firstHit.scrollIntoView({ block: "start", behavior: "smooth" }); } catch (e2) { /* ignore */ }
+      }
+    }, 80);
   }
 
   function openPolezImagePortrait(hotOrFig) {
