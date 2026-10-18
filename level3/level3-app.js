@@ -3,7 +3,7 @@
 
   var DB = window.BTCA_LEVEL3_DB;
   var BAZA = window.BTCA_LEVEL3_BAZA;
-  var VERSION = "10.1.91";
+  var VERSION = "10.1.92";
   var BRANDING_UP = "branding/up.png";
   var BRANDING_BAZA = "branding/baza.png";
   var BRANDING_INFO = "branding/info.png";
@@ -3915,7 +3915,8 @@
 
     content.querySelectorAll("[data-btca-polez-desc]").forEach(function (btn) {
       btn.addEventListener("click", function () {
-        openPolezDescription(btn.getAttribute("data-btca-polez-desc"));
+        var sq = typeof state.ui.polez.searchQuery === "string" ? state.ui.polez.searchQuery : "";
+        openPolezDescription(btn.getAttribute("data-btca-polez-desc"), sq);
       });
     });
     content.querySelectorAll("[data-btca-polez-image-swipe]").forEach(function (frame) {
