@@ -3,7 +3,7 @@
 
   var DB = window.BTCA_LEVEL3_DB;
   var BAZA = window.BTCA_LEVEL3_BAZA;
-  var VERSION = "10.1.88";
+  var VERSION = "10.1.89";
   var BRANDING_UP = "branding/up.png";
   var BRANDING_BAZA = "branding/baza.png";
   var BRANDING_INFO = "branding/info.png";
@@ -1838,12 +1838,24 @@
     return polezRowsForLevel1().filter(function (r) { return r.key === figKey; })[0] || null;
   }
 
+  function formatPolezHotDisplay(hot) {
+    if (hot === 0 || hot === "0") return "000";
+    return String(hot);
+  }
+
   function polezCatalogLabelForKey(catalogKey) {
     if (catalogKey === POLEZ_ALL) return "Весь список";
     var item = polezNavItemByKey(catalogKey);
     if (!item) return "Весь список";
     if (isPolezDictionaryItem(item) || item.hot == null || item.hot === "") return item.title;
-    return item.hot + " 🔥 " + item.title;
+    return formatPolezHotDisplay(item.hot) + " 🔥 " + item.title;
+  }
+
+  /** Раздел 1 с рисунком/видео на листе — кнопка Описание; остальное — сразу. */
+  function polezOpensDescImmediately(item) {
+    if (!item) return false;
+    if (String(item.sectionId || "") !== "1") return true;
+    return !isPolezSheetFigureItem(item);
   }
 
   function normalizePolezSearch(s) {
@@ -1903,7 +1915,10 @@
       return polezDictionaryContentMatch(item, q);
     }
     // Только по горячему номеру (точное совпадение) или по фразе целиком в названии пункта
-    if (/^\d+$/.test(q)) return String(item.hot) === q;
+    if (/^\d+$/.test(q)) {
+      if (q === "000" || q === "0") return item.hot === 0 || String(item.hot) === "0";
+      return String(item.hot) === q;
+    }
     var nq = normalizePolezSearch(q);
     if (!nq) return true;
     return normalizePolezSearch(item.title).indexOf(nq) >= 0;
@@ -1949,10 +1964,11 @@
           });
           return;
         }
+        var hotLabel = formatPolezHotDisplay(it.hot);
         options.push({
           value: String(it.hot),
-          label: it.hot + " 🔥 " + it.title,
-          catalogHot: String(it.hot),
+          label: hotLabel + " 🔥 " + it.title,
+          catalogHot: hotLabel,
           catalogTitle: it.title,
         });
       });
@@ -1979,13 +1995,47 @@
     return entry && entry.text ? String(entry.text) : "";
   }
 
+  function openPolezCatalogPicker(content, searchValue, currentKey) {
+    var face = content && content.querySelector("[data-btca-polez-catalog]");
+    if (!face) return;
+    var q = typeof searchValue === "string" ? searchValue : "";
+    openPicker(
+      "Каталог",
+      buildPolezCatalogOptions(q),
+      currentKey || state.ui.polez.catalogKey || POLEZ_ALL,
+      function (value) {
+        selectPolezCatalogKey(value, content);
+      },
+      face,
+      {
+        catalogList: true,
+        searchable: true,
+        selectExactHot: true,
+        searchValue: q,
+        getOptions: function (query) { return buildPolezCatalogOptions(query); },
+        onSearchChange: function (query) {
+          state.ui.polez.searchQuery = query;
+          applyUiPatch({ polez: { searchQuery: query } });
+        },
+      }
+    );
+  }
+
   function selectPolezCatalogKey(value, content) {
     state.ui.polez.catalogKey = value;
     applyUiPatch({ polez: { catalogKey: value } });
     renderPolezTab(content);
+    // «Весь список» — снова открыть окно каталога со всеми пунктами
+    if (value === POLEZ_ALL) {
+      state.ui.polez.searchQuery = "";
+      applyUiPatch({ polez: { searchQuery: "" } });
+      window.setTimeout(function () {
+        openPolezCatalogPicker(content, "", POLEZ_ALL);
+      }, 0);
+      return;
+    }
     var item = polezNavItemByKey(value);
-    // Вне раздела 1 Описание открывается сразу (без кнопки)
-    if (item && String(item.sectionId || "") !== "1" && value !== POLEZ_ALL) {
+    if (item && polezOpensDescImmediately(item)) {
       window.setTimeout(function () {
         openPolezDescription(value);
       }, 0);
@@ -2204,11 +2254,14 @@
       var q = input ? String(input.value || "") : "";
       if (typeof pickerOpts.onSearchChange === "function") pickerOpts.onSearchChange(q);
       var exact = q.trim();
-      if (pickerOpts.selectExactHot && /^\d+$/.test(exact) && polezNavItemByHot(exact)) {
-        clearEmptyFlash(input);
-        closePicker();
-        onSelect(exact, "own");
-        return;
+      if (pickerOpts.selectExactHot && /^\d+$/.test(exact)) {
+        var exactHot = exact === "000" ? "0" : exact;
+        if (polezNavItemByHot(exactHot)) {
+          clearEmptyFlash(input);
+          closePicker();
+          onSelect(exactHot, "own");
+          return;
+        }
       }
       liveOptions = typeof pickerOpts.getOptions === "function"
         ? pickerOpts.getOptions(q)
@@ -2267,7 +2320,18 @@
       if (!value || value.indexOf("__group:") === 0 || value.indexOf("__section:") === 0) return;
       if (value.indexOf("__group_") === 0) return;
       var source = btn.getAttribute("data-btca-picker-source") || "own";
-      clearEmptyFlash(layer.querySelector("[data-btca-picker-search]"));
+      var searchInputEl = layer.querySelector("[data-btca-picker-search]");
+      if (
+        searchInputEl &&
+        pickerOpts.catalogList &&
+        !searchInputEl.classList.contains("btca-level1-picker__search-input--empty")
+      ) {
+        var liveQ = String(searchInputEl.value || "");
+        state.ui.polez.searchQuery = liveQ;
+        applyUiPatch({ polez: { searchQuery: liveQ } });
+        if (typeof pickerOpts.onSearchChange === "function") pickerOpts.onSearchChange(liveQ);
+      }
+      clearEmptyFlash(searchInputEl);
       closePicker();
       onSelect(value, source);
     };
@@ -3784,8 +3848,8 @@
     if (catalogKey === POLEZ_ALL) return "";
     var item = polezNavItemByHot(catalogKey);
     if (!item) return "";
-    // Вне раздела 1 Описание открывается сразу — под Каталогом пусто
-    if (String(item.sectionId || "") !== "1") return "";
+    // Сразу Описание — под Каталогом пусто (в т.ч. 131/133 без рисунка на листе)
+    if (polezOpensDescImmediately(item)) return "";
     if (isPolezSheetFigureItem(item)) {
       var row = polezFigRow(item.figKey);
       var label = row ? row.label : item.title;
@@ -3794,7 +3858,6 @@
       if (!media) return renderPolezDescCard(item, "", "");
       return renderPolezDescCard(item, polezSheetMediaHtml(media, label, mediaFile), item.hot);
     }
-    // 133 и прочие текстовые пункты раздела 1 — кнопка Описание
     return renderPolezDescCard(item, "", "");
   }
 
@@ -3836,28 +3899,9 @@
     }
     bindPolezVideos(cardsHost);
 
-    content.querySelector("[data-btca-polez-catalog]").addEventListener("click", function (event) {
+    content.querySelector("[data-btca-polez-catalog]").addEventListener("click", function () {
       var savedSearch = typeof state.ui.polez.searchQuery === "string" ? state.ui.polez.searchQuery : "";
-      openPicker(
-        "Каталог",
-        buildPolezCatalogOptions(savedSearch),
-        catalogKey,
-        function (value) {
-          selectPolezCatalogKey(value, content);
-        },
-        event.currentTarget,
-        {
-          catalogList: true,
-          searchable: true,
-          selectExactHot: true,
-          searchValue: savedSearch,
-          getOptions: function (q) { return buildPolezCatalogOptions(q); },
-          onSearchChange: function (q) {
-            state.ui.polez.searchQuery = q;
-            applyUiPatch({ polez: { searchQuery: q } });
-          },
-        }
-      );
+      openPolezCatalogPicker(content, savedSearch, catalogKey);
     });
 
     content.querySelectorAll("[data-btca-polez-desc]").forEach(function (btn) {
@@ -4041,10 +4085,13 @@
     overlay.className = "btca-polez-desc-root";
     var bodyHtml = isPolezDictionaryItem(item)
       ? formatPolezDictionaryBody(text, searchQ)
-      : formatPolezSourceBody(text, item.docId) + polezInlineFiguresHtml(figures);
+      : highlightInHtmlText(
+          formatPolezSourceBody(text, item.docId) + polezInlineFiguresHtml(figures),
+          searchQ,
+        );
     var hotHtml = isPolezDictionaryItem(item) || item.hot == null || item.hot === ""
       ? '<span aria-hidden="true"></span>'
-      : '<span class="btca-polez-desc-header__hot">' + escapeHtml(String(item.hot)) + " 🔥</span>";
+      : '<span class="btca-polez-desc-header__hot">' + escapeHtml(formatPolezHotDisplay(item.hot)) + " 🔥</span>";
     overlay.innerHTML =
       '<main class="btca-about-screen">' +
       '<header class="btca-screen-header btca-polez-desc-header">' +
@@ -4065,17 +4112,17 @@
     });
     var content = state.root.querySelector("[data-btca-level3-content]");
     bindPolezSourceLinks(overlay, content);
-    if (isPolezDictionaryItem(item) && String(searchQ || "").trim()) {
+    if (String(searchQ || "").trim()) {
       // Сверху вниз до первого совпадения
       overlay.scrollTop = 0;
       window.setTimeout(function () {
-        var firstMark = overlay.querySelector("mark.btca-l1-polez-dict-hit");
-        if (!firstMark || !firstMark.isConnected) return;
+        var firstHit = overlay.querySelector(".btca-l1-polez-dict-hit");
+        if (!firstHit || !firstHit.isConnected) return;
         try {
-          var top = firstMark.getBoundingClientRect().top - overlay.getBoundingClientRect().top;
+          var top = firstHit.getBoundingClientRect().top - overlay.getBoundingClientRect().top;
           overlay.scrollTop = Math.max(0, overlay.scrollTop + top - 12);
         } catch (e) {
-          try { firstMark.scrollIntoView({ block: "start", behavior: "smooth" }); } catch (e2) { /* ignore */ }
+          try { firstHit.scrollIntoView({ block: "start", behavior: "smooth" }); } catch (e2) { /* ignore */ }
         }
       }, 60);
     }
@@ -4215,7 +4262,7 @@
     return html;
   }
 
-  /** Все вхождения фразы в plain-тексте → escape + <mark>. */
+  /** Все вхождения фразы в plain-тексте → escape + подсветка. */
   function highlightAllPolezPlain(plain, searchRaw) {
     var raw = String(plain || "");
     var q = String(searchRaw || "").trim();
@@ -4233,11 +4280,37 @@
       var hit = lower.indexOf(qLower, pos);
       if (hit < 0) break;
       out += escapeHtml(raw.slice(pos, hit));
-      out += '<mark class="btca-l1-polez-dict-hit">' + escapeHtml(raw.slice(hit, hit + qLen)) + "</mark>";
+      out += '<span class="btca-l1-polez-dict-hit">' + escapeHtml(raw.slice(hit, hit + qLen)) + "</span>";
       pos = hit + qLen;
     }
     out += escapeHtml(raw.slice(pos));
     return out;
+  }
+
+  /** Подсветка в уже собранном HTML (только текстовые узлы между тегами). */
+  function highlightInHtmlText(html, searchRaw) {
+    var q = String(searchRaw || "").trim();
+    if (!q || !html) return html || "";
+    var qLower = q.toLowerCase();
+    var qLen = q.length;
+    return String(html).split(/(<[^>]+>)/g).map(function (part) {
+      if (!part || part.charAt(0) === "<") return part;
+      // Текст уже экранирован; кириллица/цифры без изменений — ищем напрямую
+      var lower = part.toLowerCase();
+      var out = "";
+      var pos = 0;
+      var guard = 0;
+      while (pos < part.length && guard < 500) {
+        guard += 1;
+        var hit = lower.indexOf(qLower, pos);
+        if (hit < 0) break;
+        out += part.slice(pos, hit);
+        out += '<span class="btca-l1-polez-dict-hit">' + part.slice(hit, hit + qLen) + "</span>";
+        pos = hit + qLen;
+      }
+      out += part.slice(pos);
+      return out;
+    }).join("");
   }
 
   function formatPolezDictionaryBody(body, searchRaw) {

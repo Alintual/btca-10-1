@@ -2878,7 +2878,7 @@ body.btca-apple-comfort .btca-l1-chart-panel {
   word-break: break-word;
 }
 
-.btca-l1-polez-source__body mark.btca-l1-polez-dict-hit {
+.btca-l1-polez-source__body .btca-l1-polez-dict-hit {
   padding: 0 2px;
   border-radius: 2px;
   color: #111111;
@@ -3604,7 +3604,7 @@ body.btca-apple-comfort .btca-l1-ok-input {
 }
 
 .btca-level1-picker__search-input--empty {
-  color: #ff1143;
+  color: #ffe08a;
   font-weight: 600;
 }
 
