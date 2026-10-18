@@ -3,7 +3,7 @@
 
   var DB = window.BTCA_LEVEL3_DB;
   var BAZA = window.BTCA_LEVEL3_BAZA;
-  var VERSION = "10.1.84";
+  var VERSION = "10.1.85";
   var BRANDING_UP = "branding/up.png";
   var BRANDING_BAZA = "branding/baza.png";
   var BRANDING_INFO = "branding/info.png";
@@ -1003,22 +1003,51 @@
     return '<img src="' + escapeHtml(url) + '" alt="' + escapeHtml(label) + '" loading="lazy" draggable="false">';
   }
 
-  function closeSheetInfoOverlay() {
+  function closeSheetInfoOverlay(immediate) {
     var overlay = state.root && state.root.querySelector(".btca-sheet-info-root");
-    if (overlay) overlay.remove();
+    if (!overlay) return;
+    if (immediate || !overlay.classList.contains("is-open")) {
+      overlay.remove();
+      return;
+    }
+    var panel = overlay.querySelector(".btca-sheet-info-panel");
+    var finished = false;
+    function finish() {
+      if (finished) return;
+      finished = true;
+      overlay.remove();
+    }
+    overlay.classList.remove("is-open");
+    if (panel) {
+      panel.addEventListener("transitionend", function onEnd(e) {
+        if (e.propertyName !== "transform") return;
+        panel.removeEventListener("transitionend", onEnd);
+        finish();
+      });
+    }
+    window.setTimeout(finish, 320);
   }
 
   function openSheetInfoOverlay() {
     var sheet = sheetByKey(state.ui.tab);
-    if (!sheet) return;
-    closeSheetInfoOverlay();
+    if (!sheet || !state.root) return;
+    closeSheetInfoOverlay(true);
+    var titlebar = state.root.querySelector("[data-btca-level3-titlebar]");
+    var rootRect = state.root.getBoundingClientRect();
+    var barBottom = titlebar
+      ? titlebar.getBoundingClientRect().bottom
+      : rootRect.top + 46;
+    var topPx = Math.max(0, Math.round(barBottom - rootRect.top));
+    var midPx = Math.round(rootRect.height * 0.5);
+    var panelH = Math.max(120, midPx - topPx);
     var overlay = document.createElement("div");
     overlay.className = "btca-sheet-info-root";
     overlay.innerHTML =
       '<button type="button" class="btca-sheet-info-backdrop" data-btca-sheet-info-close aria-label="Закрыть"></button>' +
+      '<div class="btca-sheet-info-clip" style="top:' + topPx + "px;height:" + panelH + 'px">' +
       '<div class="btca-sheet-info-panel" role="dialog" aria-modal="true">' +
       '<h3 class="btca-sheet-info-panel__title">' + escapeHtml(sheet.title + " - Функционал") + "</h3>" +
-      '<div class="btca-sheet-info-panel__body">В разработке...</div></div>';
+      '<div class="btca-sheet-info-panel__body">В разработке...</div></div></div>';
     state.root.appendChild(overlay);
     overlay.querySelectorAll("[data-btca-sheet-info-close]").forEach(function (el) {
       el.addEventListener("click", closeSheetInfoOverlay);
@@ -1026,6 +1055,10 @@
     bindHorizontalSwipe(overlay.querySelector(".btca-sheet-info-panel") || overlay, {
       onSwipeLeft: closeSheetInfoOverlay,
     });
+    void overlay.offsetWidth;
+    window.setTimeout(function () {
+      overlay.classList.add("is-open");
+    }, 20);
   }
 
   function sheetInfoIconHtml() {
@@ -1935,8 +1968,8 @@
       if (pickerOpts.catalogList && opt.catalogHot != null) {
         textHtml =
           '<span class="btca-level1-picker__text btca-level1-picker__text--wrap">' +
-          '<span class="btca-level1-picker__hot">' + escapeHtml(String(opt.catalogHot)) + " #</span> " +
-          '<span class="btca-level1-picker__title">' + escapeHtml(String(opt.catalogTitle || "")) + "</span></span>";
+          '<span class="btca-level1-picker__item-hot">' + escapeHtml(String(opt.catalogHot)) + " #</span> " +
+          '<span class="btca-level1-picker__item-title">' + escapeHtml(String(opt.catalogTitle || "")) + "</span></span>";
       } else {
         textHtml = '<span class="btca-level1-picker__text">' + escapeHtml(opt.label) + "</span>";
       }

@@ -2236,9 +2236,6 @@ body.btca-apple-comfort .btca-l1-chart-panel {
   position: absolute;
   inset: 0;
   z-index: 90;
-  display: flex;
-  flex-direction: column;
-  justify-content: flex-start;
   pointer-events: auto;
 }
 
@@ -2247,25 +2244,48 @@ body.btca-apple-comfort .btca-l1-chart-panel {
   inset: 0;
   border: 0;
   background: rgba(17, 24, 39, 0.28);
+  opacity: 0;
   cursor: pointer;
+  transition: opacity 260ms ease;
+}
+
+.btca-sheet-info-root.is-open .btca-sheet-info-backdrop {
+  opacity: 1;
+}
+
+.btca-sheet-info-clip {
+  position: absolute;
+  left: 0;
+  right: 0;
+  z-index: 1;
+  overflow: hidden;
+  pointer-events: none;
 }
 
 .btca-sheet-info-panel {
-  position: relative;
-  z-index: 1;
+  pointer-events: auto;
   display: flex;
   flex-direction: column;
+  box-sizing: border-box;
   width: 100%;
-  height: 50vh;
-  max-height: 50vh;
-  margin-top: 0;
-  padding: max(12px, env(safe-area-inset-top)) 14px 16px;
+  height: 100%;
+  padding: 14px 14px 16px;
   overflow: auto;
   -webkit-overflow-scrolling: touch;
   color: #111111;
   background: #c5d9dc;
   border-radius: 0 0 14px 14px;
   box-shadow: 0 4px 24px rgba(0, 0, 0, 0.18);
+  -webkit-transform: translate3d(0, -100%, 0);
+  transform: translate3d(0, -100%, 0);
+  -webkit-transition: -webkit-transform 260ms cubic-bezier(0.32, 0.72, 0, 1);
+  transition: transform 260ms cubic-bezier(0.32, 0.72, 0, 1);
+  will-change: transform;
+}
+
+.btca-sheet-info-root.is-open .btca-sheet-info-panel {
+  -webkit-transform: translate3d(0, 0, 0);
+  transform: translate3d(0, 0, 0);
 }
 
 .btca-sheet-info-panel__title {
@@ -2282,7 +2302,14 @@ body.btca-apple-comfort .btca-l1-chart-panel {
   font-size: 1rem;
   font-weight: 400;
   line-height: calc(26rem / 17);
-  text-align: center;
+  text-align: left;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .btca-sheet-info-backdrop,
+  .btca-sheet-info-panel {
+    transition: none;
+  }
 }
 
 .btca-level1-titlebar__baza-fill {
@@ -3669,6 +3696,7 @@ body.btca-apple-comfort .btca-l1-ok-input {
   justify-content: flex-start;
   padding-top: 8px;
   padding-bottom: 8px;
+  color: #000000;
   font-weight: 400;
   text-align: left;
 }
@@ -3680,23 +3708,31 @@ body.btca-apple-comfort .btca-l1-ok-input {
   overflow: visible;
   text-overflow: clip;
   white-space: normal;
+  color: #000000;
   text-align: left;
   font-weight: 400;
   line-height: var(--btca-l1-lh, calc(26rem / 17));
   word-break: break-word;
 }
 
-.btca-level1-picker--anchored .btca-level1-picker__hot {
+.btca-level1-picker--anchored .btca-level1-picker__item-hot {
+  color: #000000;
   font-weight: 400;
 }
 
-.btca-level1-picker--anchored .btca-level1-picker__title {
-  font-weight: 400;
+.btca-level1-picker--anchored .btca-level1-picker__item-title {
+  color: #000000;
+  font-weight: 600;
 }
 
 .btca-level1-picker--anchored .btca-level1-picker__item--catalog.btca-level1-picker__item--active {
   border-color: rgba(17, 24, 39, 0.6);
   background: #d9d9d9;
+  color: #000000;
+}
+
+.btca-level1-picker--anchored .btca-level1-picker__item--catalog.btca-level1-picker__item--active .btca-level1-picker__item-hot,
+.btca-level1-picker--anchored .btca-level1-picker__item--catalog.btca-level1-picker__item--active .btca-level1-picker__item-title {
   color: #000000;
 }
 
