@@ -2020,6 +2020,23 @@
           "sectionTitle": "18 - Правила проведения соревнований по игре в «Корону»"
         }
       ]
+    },
+    {
+      "id": "other",
+      "title": "Прочее",
+      "items": [
+        {
+          "id": "dict",
+          "hot": null,
+          "title": "Словарь бильярдных терминов",
+          "query": "Словарь бильярдных терминов",
+          "figKey": null,
+          "docId": "2.3",
+          "sectionId": "other",
+          "sectionTitle": "Прочее",
+          "kind": "dictionary"
+        }
+      ]
     }
   ]
 }

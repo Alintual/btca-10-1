@@ -2878,6 +2878,13 @@ body.btca-apple-comfort .btca-l1-chart-panel {
   word-break: break-word;
 }
 
+.btca-l1-polez-source__body mark.btca-l1-polez-dict-hit {
+  padding: 0 1px;
+  border-radius: 2px;
+  color: inherit;
+  background: #ffe566;
+}
+
 /* В тексте Описания {N}/[N]/URL — inline (как в доке 1.4).
    .btca-l1-link сам по себе display:block для списка ссылок. */
 .btca-l1-polez-source__body .btca-l1-link,
