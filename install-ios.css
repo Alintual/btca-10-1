@@ -3688,10 +3688,12 @@ body.btca-apple-comfort .btca-l1-ok-input {
   color: #000000;
 }
 
-.btca-level1-picker--anchored .btca-level1-picker__item--catalog {
-  height: auto;
+.btca-level1-picker--anchored .btca-level1-picker__item--catalog,
+.btca-level1-picker--anchored .btca-level1-picker__item--catalog-all {
+  flex: 0 0 auto;
+  height: auto !important;
   min-height: var(--btca-l1-picker-row, calc(40rem / 17));
-  max-height: none;
+  max-height: none !important;
   align-items: flex-start;
   justify-content: flex-start;
   padding-top: 8px;
@@ -3699,6 +3701,11 @@ body.btca-apple-comfort .btca-l1-ok-input {
   color: #000000;
   font-weight: 400;
   text-align: left;
+  white-space: normal;
+}
+
+.btca-level1-picker--anchored .btca-level1-picker__item--catalog-all .btca-level1-picker__item-title {
+  font-weight: 600;
 }
 
 .btca-level1-picker--anchored .btca-level1-picker__item--catalog .btca-level1-picker__text,
