@@ -2878,11 +2878,13 @@ body.btca-apple-comfort .btca-l1-chart-panel {
   word-break: break-word;
 }
 
-.btca-l1-polez-source__body .btca-l1-polez-dict-hit {
+.btca-l1-polez-source__body .btca-l1-polez-dict-hit,
+.btca-about-content .btca-l1-polez-dict-hit {
+  display: inline;
   padding: 0 2px;
   border-radius: 2px;
-  color: #111111;
-  background: #ffeb3b;
+  color: #111111 !important;
+  background-color: #ffeb3b !important;
   font-weight: 700;
   -webkit-box-decoration-break: clone;
   box-decoration-break: clone;

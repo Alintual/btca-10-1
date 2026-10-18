@@ -3,7 +3,7 @@
 
   var DB = window.BTCA_LEVEL3_DB;
   var BAZA = window.BTCA_LEVEL3_BAZA;
-  var VERSION = "10.1.90";
+  var VERSION = "10.1.91";
   var BRANDING_UP = "branding/up.png";
   var BRANDING_BAZA = "branding/baza.png";
   var BRANDING_INFO = "branding/info.png";
@@ -2001,12 +2001,13 @@
     var face = content && content.querySelector("[data-btca-polez-catalog]");
     if (!face) return;
     var q = typeof searchValue === "string" ? searchValue : "";
+    // Поиск всегда по всему Каталогу (не по предыдущей выборке)
     openPicker(
       "Каталог",
       buildPolezCatalogOptions(q),
       currentKey || state.ui.polez.catalogKey || POLEZ_ALL,
-      function (value) {
-        selectPolezCatalogKey(value, content);
+      function (value, _source, pickedSearch) {
+        selectPolezCatalogKey(value, content, pickedSearch);
       },
       face,
       {
@@ -2023,7 +2024,11 @@
     );
   }
 
-  function selectPolezCatalogKey(value, content) {
+  function selectPolezCatalogKey(value, content, searchFromPicker) {
+    if (typeof searchFromPicker === "string") {
+      state.ui.polez.searchQuery = searchFromPicker;
+      applyUiPatch({ polez: { searchQuery: searchFromPicker } });
+    }
     state.ui.polez.catalogKey = value;
     applyUiPatch({ polez: { catalogKey: value } });
     renderPolezTab(content);
@@ -2037,9 +2042,10 @@
       return;
     }
     var item = polezNavItemByKey(value);
+    var searchQ = typeof state.ui.polez.searchQuery === "string" ? state.ui.polez.searchQuery : "";
     if (item && polezOpensDescImmediately(item)) {
       window.setTimeout(function () {
-        openPolezDescription(value);
+        openPolezDescription(value, searchQ);
       }, 0);
     }
   }
@@ -2323,19 +2329,20 @@
       if (value.indexOf("__group_") === 0) return;
       var source = btn.getAttribute("data-btca-picker-source") || "own";
       var searchInputEl = layer.querySelector("[data-btca-picker-search]");
+      var liveQ = "";
       if (
         searchInputEl &&
         pickerOpts.catalogList &&
         !searchInputEl.classList.contains("btca-level1-picker__search-input--empty")
       ) {
-        var liveQ = String(searchInputEl.value || "");
+        liveQ = String(searchInputEl.value || "");
         state.ui.polez.searchQuery = liveQ;
         applyUiPatch({ polez: { searchQuery: liveQ } });
         if (typeof pickerOpts.onSearchChange === "function") pickerOpts.onSearchChange(liveQ);
       }
       clearEmptyFlash(searchInputEl);
       closePicker();
-      onSelect(value, source);
+      onSelect(value, source, liveQ);
     };
   }
 
@@ -3941,7 +3948,8 @@
       host.innerHTML = html;
       content.querySelectorAll("[data-btca-polez-desc]").forEach(function (btn) {
         btn.addEventListener("click", function () {
-          openPolezDescription(btn.getAttribute("data-btca-polez-desc"));
+          var sq = typeof state.ui.polez.searchQuery === "string" ? state.ui.polez.searchQuery : "";
+          openPolezDescription(btn.getAttribute("data-btca-polez-desc"), sq);
         });
       });
       content.querySelectorAll("[data-btca-polez-image-swipe]").forEach(function (frame) {
@@ -4061,7 +4069,7 @@
     return item && item.figKey ? item.figKey : "";
   }
 
-  function openPolezDescription(hotOrFig) {
+  function openPolezDescription(hotOrFig, searchOverride) {
     // Описания всегда из первоисточника (*_structured.txt), не из polezDescriptions.json
     var hot = String(hotOrFig || "");
     var item = polezNavItemByKey(hot);
@@ -4081,7 +4089,16 @@
     if (!item || !text) return;
     var figures = entry && Array.isArray(entry.figures) ? entry.figures : [];
     var sectionTitle = polezSectionTitleForItem(item);
-    var searchQ = typeof state.ui.polez.searchQuery === "string" ? state.ui.polez.searchQuery : "";
+    var searchQ =
+      typeof searchOverride === "string"
+        ? searchOverride
+        : typeof state.ui.polez.searchQuery === "string"
+          ? state.ui.polez.searchQuery
+          : "";
+    if (typeof searchQ === "string") {
+      state.ui.polez.searchQuery = searchQ;
+      applyUiPatch({ polez: { searchQuery: searchQ } });
+    }
     document.body.classList.add("btca-screen-mode");
     var overlay = document.createElement("div");
     overlay.className = "btca-polez-desc-root";
@@ -4105,6 +4122,16 @@
     function closeOverlay() {
       document.body.classList.remove("btca-screen-mode");
       overlay.remove();
+      // Вернуться к фильтрованному Каталогу с последним запросом
+      var q = typeof state.ui.polez.searchQuery === "string" ? state.ui.polez.searchQuery : "";
+      if (String(q).trim()) {
+        var contentRestore = state.root && state.root.querySelector("[data-btca-level3-content]");
+        if (contentRestore && state.ui.tab === "polez") {
+          window.setTimeout(function () {
+            openPolezCatalogPicker(contentRestore, q, state.ui.polez.catalogKey || POLEZ_ALL);
+          }, 0);
+        }
+      }
     }
     overlay.querySelector("[data-btca-overlay-close]").addEventListener("click", closeOverlay);
     bindHorizontalSwipe(overlay, {
@@ -4124,7 +4151,7 @@
         } catch (e) {
           try { firstHit.scrollIntoView({ block: "start", behavior: "smooth" }); } catch (e2) { /* ignore */ }
         }
-      }, 60);
+      }, 80);
     }
   }
 
@@ -4262,6 +4289,10 @@
     return html;
   }
 
+  function polezDictHitOpen() {
+    return '<span class="btca-l1-polez-dict-hit" style="background-color:#ffeb3b;color:#111111;font-weight:700;padding:0 2px;border-radius:2px;">';
+  }
+
   /** Все вхождения фразы в plain-тексте → escape + подсветка. */
   function highlightAllPolezPlain(plain, searchRaw) {
     var raw = String(plain || "");
@@ -4280,7 +4311,7 @@
       var hit = lower.indexOf(qLower, pos);
       if (hit < 0) break;
       out += escapeHtml(raw.slice(pos, hit));
-      out += '<span class="btca-l1-polez-dict-hit">' + escapeHtml(raw.slice(hit, hit + qLen)) + "</span>";
+      out += polezDictHitOpen() + escapeHtml(raw.slice(hit, hit + qLen)) + "</span>";
       pos = hit + qLen;
     }
     out += escapeHtml(raw.slice(pos));
@@ -4305,7 +4336,7 @@
         var hit = lower.indexOf(qLower, pos);
         if (hit < 0) break;
         out += part.slice(pos, hit);
-        out += '<span class="btca-l1-polez-dict-hit">' + part.slice(hit, hit + qLen) + "</span>";
+        out += polezDictHitOpen() + part.slice(hit, hit + qLen) + "</span>";
         pos = hit + qLen;
       }
       out += part.slice(pos);
@@ -4316,21 +4347,22 @@
   function formatPolezDictionaryBody(body, searchRaw) {
     var q = String(searchRaw || "").trim();
     var lines = String(body || "").split("\n");
-    return lines.map(function (line) {
+    // Сначала структура (жирный термин), затем подсветка по всему HTML
+    var html = lines.map(function (line) {
       var m = /^(\d+)\.\s+(.+)$/.exec(line);
       if (!m) {
-        return applyPolezInlineMarkup(highlightAllPolezPlain(line, q));
+        return applyPolezInlineMarkup(escapeHtml(line));
       }
       var num = m[1];
       var rest = m[2];
       var term = extractDictionaryTermName(rest);
       var after = rest.slice(term.length);
-      // Жирным — только термин; подсветка — по всем совпадениям в термине и определении
       return (
-        escapeHtml(num) + ". <strong>" + highlightAllPolezPlain(term, q) + "</strong>" +
-        applyPolezInlineMarkup(highlightAllPolezPlain(after, q))
+        escapeHtml(num) + ". <strong>" + escapeHtml(term) + "</strong>" +
+        applyPolezInlineMarkup(escapeHtml(after))
       );
     }).join("<br>");
+    return q ? highlightInHtmlText(html, q) : html;
   }
 
   function formatPolezSourceBody(body, docId) {
