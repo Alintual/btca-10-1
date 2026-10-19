@@ -3557,6 +3557,8 @@ body.btca-apple-comfort .btca-l1-ok-input {
   z-index: 80;
   display: flex;
   flex-direction: column;
+  /* иначе базовый max-height: min(52vh, 420px) режет высоту до ~½ экрана */
+  max-height: none;
   overflow: hidden;
   padding: 0;
   border: 1px solid rgba(17, 24, 39, 0.6);

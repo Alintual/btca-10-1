@@ -3,7 +3,7 @@
 
   var DB = window.BTCA_LEVEL3_DB;
   var BAZA = window.BTCA_LEVEL3_BAZA;
-  var VERSION = "10.1.102";
+  var VERSION = "10.1.103";
   var BRANDING_UP = "branding/up.png";
   var BRANDING_BAZA = "branding/baza.png";
   var BRANDING_INFO = "branding/info.png";
@@ -2214,7 +2214,7 @@
     if (layout) {
       pickerStyle =
         ' style="position:fixed;top:' + layout.top + "px;left:" + layout.left + "px;width:" + layout.width +
-        "px;height:" + layout.height + 'px;right:auto;"';
+        "px;height:" + layout.height + "px;max-height:none;right:auto;\"";
     }
     var searchDraft = typeof pickerOpts.searchValue === "string"
       ? pickerOpts.searchValue
