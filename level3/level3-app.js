@@ -3,7 +3,7 @@
 
   var DB = window.BTCA_LEVEL3_DB;
   var BAZA = window.BTCA_LEVEL3_BAZA;
-  var VERSION = "10.1.95";
+  var VERSION = "10.1.96";
   var BRANDING_UP = "branding/up.png";
   var BRANDING_BAZA = "branding/baza.png";
   var BRANDING_INFO = "branding/info.png";
@@ -1900,12 +1900,14 @@
     return terms;
   }
 
-  function polezDictionaryContentMatch(item, searchRaw) {
+  /** Совпадение поисковой фразы с текстом Описания пункта. */
+  function polezDescriptionContentMatch(item, searchRaw) {
     var q = String(searchRaw || "").trim();
     if (!q) return true;
     var nq = normalizePolezSearch(q);
     if (!nq) return true;
-    var key = polezNavItemKey(item) || POLEZ_DICT_ID;
+    var key = polezNavItemKey(item) || (isPolezDictionaryItem(item) ? POLEZ_DICT_ID : "");
+    if (!key) return false;
     var entry = polezSourceEntry(key);
     var text = entry && entry.text ? String(entry.text) : "";
     if (!text) return false;
@@ -1916,21 +1918,18 @@
   function polezItemMatchesSearch(item, searchRaw) {
     var q = String(searchRaw || "").trim();
     if (!q) return true;
-    // Словарь: название пункта + весь текст Описания; подсветка — только в Описании
-    if (isPolezDictionaryItem(item)) {
-      if (/^\d+$/.test(q)) return false;
-      var nqDict = normalizePolezSearch(q);
-      if (nqDict && normalizePolezSearch(item.title).indexOf(nqDict) >= 0) return true;
-      return polezDictionaryContentMatch(item, q);
-    }
-    // Только по горячему номеру (точное совпадение) или по фразе целиком в названии пункта
+    // Чистый номер → только точный горячий номер (000 / 0 / N)
     if (/^\d+$/.test(q)) {
+      if (isPolezDictionaryItem(item) || item.hot == null || item.hot === "") return false;
       if (q === "000" || q === "0") return item.hot === 0 || String(item.hot) === "0";
       return String(item.hot) === q;
     }
     var nq = normalizePolezSearch(q);
     if (!nq) return true;
-    return normalizePolezSearch(item.title).indexOf(nq) >= 0;
+    // Название пункта
+    if (normalizePolezSearch(item.title).indexOf(nq) >= 0) return true;
+    // Всё содержание Описания (как в Словаре)
+    return polezDescriptionContentMatch(item, q);
   }
 
   function polezSectionMatchesSearch(sectionTitle, searchRaw) {
@@ -4114,10 +4113,10 @@
     document.body.classList.add("btca-screen-mode");
     var overlay = document.createElement("div");
     overlay.className = "btca-polez-desc-root";
-    // Подсветка поиска — только в Описании Словаря
+    // Подсветка поиска — в теле Описания (не в h1/шапке), как в Словаре
     var bodyHtml = isPolezDictionaryItem(item)
       ? formatPolezDictionaryBody(text, searchQ)
-      : formatPolezSourceBody(text, item.docId) + polezInlineFiguresHtml(figures);
+      : formatPolezSourceBody(text, item.docId, searchQ) + polezInlineFiguresHtml(figures);
     var hotHtml = isPolezDictionaryItem(item) || item.hot == null || item.hot === ""
       ? '<span aria-hidden="true"></span>'
       : '<span class="btca-polez-desc-header__hot">' + escapeHtml(formatPolezHotDisplay(item.hot)) + " 🔥</span>";
@@ -4151,13 +4150,13 @@
     });
     var content = state.root.querySelector("[data-btca-level3-content]");
     bindPolezSourceLinks(overlay, content);
-    if (isPolezDictionaryItem(item) && String(searchQ || "").trim()) {
-      applyPolezDictHighlightDom(overlay, searchQ);
+    if (String(searchQ || "").trim()) {
+      applyPolezDescHighlightDom(overlay, searchQ);
     }
   }
 
   /** Подсветка через DOM только в теле Описания (не в h1/шапке). */
-  function applyPolezDictHighlightDom(root, searchRaw) {
+  function applyPolezDescHighlightDom(root, searchRaw) {
     var q = String(searchRaw || "").trim();
     if (!q || !root) return;
     var body = root.querySelector(".btca-l1-polez-source__body");
@@ -4412,7 +4411,7 @@
     return html;
   }
 
-  function formatPolezSourceBody(body, docId) {
+  function formatPolezSourceBody(body, docId, searchRaw) {
     var footnotes = polezFootnotesForDoc(docId);
     // 1.4 — один в один с txt; остальные доки — прежняя нормализация
     var raw = (docId === "1.4" || docId === "2.3" ? softGluePolezMarkers(String(body || "")) : stripPolezBotPointRefs(String(body || "")))
@@ -4432,7 +4431,9 @@
         titleAttr + ">[" + num + "]</a>";
     });
     // Переносы строк — в самом конце, чтобы не ломать { } / [ ]
-    return html.replace(/\n/g, "<br>");
+    html = html.replace(/\n/g, "<br>");
+    var q = String(searchRaw || "").trim();
+    return q ? highlightInHtmlText(html, q) : html;
   }
 
   function closePolezDescriptionOverlay() {
