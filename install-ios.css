@@ -1725,7 +1725,7 @@ body.btca-apple-comfort.btca-force-landscape-table #root {
   color: rgba(17, 24, 39, 0.72);
   background: rgba(17, 24, 39, 0.06);
   font-size: var(--btca-l1-font, 1rem);
-  font-weight: 700;
+  font-weight: 600;
   line-height: var(--btca-l1-lh, calc(26rem / 17));
   text-align: center;
   overflow: hidden;
@@ -2741,7 +2741,7 @@ body.btca-apple-comfort .btca-l1-chart-panel {
   color: #111827;
   background: #ffffff;
   font-size: var(--btca-l1-font);
-  font-weight: 600;
+  font-weight: 400;
   line-height: var(--btca-l1-lh);
   touch-action: manipulation;
 }
@@ -2873,9 +2873,15 @@ body.btca-apple-comfort .btca-l1-chart-panel {
 .btca-l1-polez-source__body {
   color: #111111;
   font-size: 1rem;
+  font-weight: 400;
   line-height: calc(26rem / 17);
   white-space: normal;
   word-break: break-word;
+}
+
+.btca-l1-polez-source__body strong,
+.btca-about-content .btca-l1-polez-source__body strong {
+  font-weight: 600;
 }
 
 .btca-l1-polez-source__body .btca-l1-polez-dict-hit {
@@ -3690,7 +3696,7 @@ body.btca-apple-comfort .btca-l1-ok-input {
   color: #111827;
   background: transparent;
   font-size: var(--btca-l1-font);
-  font-weight: 600;
+  font-weight: 400;
   line-height: var(--btca-l1-lh);
   text-align: center;
   overflow: hidden;
@@ -3750,7 +3756,7 @@ body.btca-apple-comfort .btca-l1-ok-input {
 
 .btca-level1-picker--anchored .btca-level1-picker__item-title {
   color: #000000;
-  font-weight: 600;
+  font-weight: 400;
 }
 
 .btca-level1-picker--anchored .btca-level1-picker__item--catalog-all {
