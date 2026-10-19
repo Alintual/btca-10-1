@@ -3,7 +3,7 @@
 
   var DB = window.BTCA_LEVEL3_DB;
   var BAZA = window.BTCA_LEVEL3_BAZA;
-  var VERSION = "10.1.93";
+  var VERSION = "10.1.94";
   var BRANDING_UP = "branding/up.png";
   var BRANDING_BAZA = "branding/baza.png";
   var BRANDING_INFO = "branding/info.png";
@@ -1092,7 +1092,14 @@
     overlay.querySelectorAll("[data-btca-sheet-info-close]").forEach(function (el) {
       el.addEventListener("click", closeSheetInfoOverlay);
     });
-    bindHorizontalSwipe(overlay.querySelector(".btca-sheet-info-panel") || overlay, {
+    var infoPanel = overlay.querySelector(".btca-sheet-info-panel");
+    if (infoPanel) {
+      infoPanel.addEventListener("dblclick", function (e) {
+        e.preventDefault();
+        closeSheetInfoOverlay();
+      });
+    }
+    bindHorizontalSwipe(infoPanel || overlay, {
       onSwipeLeft: closeSheetInfoOverlay,
     });
     void overlay.offsetWidth;
@@ -4145,11 +4152,11 @@
     var content = state.root.querySelector("[data-btca-level3-content]");
     bindPolezSourceLinks(overlay, content);
     if (isPolezDictionaryItem(item) && String(searchQ || "").trim()) {
-      scrollPolezDictToFirstHit(overlay, searchQ);
+      applyPolezDictHighlightDom(overlay, searchQ);
     }
   }
 
-  /** Подсветка через DOM (на случай если HTML-путь не сработал) + скролл к первому сверху. */
+  /** Подсветка через DOM только в теле Описания (не в h1/шапке). */
   function applyPolezDictHighlightDom(root, searchRaw) {
     var q = String(searchRaw || "").trim();
     if (!q || !root) return;
@@ -4179,7 +4186,6 @@
         if (hit > pos) frag.appendChild(document.createTextNode(raw.slice(pos, hit)));
         var mark = document.createElement("span");
         mark.className = "btca-l1-polez-dict-hit";
-        mark.style.cssText = "background-color:#ffeb3b;color:#111111;font-weight:700;padding:0 2px;border-radius:2px;";
         mark.textContent = raw.slice(hit, hit + q.length);
         frag.appendChild(mark);
         pos = hit + q.length;
@@ -4187,22 +4193,6 @@
       if (pos < raw.length) frag.appendChild(document.createTextNode(raw.slice(pos)));
       if (tn.parentNode) tn.parentNode.replaceChild(frag, tn);
     }
-  }
-
-  function scrollPolezDictToFirstHit(overlay, searchRaw) {
-    applyPolezDictHighlightDom(overlay, searchRaw);
-    overlay.scrollTop = 0;
-    window.setTimeout(function () {
-      applyPolezDictHighlightDom(overlay, searchRaw);
-      var firstHit = overlay.querySelector(".btca-l1-polez-dict-hit");
-      if (!firstHit || !firstHit.isConnected) return;
-      try {
-        var top = firstHit.getBoundingClientRect().top - overlay.getBoundingClientRect().top;
-        overlay.scrollTop = Math.max(0, overlay.scrollTop + top - 12);
-      } catch (e) {
-        try { firstHit.scrollIntoView({ block: "start", behavior: "smooth" }); } catch (e2) { /* ignore */ }
-      }
-    }, 80);
   }
 
   function openPolezImagePortrait(hotOrFig) {
@@ -4340,7 +4330,7 @@
   }
 
   function polezDictHitOpen() {
-    return '<span class="btca-l1-polez-dict-hit" style="background-color:#ffeb3b;color:#111111;font-weight:700;padding:0 2px;border-radius:2px;">';
+    return '<span class="btca-l1-polez-dict-hit">';
   }
 
   /** Все вхождения фразы в plain-тексте → escape + подсветка. */
@@ -4397,22 +4387,29 @@
   function formatPolezDictionaryBody(body, searchRaw) {
     var q = String(searchRaw || "").trim();
     var lines = String(body || "").split("\n");
-    // Сначала структура (жирный термин), затем подсветка по всему HTML
+    // Сначала структура (жирный термин), затем подсветка только в тексте статей — не в #/заголовках
     var html = lines.map(function (line) {
-      var m = /^(\d+)\.\s+(.+)$/.exec(line);
+      var trimmed = String(line || "").replace(/^\uFEFF/, "");
+      // Заголовок документа (# …) — не в теле: он уже в h1 окна пункта
+      if (/^#\s*/.test(trimmed)) {
+        return "";
+      }
+      var m = /^(\d+)\.\s+(.+)$/.exec(trimmed);
       if (!m) {
-        return applyPolezInlineMarkup(escapeHtml(line));
+        var plain = applyPolezInlineMarkup(escapeHtml(trimmed));
+        return q ? highlightInHtmlText(plain, q) : plain;
       }
       var num = m[1];
       var rest = m[2];
       var term = extractDictionaryTermName(rest);
       var after = rest.slice(term.length);
-      return (
-        escapeHtml(num) + ". <strong>" + escapeHtml(term) + "</strong>" +
-        applyPolezInlineMarkup(escapeHtml(after))
-      );
-    }).join("<br>");
-    return q ? highlightInHtmlText(html, q) : html;
+      // Термин в <strong> — жирность сохраняем; подсветка не добавляет свой font-weight
+      var termHtml = "<strong>" + (q ? highlightInHtmlText(escapeHtml(term), q) : escapeHtml(term)) + "</strong>";
+      var afterHtml = applyPolezInlineMarkup(escapeHtml(after));
+      if (q) afterHtml = highlightInHtmlText(afterHtml, q);
+      return escapeHtml(num) + ". " + termHtml + afterHtml;
+    }).filter(function (part) { return part !== ""; }).join("<br>");
+    return html;
   }
 
   function formatPolezSourceBody(body, docId) {
