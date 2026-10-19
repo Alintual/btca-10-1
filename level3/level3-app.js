@@ -3,7 +3,7 @@
 
   var DB = window.BTCA_LEVEL3_DB;
   var BAZA = window.BTCA_LEVEL3_BAZA;
-  var VERSION = "10.1.100";
+  var VERSION = "10.1.101";
   var BRANDING_UP = "branding/up.png";
   var BRANDING_BAZA = "branding/baza.png";
   var BRANDING_INFO = "branding/info.png";
@@ -1078,8 +1078,10 @@
       ? titlebar.getBoundingClientRect().bottom
       : rootRect.top + 46;
     var topPx = Math.max(0, Math.round(barBottom - rootRect.top));
-    var midPx = Math.round(rootRect.height * 0.5);
-    var panelH = Math.max(120, midPx - topPx);
+    // Верх у titlebar; низ окна — на 2/3 высоты экрана
+    var bottomOnScreen = Math.round(window.innerHeight * (2 / 3));
+    var bottomPx = Math.max(topPx + 120, Math.round(bottomOnScreen - rootRect.top));
+    var panelH = Math.max(120, bottomPx - topPx);
     var overlay = document.createElement("div");
     overlay.className = "btca-sheet-info-root";
     overlay.innerHTML =
