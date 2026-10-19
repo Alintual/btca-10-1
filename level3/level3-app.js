@@ -3,7 +3,7 @@
 
   var DB = window.BTCA_LEVEL3_DB;
   var BAZA = window.BTCA_LEVEL3_BAZA;
-  var VERSION = "10.1.99";
+  var VERSION = "10.1.100";
   var BRANDING_UP = "branding/up.png";
   var BRANDING_BAZA = "branding/baza.png";
   var BRANDING_INFO = "branding/info.png";
@@ -1366,9 +1366,10 @@
     var gutterR = safeGutter();
     var left = Math.max(gutterL, Math.min(Math.round(rect.left), window.innerWidth - gutterR - panelW));
     var top = Math.round(rect.bottom + gap);
-    // Нижняя граница списков Упр./Задача/Раздел/Каталог — 2/3 высоты экрана на всех листах
-    var bottomY = Math.round(window.innerHeight * (2 / 3));
-    var panelH = Math.max(120, bottomY - top);
+    var bottomReserve = safeGutter() + 12;
+    var availableH = Math.max(0, window.innerHeight - top - bottomReserve);
+    var maxCap = Math.round(window.innerHeight * 0.52);
+    var panelH = Math.min(maxCap, Math.max(120, availableH));
     return { top: top, left: left, width: panelW, height: panelH };
   }
 
