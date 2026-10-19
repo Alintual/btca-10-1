@@ -2,8 +2,8 @@
   "use strict";
 
   var BTCA_BASE = "/btca-10-1/";
-  var INSTALL_CACHE = "btca10-web-10.1.135:static-install";
-  var MEDIA_CACHE = "btca10-web-10.1.135:static-media";
+  var INSTALL_CACHE = "btca10-web-10.1.136:static-install";
+  var MEDIA_CACHE = "btca10-web-10.1.136:static-media";
   var MEDIA_PROBE_RE = /offline-unpacked\/level3\/exercises\/.+\.(jpe?g|png|webp|gif)$/i;
   var MEDIA_STATE_KEY = "btca10-web:static-media-state";
   var APP_READY_KEY = "btca10-web:app-ready";
@@ -25,8 +25,8 @@
   var ABOUT_MAIN_TEXT = "Настоящее Приложение разработано для локальной установки (развёртывания) на смартфоне или планшете с операционными системами Android или iOS и рассчитано для обучения и тренировки учеников с уровнем подготовки «Уровень 3 — Продвинутый».";
   var ABOUT_POST_TEXT = "*****\nБТКА, это — учебно-тренировочный программный комплекс, предназначенный для комплексного обучения игре на русском бильярде, выработки и закрепления практических навыков ведения бильярдной игры в Пирамиду, как самостоятельно, так и с тренером, с применением современных методик и технологий.\nТренировочный комплекс БТКА в сочетании с уникальной Методологией обучения составляют общую Систему тренировок БТКА школы русского бильярда «Абриколь» г. Красноярск.\n<a href=\"https://cloud.mail.ru/public/sujN/mpE8mr6aW\">Методика обучения</a>\n\nВ текущей версии Приложения БТКА 10.1 доступен раздел:\n•  *Уровень 3 — Продвинутый* Упражнений – 40, Задач – 263, Полезностей – 15.\n\nВсе Приложения функционируют без использования сети Интернет.\nКаждое Приложение:\n•  Содержит специфический (соответствующий уровню подготовки) набор упражнений, задач и тестов (в графическом виде), ранжированных по принципу - \"от простого к сложному\", и сгруппированных в тематические разделы по видам тренировок;\n•  Включает необходимые инструкции, методическую и справочную информацию;\n•  Обеспечивает возможность ввода, хранения и обработки результатов прогресса выполнения учеником практических заданий для последующего статистического анализа с использованием локальной Базы данных (БД);\n•  Имеет весь необходимый функционал и автоматизацию, а также интуитивно-понятный интерфейс, что способствует осуществлению полноценного, эффективного тренировочного процесса в комфортных условиях.\n\nОТ АВТОРА. Система тренировок БТКА разработана по результатам систематизации методик обучения русскому бильярду на основе: секретов ведущих тренеров и игроков (в т.ч. В. Симонича, В. Лазарева, С. Баурова, Е. Сталева и др.), опыта «старой школы», а также современных научных и экспериментальных исследований и IT-технологий.\n<a href=\"https://cloud.mail.ru/public/Ye3r/ZYwpjB9uz\">Подробное описание комплекса БТКА</a>\n\nCopyright © Юрий Алинт (Андрей Юрьев) 2026";
   var installedHomeSnapshot = "";
-  var LEVEL1_MODULE_VERSION = "10.1.96";
-  var LEVEL3_MODULE_VERSION = "10.1.96";
+  var LEVEL1_MODULE_VERSION = "10.1.97";
+  var LEVEL3_MODULE_VERSION = "10.1.97";
 
   var CORE_REL_PATHS = [
     "",
@@ -2958,6 +2958,9 @@
     if (/код истёк/i.test(raw)) {
       return "Код истёк. Запросите новый.";
     }
+    if (/central directory|invalid zip|corrupted zip|not a zip|zip file/i.test(raw)) {
+      return "Архив медиа повреждён при загрузке. Обновите страницу и нажмите загрузку ещё раз.";
+    }
     // Не показываем сырой английский текст браузера.
     if (/^[A-Za-z][A-Za-z0-9 _.,:;'"()%/+-]{0,120}$/.test(raw) && !/[А-Яа-яЁё]/.test(raw)) {
       return fallback || "Ошибка запроса. Повторите попытку.";
@@ -4308,9 +4311,13 @@
   }
 
   function renderError(error) {
+    var msg = localizeUserFacingError(
+      error,
+      "Не удалось подготовить offline. Обновите страницу и повторите."
+    );
     setPanel(
       '<div class="ios-panel__header"><span>Ошибка iOS/iPadOS</span></div>' +
-      '<p class="prepare-status prepare-status--error">' + escapeHtml(error && (error.message || error)) + "</p>"
+      '<p class="prepare-status prepare-status--error">' + escapeHtml(msg) + "</p>"
     );
   }
 
@@ -4511,6 +4518,23 @@
                 return fetch(zipUrl, { cache: "no-store", credentials: "include" }).then(function (response) {
                   if (!response.ok) throw new Error("Не удалось загрузить " + zipUrl + ": " + response.status);
                   return response.blob();
+                }).then(function (blob) {
+                  var expected = Number(pack.bytes) || 0;
+                  if (expected > 0 && blob && blob.size > 0 && Math.abs(blob.size - expected) > 2048) {
+                    throw new Error(
+                      "Архив " + pack.id + " повреждён при загрузке (размер " +
+                      blob.size + ", ожидалось " + expected + "). Обновите страницу и повторите."
+                    );
+                  }
+                  return blob.slice(0, 4).arrayBuffer().then(function (headBuf) {
+                    var head = new Uint8Array(headBuf || []);
+                    if (head.length < 2 || head[0] !== 0x50 || head[1] !== 0x4b) {
+                      throw new Error(
+                        "Архив " + pack.id + " повреждён при загрузке. Обновите страницу и повторите."
+                      );
+                    }
+                    return blob;
+                  });
                 }).then(function (blob) {
                   return cache.put(zipUrl, new Response(blob.slice(0, blob.size), {
                     headers: { "Content-Type": "application/zip" },

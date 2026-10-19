@@ -1,4 +1,4 @@
-const CACHE_VERSION = "btca10-web-10.1.135";
+const CACHE_VERSION = "btca10-web-10.1.136";
 const APP_CACHE = `${CACHE_VERSION}:app`;
 const RUNTIME_CACHE = `${CACHE_VERSION}:runtime`;
 const BASE_PATH = "/btca-10-1";
@@ -85,15 +85,20 @@ function networkFirst(request, cacheName) {
       settled = true;
       resolve(response);
     }
+    var isHtmlNav =
+      request.mode === "navigate" ||
+      ((request.headers && request.headers.get("accept")) || "").indexOf("text/html") !== -1;
     var timer = setTimeout(function () {
+      // Только для HTML: иначе zip/бинарник подменяется shell → «End of central directory»
+      if (!isHtmlNav) {
+        finish(new Response("", { status: 504, statusText: "Gateway Timeout" }));
+        return;
+      }
       matchShell(request).then(function (cached) {
         if (cached) finish(cached);
         else offlineFallback(request).then(finish);
       });
     }, 2800);
-    var isHtmlNav =
-      request.mode === "navigate" ||
-      ((request.headers && request.headers.get("accept")) || "").indexOf("text/html") !== -1;
     safeFetch(request)
       .then(function (response) {
         if (response && response.ok) {
@@ -102,23 +107,26 @@ function networkFirst(request, cacheName) {
           finish(response);
           return;
         }
+        clearTimeout(timer);
+        if (!isHtmlNav) {
+          finish(response || new Response("", { status: 503 }));
+          return;
+        }
         return matchShell(request).then(function (cached) {
-          clearTimeout(timer);
           if (cached) {
             finish(cached);
             return;
           }
-          // Никогда не отдаём 404/401 HTML в лицо пользователю после сброса кэша.
-          if (isHtmlNav) {
-            offlineFallback(request).then(finish);
-            return;
-          }
-          finish(response || new Response("", { status: 503 }));
+          offlineFallback(request).then(finish);
         });
       })
       .catch(function () {
+        clearTimeout(timer);
+        if (!isHtmlNav) {
+          finish(new Response("", { status: 503, statusText: "Service Unavailable" }));
+          return;
+        }
         matchShell(request).then(function (cached) {
-          clearTimeout(timer);
           if (cached) finish(cached);
           else offlineFallback(request).then(finish);
         });
@@ -268,7 +276,11 @@ self.addEventListener("fetch", (event) => {
     return;
   }
 
-  // Манифест/zip offline — networkFirst в runtime-кэш.
+  // media.btca.zip и прочее /offline/media/ — только сеть, без SW.
+  // networkFirst(2.8s) на больших zip отдавал HTML shell → ZipReader: End of central directory.
+  if (path.indexOf(BASE_PATH + "/offline/media/") === 0) return;
+
+  // Прочий offline (app-shell и т.п.) — networkFirst в runtime-кэш.
   if (path.indexOf(BASE_PATH + "/offline/") !== 0) return;
 
   event.respondWith(networkFirst(event.request, RUNTIME_CACHE));
