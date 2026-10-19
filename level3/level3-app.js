@@ -1367,8 +1367,8 @@
     var gutterL = safeGutter();
     var gutterR = safeGutter();
     var left = Math.max(gutterL, Math.min(Math.round(rect.left), window.innerWidth - gutterR - panelW));
+    // Верх — сразу под полем; низ у всех списков — на 2/3 высоты экрана
     var top = Math.round(rect.bottom + gap);
-    // Все якорные списки (Упр./Задача/Раздел/Каталог): низ на 2/3 высоты экрана
     var bottomOnScreen = Math.round(window.innerHeight * (2 / 3));
     var panelH = Math.max(120, bottomOnScreen - top);
     return { top: top, left: left, width: panelW, height: panelH };
