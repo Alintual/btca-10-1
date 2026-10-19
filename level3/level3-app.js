@@ -3,7 +3,7 @@
 
   var DB = window.BTCA_LEVEL3_DB;
   var BAZA = window.BTCA_LEVEL3_BAZA;
-  var VERSION = "10.1.103";
+  var VERSION = "10.1.104";
   var BRANDING_UP = "branding/up.png";
   var BRANDING_BAZA = "branding/baza.png";
   var BRANDING_INFO = "branding/info.png";
@@ -1360,8 +1360,7 @@
     return SCREEN_EDGE_GUTTER;
   }
 
-  function computeAnchoredPickerLayout(anchorEl, opts) {
-    opts = opts || {};
+  function computeAnchoredPickerLayout(anchorEl) {
     var rect = anchorEl.getBoundingClientRect();
     var gap = 6;
     var panelW = Math.max(96, Math.round(rect.width));
@@ -1369,16 +1368,9 @@
     var gutterR = safeGutter();
     var left = Math.max(gutterL, Math.min(Math.round(rect.left), window.innerWidth - gutterR - panelW));
     var top = Math.round(rect.bottom + gap);
-    // Раздел / Каталог: низ списка на 2/3 высоты экрана (как окно Инфо)
-    if (opts.bottomAtTwoThirds) {
-      var bottomOnScreen = Math.round(window.innerHeight * (2 / 3));
-      var panelHTall = Math.max(120, bottomOnScreen - top);
-      return { top: top, left: left, width: panelW, height: panelHTall };
-    }
-    var bottomReserve = safeGutter() + 12;
-    var availableH = Math.max(0, window.innerHeight - top - bottomReserve);
-    var maxCap = Math.round(window.innerHeight * 0.52);
-    var panelH = Math.min(maxCap, Math.max(120, availableH));
+    // Все якорные списки (Упр./Задача/Раздел/Каталог): низ на 2/3 высоты экрана
+    var bottomOnScreen = Math.round(window.innerHeight * (2 / 3));
+    var panelH = Math.max(120, bottomOnScreen - top);
     return { top: top, left: left, width: panelW, height: panelH };
   }
 
@@ -2029,7 +2021,6 @@
         catalogList: true,
         searchable: true,
         selectExactHot: true,
-        bottomAtTwoThirds: true,
         searchValue: q,
         getOptions: function (query) { return buildPolezCatalogOptions(query); },
         onSearchChange: function (query) {
@@ -2208,9 +2199,7 @@
     var pickerStyle = "";
     var layout =
       pickerOpts.anchorLayout ||
-      (anchorEl && anchorEl.getBoundingClientRect
-        ? computeAnchoredPickerLayout(anchorEl, pickerOpts)
-        : null);
+      (anchorEl && anchorEl.getBoundingClientRect ? computeAnchoredPickerLayout(anchorEl) : null);
     if (layout) {
       pickerStyle =
         ' style="position:fixed;top:' + layout.top + "px;left:" + layout.left + "px;width:" + layout.width +
@@ -3821,7 +3810,7 @@
     head.querySelector("[data-btca-nav-section]").addEventListener("click", function (event) {
       openPicker("Раздел", sectionOptions, sectionKey, function (value) {
         applyNavSectionChange(content, value);
-      }, event.currentTarget, { bottomAtTwoThirds: true });
+      }, event.currentTarget);
     });
     head.querySelector("[data-btca-nav-filter]").addEventListener("click", function (event) {
       openPicker("Упражнение", exerciseOptions, filterKey, function (value) {
