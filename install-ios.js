@@ -2,8 +2,8 @@
   "use strict";
 
   var BTCA_BASE = "/btca-10-1/";
-  var INSTALL_CACHE = "btca10-web-10.1.145:static-install";
-  var MEDIA_CACHE = "btca10-web-10.1.145:static-media";
+  var INSTALL_CACHE = "btca10-web-10.1.146:static-install";
+  var MEDIA_CACHE = "btca10-web-10.1.146:static-media";
   var MEDIA_PROBE_RE = /offline-unpacked\/level3\/exercises\/.+\.(jpe?g|png|webp|gif)$/i;
   var MEDIA_STATE_KEY = "btca10-web:static-media-state";
   var APP_READY_KEY = "btca10-web:app-ready";
@@ -40,7 +40,7 @@
     "•  Срок — от 1 года.\n" +
     "•  Количество устройств — 6.\n" +
     "•  Стоимость — по согласованию.\n" +
-    "\n*** Служба поддержки проекта — <a href=\"mailto:interual@gmail.com\">interual@gmail.com</a>.\n" +
+    "\n*** Служба поддержки проекта — interual@gmail.com.\n" +
     "\nСсылки для загрузки и установки Приложений являются персональными и привязываются к аккаунту и конкретному устройству!\n" +
     "Для работы Приложений требуется сеть Интернет (режим онлайн) ТОЛЬКО при загрузке, установке/переустановке, после перезапуска Приложений. В режиме работы с Интернет происходит верификация: аккаунта, самого устройства и активность подписки. Во всех других случаях, Приложения полностью функциональны в режиме работы оффлайн.\n" +
     "*** Режимы работы онлайн/оффлайн переключаются автоматически.\n" +
@@ -54,8 +54,8 @@
     "*Упражнений* – более 150, *Задач* – более 700, *Полезности* – интеллектуальная поисковая система по Базе знаний школы: 14 основополагающих документов, 114 рисунков и видео и более 370 тематических материалов.\n" +
     "\nCopyright © Юрий Алинт (Андрей Юрьев) 2026";
   var installedHomeSnapshot = "";
-  var LEVEL1_MODULE_VERSION = "10.1.106";
-  var LEVEL3_MODULE_VERSION = "10.1.106";
+  var LEVEL1_MODULE_VERSION = "10.1.107";
+  var LEVEL3_MODULE_VERSION = "10.1.107";
 
   var CORE_REL_PATHS = [
     "",
@@ -1876,24 +1876,26 @@
     var html = escapeHtml(value)
       .replace(
         /&lt;a href=&quot;([^&]+)&quot;&gt;([\s\S]*?)&lt;\/a&gt;/g,
-        '<a href="$1" target="_blank" rel="noopener">$2</a>'
+        '<a href="$1" target="_blank" rel="noopener noreferrer">$2</a>'
       )
       .replace(/\*([^*\n]+)\*/g, "<strong>$1</strong>")
       .replace(/\n/g, "<br>")
       .replace(/\{\{INFO_ICON\}\}/g, aboutInfoIconHtml());
-    // Голые https/http и email, ещё не обёрнутые в <a>
+    // Голые https/http (email намеренно не делаем ссылкой)
     html = html.replace(
       /(^|[^">])(https?:\/\/[^\s<]+)/g,
       function (_m, prefix, url) {
         var clean = url.replace(/[.,;:!?)]+$/, "");
         var trail = url.slice(clean.length);
-        return prefix + '<a href="' + clean + '" target="_blank" rel="noopener">' + clean + "</a>" + trail;
-      }
-    );
-    html = html.replace(
-      /(^|[^">])([a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})/g,
-      function (_m, prefix, email) {
-        return prefix + '<a href="mailto:' + email + '">' + email + "</a>";
+        return (
+          prefix +
+          '<a href="' +
+          clean +
+          '" target="_blank" rel="noopener noreferrer">' +
+          clean +
+          "</a>" +
+          trail
+        );
       }
     );
     return html;
@@ -1973,6 +1975,13 @@
         renderInstalledHome();
       });
     }
+    // Загрузчик БТКА — во внешний Safari, не внутрь установленного PWA.
+    root.querySelectorAll('a[href*="clc.li/btca-10-1"]').forEach(function (a) {
+      a.addEventListener("click", function (e) {
+        e.preventDefault();
+        openUrlInExternalSafari(a.getAttribute("href") || "https://clc.li/btca-10-1");
+      });
+    });
   }
 
   function removeInjectedScript(attr, src) {
@@ -2775,13 +2784,13 @@
     });
   }
 
-  function openDownloadsFromAccountLink() {
-    var url =
-      LOADING_PAGE_URL + (LOADING_PAGE_URL.indexOf("?") >= 0 ? "&" : "?") + "open=downloads";
-    // Из установленного PWA — открыть загрузочную во внешнем Safari, не подменяя экран PWA.
+  /** Открыть URL во внешнем Safari (из standalone PWA), не подменяя экран приложения. */
+  function openUrlInExternalSafari(url) {
+    var target = String(url || "").trim();
+    if (!target) return;
     if (isStandalone()) {
       try {
-        var safariScheme = url
+        var safariScheme = target
           .replace(/^https:\/\//i, "x-safari-https://")
           .replace(/^http:\/\//i, "x-safari-http://");
         var probe = document.createElement("a");
@@ -2795,15 +2804,21 @@
         return;
       } catch (e) { }
       try {
-        var opened = window.open(url, "_blank", "noopener,noreferrer");
+        var opened = window.open(target, "_blank", "noopener,noreferrer");
         if (opened) return;
       } catch (e2) { }
     }
     try {
-      window.open(url, "_blank", "noopener,noreferrer");
+      window.open(target, "_blank", "noopener,noreferrer");
     } catch (e3) {
-      window.location.href = url;
+      window.location.href = target;
     }
+  }
+
+  function openDownloadsFromAccountLink() {
+    var url =
+      LOADING_PAGE_URL + (LOADING_PAGE_URL.indexOf("?") >= 0 ? "&" : "?") + "open=downloads";
+    openUrlInExternalSafari(url);
   }
 
   function enterDownloadsViewFromSession() {
