@@ -3,7 +3,7 @@
 
   var DB = window.BTCA_LEVEL3_DB;
   var BAZA = window.BTCA_LEVEL3_BAZA;
-  var VERSION = "10.1.108";
+  var VERSION = "10.1.109";
   var BRANDING_UP = "branding/up.png";
   var BRANDING_BAZA = "branding/baza.png";
   var BRANDING_INFO = "branding/info.png";
@@ -2220,15 +2220,67 @@
       : "";
     var liveOptions = options;
     var emptyFlashTimer = null;
+    var scrollNavHtml = pickerOpts.catalogList
+      ? '<div class="btca-level1-picker__scroll-nav" data-btca-picker-scroll-nav hidden>' +
+        '<button type="button" class="btca-level1-picker__scroll-btn btca-level1-picker__scroll-btn--down" data-btca-picker-scroll-down aria-label="Вниз">' +
+        '<img src="' + escapeHtml(brandingUrl(BRANDING_UP)) + '" alt="" draggable="false">' +
+        "</button>" +
+        '<button type="button" class="btca-level1-picker__scroll-btn btca-level1-picker__scroll-btn--up" data-btca-picker-scroll-up aria-label="Наверх">' +
+        '<img src="' + escapeHtml(brandingUrl(BRANDING_UP)) + '" alt="" draggable="false">' +
+        "</button></div>"
+      : "";
     layer.innerHTML =
       '<button class="btca-level1-menu-backdrop" type="button" data-btca-picker-close aria-label="Закрыть"></button>' +
       '<div class="' + pickerClass + '" role="dialog" aria-label="' + escapeHtml(title) + '"' + pickerStyle + ">" +
       searchHtml +
       '<div class="btca-level1-picker__list" data-btca-picker-list>' +
       renderPickerOptionsHtml(liveOptions, current, pickerOpts) +
-      "</div></div>";
+      "</div>" +
+      scrollNavHtml +
+      "</div>";
     var listEl = layer.querySelector("[data-btca-picker-list]");
+    var scrollNavEl = layer.querySelector("[data-btca-picker-scroll-nav]");
     scrollPickerToActive(listEl, liveOptions, current, rowHeight);
+
+    function updatePickerScrollNav() {
+      if (!scrollNavEl || !listEl) return;
+      var needScroll = listEl.scrollHeight > listEl.clientHeight + 2;
+      if (needScroll) scrollNavEl.removeAttribute("hidden");
+      else scrollNavEl.setAttribute("hidden", "hidden");
+    }
+
+    function pickerScrollByPage(direction) {
+      if (!listEl) return;
+      var page = Math.max(48, Math.floor(listEl.clientHeight * 0.85));
+      var next = listEl.scrollTop + direction * page;
+      if (typeof listEl.scrollTo === "function") {
+        listEl.scrollTo({ top: next, behavior: "smooth" });
+      } else {
+        listEl.scrollTop = next;
+      }
+    }
+
+    if (scrollNavEl) {
+      var btnDown = scrollNavEl.querySelector("[data-btca-picker-scroll-down]");
+      var btnUp = scrollNavEl.querySelector("[data-btca-picker-scroll-up]");
+      if (btnDown) {
+        btnDown.addEventListener("click", function (event) {
+          event.preventDefault();
+          event.stopPropagation();
+          pickerScrollByPage(1);
+        });
+      }
+      if (btnUp) {
+        btnUp.addEventListener("click", function (event) {
+          event.preventDefault();
+          event.stopPropagation();
+          pickerScrollByPage(-1);
+        });
+      }
+      listEl.addEventListener("scroll", updatePickerScrollNav, { passive: true });
+      window.setTimeout(updatePickerScrollNav, 0);
+      window.setTimeout(updatePickerScrollNav, 120);
+    }
 
     function catalogOptionsHaveItems(opts) {
       for (var i = 0; i < (opts || []).length; i += 1) {
@@ -2287,6 +2339,8 @@
         : liveOptions;
       listEl.innerHTML = renderPickerOptionsHtml(liveOptions, current, pickerOpts);
       scrollPickerToActive(listEl, liveOptions, current, rowHeight);
+      updatePickerScrollNav();
+      window.setTimeout(updatePickerScrollNav, 0);
       if (pickerOpts.catalogList && exact && !catalogOptionsHaveItems(liveOptions)) {
         flashPickerEmpty(input, exact);
         return;

@@ -3683,6 +3683,61 @@ body.btca-apple-comfort .btca-l1-ok-input {
   -webkit-overflow-scrolling: touch;
 }
 
+/* Полезности / Каталог: прокрутка списка — up.png (Вниз слева, Наверх справа) */
+.btca-level1-picker__scroll-nav {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  pointer-events: none;
+}
+
+.btca-level1-picker__scroll-nav[hidden] {
+  display: none !important;
+}
+
+.btca-level1-picker__scroll-btn {
+  position: absolute;
+  bottom: 8px;
+  z-index: 4;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  opacity: 0.72;
+  pointer-events: auto;
+  cursor: pointer;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+.btca-level1-picker__scroll-btn--down {
+  left: 8px;
+}
+
+.btca-level1-picker__scroll-btn--up {
+  right: 8px;
+}
+
+.btca-level1-picker__scroll-btn img {
+  display: block;
+  width: calc(22rem / 17);
+  height: calc(22rem / 17);
+  object-fit: contain;
+  pointer-events: none;
+}
+
+.btca-level1-picker__scroll-btn--down img {
+  transform: rotate(180deg);
+}
+
+.btca-level1-picker__scroll-btn:active {
+  opacity: 0.95;
+}
+
 .btca-level1-picker--anchored .btca-level1-picker__item {
   box-sizing: border-box;
   display: flex;
