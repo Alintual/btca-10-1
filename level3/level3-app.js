@@ -3,8 +3,9 @@
 
   var DB = window.BTCA_LEVEL3_DB;
   var BAZA = window.BTCA_LEVEL3_BAZA;
-  var VERSION = "10.1.110";
+  var VERSION = "10.1.111";
   var BRANDING_UP = "branding/up.png";
+  var BRANDING_UP_LIST = "branding/up_list.png";
   var BRANDING_BAZA = "branding/baza.png";
   var BRANDING_INFO = "branding/info.png";
   var TRAILING_SLOT_W = 112;
@@ -2223,10 +2224,10 @@
     var scrollNavHtml = pickerOpts.catalogList
       ? '<div class="btca-level1-picker__scroll-nav" data-btca-picker-scroll-nav hidden>' +
         '<button type="button" class="btca-level1-picker__scroll-btn btca-level1-picker__scroll-btn--down" data-btca-picker-scroll-down aria-label="Вниз">' +
-        '<img src="' + escapeHtml(brandingUrl(BRANDING_UP)) + '" alt="" draggable="false">' +
+        '<img src="' + escapeHtml(brandingUrl(BRANDING_UP_LIST)) + '" alt="" draggable="false">' +
         "</button>" +
         '<button type="button" class="btca-level1-picker__scroll-btn btca-level1-picker__scroll-btn--up" data-btca-picker-scroll-up aria-label="Наверх">' +
-        '<img src="' + escapeHtml(brandingUrl(BRANDING_UP)) + '" alt="" draggable="false">' +
+        '<img src="' + escapeHtml(brandingUrl(BRANDING_UP_LIST)) + '" alt="" draggable="false">' +
         "</button></div>"
       : "";
     layer.innerHTML =
@@ -2263,20 +2264,24 @@
     if (scrollNavEl) {
       var btnDown = scrollNavEl.querySelector("[data-btca-picker-scroll-down]");
       var btnUp = scrollNavEl.querySelector("[data-btca-picker-scroll-up]");
-      if (btnDown) {
-        btnDown.addEventListener("click", function (event) {
+      function bindScrollBtn(btn, toEnd) {
+        if (!btn) return;
+        function blockListHit(event) {
           event.preventDefault();
           event.stopPropagation();
-          pickerScrollToEdge(true);
+          if (typeof event.stopImmediatePropagation === "function") {
+            event.stopImmediatePropagation();
+          }
+        }
+        btn.addEventListener("pointerdown", blockListHit);
+        btn.addEventListener("touchstart", blockListHit, { passive: false });
+        btn.addEventListener("click", function (event) {
+          blockListHit(event);
+          pickerScrollToEdge(toEnd);
         });
       }
-      if (btnUp) {
-        btnUp.addEventListener("click", function (event) {
-          event.preventDefault();
-          event.stopPropagation();
-          pickerScrollToEdge(false);
-        });
-      }
+      bindScrollBtn(btnDown, true);
+      bindScrollBtn(btnUp, false);
       listEl.addEventListener("scroll", updatePickerScrollNav, { passive: true });
       window.setTimeout(updatePickerScrollNav, 0);
       window.setTimeout(updatePickerScrollNav, 120);

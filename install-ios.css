@@ -3695,7 +3695,7 @@ body.btca-apple-comfort .btca-l1-ok-input {
 .btca-level1-picker__scroll-nav {
   position: absolute;
   inset: 0;
-  z-index: 3;
+  z-index: 20;
   pointer-events: none;
 }
 
@@ -3705,12 +3705,13 @@ body.btca-apple-comfort .btca-l1-ok-input {
 
 .btca-level1-picker__scroll-btn {
   position: absolute;
-  z-index: 4;
+  z-index: 21;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   padding: 0;
   border: 0;
+  border-radius: 50%;
   background: transparent;
   opacity: 1;
   pointer-events: auto;
@@ -3719,28 +3720,30 @@ body.btca-apple-comfort .btca-l1-ok-input {
   -webkit-tap-highlight-color: transparent;
   -webkit-appearance: none;
   appearance: none;
+  /* Круг up_list: стрелка ≈58% диаметра → визуально ≈ прежние 23.1rem/17 */
+  width: calc(40rem / 17);
+  height: calc(40rem / 17);
 }
 
 /* Вниз — правый верхний угол; Наверх — правый нижний */
 .btca-level1-picker__scroll-btn--down {
-  top: 8px;
-  right: 8px;
+  top: 4px;
+  right: 4px;
   bottom: auto;
   left: auto;
 }
 
 .btca-level1-picker__scroll-btn--up {
   top: auto;
-  right: 8px;
-  bottom: 8px;
+  right: 4px;
+  bottom: 4px;
   left: auto;
 }
 
 .btca-level1-picker__scroll-btn img {
   display: block;
-  /* Инфо: 22rem/17; +5% */
-  width: calc(23.1rem / 17);
-  height: calc(23.1rem / 17);
+  width: 100%;
+  height: 100%;
   object-fit: contain;
   pointer-events: none;
 }
