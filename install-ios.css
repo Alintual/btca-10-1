@@ -2323,6 +2323,19 @@ body.btca-apple-comfort .btca-l1-chart-panel {
   text-align: left;
 }
 
+.btca-sheet-info-panel__body p {
+  margin: 0;
+}
+
+.btca-sheet-info-panel__body strong {
+  font-weight: 600;
+}
+
+.btca-sheet-info-panel__body a {
+  color: #06038b;
+  text-decoration: underline;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .btca-sheet-info-backdrop,
   .btca-sheet-info-panel {

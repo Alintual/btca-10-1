@@ -3,7 +3,7 @@
 
   var DB = window.BTCA_LEVEL3_DB;
   var BAZA = window.BTCA_LEVEL3_BAZA;
-  var VERSION = "10.1.112";
+  var VERSION = "10.1.113";
   var BRANDING_UP = "branding/up.png";
   var BRANDING_UP_LIST = "branding/up_list.png";
   var BRANDING_BAZA = "branding/baza.png";
@@ -118,6 +118,59 @@
   function escapeHtml(v) {
     return String(v).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
   }
+
+  /* Жирность как в «О проекте»: *текст* → <strong>; перевод строк → <br> */
+  function renderSheetInfoRichText(value) {
+    var html = escapeHtml(value)
+      .replace(
+        /&lt;a href=&quot;([^&]+)&quot;&gt;([\s\S]*?)&lt;\/a&gt;/g,
+        '<a href="$1" target="_blank" rel="noopener noreferrer">$2</a>'
+      )
+      .replace(/\*([^*\n]+)\*/g, "<strong>$1</strong>")
+      .replace(/\n/g, "<br>");
+    html = html.replace(
+      /(^|[^">])(https?:\/\/[^\s<]+)/g,
+      function (_m, prefix, url) {
+        var clean = url.replace(/[.,;:!?)]+$/, "");
+        var trail = url.slice(clean.length);
+        return (
+          prefix +
+          '<a href="' +
+          clean +
+          '" target="_blank" rel="noopener noreferrer">' +
+          clean +
+          "</a>" +
+          trail
+        );
+      }
+    );
+    return html;
+  }
+
+  var SHEET_INFO_BY_TAB = {
+    forma: {
+      title: "Форма ввода - Функционал",
+      body:
+        "Лист «Форма ввода» предназначен для ввода и записи результатов тренировки в Базу данных.\n" +
+        "\n" +
+        "Функционал листа «Форма ввода»:\n" +
+        "\n" +
+        "1. Представление данных в простом табличном виде.\n" +
+        "\n" +
+        "2. Выбор любой даты выполнения упражнения по календарю.\n" +
+        "\n" +
+        "3. Выбор упражнения по номеру из выпадающего списка поля Упражнения с автоматической загрузкой (активацией):\n" +
+        "а) Данных по Задачам – Раздел тренировки, Номер задачи, Требуемое число ударов.\n" +
+        "б) Соответствующего изображения с подробными инструкциями для упражнения. При этом, выбранное Упражнение активируется как в самой «Форме ввода», так и на листе «Упражнения». Масштаб изображения упражнения может быть изменён по кнопкам-стрелкам навигации или по свайпу (смахиванию) в мобильной версии.\n" +
+        "\n" +
+        "4. Ввод результатов тренировки по выбранному упражнению — число успешных ударов для каждой задачи. При вводе, автоматически рассчитывается результативность выполнения задачи в процентах от требуемого числа ударов, а также производится анализ на корректность вводимых данных.\n" +
+        "ВАЖНО. Реальное число сделанных ударов должно точно соответствовать требуемому.\n" +
+        "\n" +
+        "5. Запись результатов тренировки (всех данных таблицы) в Базу данных по кнопке «Записать».\n" +
+        "* При записи результатов тренировки повторно в один день и по одному и тому же упражнению данные складываются с соответствующим пересчётом результативности.\n" +
+        "** Запись данных прошедшими датами – разрешена.",
+    },
+  };
 
   function formatIsoDateAsDdMmYyyy(iso) {
     var m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(iso || "").trim());
@@ -1073,6 +1126,10 @@
     var sheet = sheetByKey(state.ui.tab);
     if (!sheet || !state.root) return;
     closeSheetInfoOverlay(true);
+    var info = SHEET_INFO_BY_TAB[state.ui.tab] || {
+      title: sheet.title + " - Функционал",
+      body: "В разработке...",
+    };
     var titlebar = state.root.querySelector("[data-btca-level3-titlebar]");
     var rootRect = state.root.getBoundingClientRect();
     var barBottom = titlebar
@@ -1089,8 +1146,10 @@
       '<button type="button" class="btca-sheet-info-backdrop" data-btca-sheet-info-close aria-label="Закрыть"></button>' +
       '<div class="btca-sheet-info-clip" style="top:' + topPx + "px;height:" + panelH + 'px">' +
       '<div class="btca-sheet-info-panel" role="dialog" aria-modal="true">' +
-      '<h3 class="btca-sheet-info-panel__title">' + escapeHtml(sheet.title + " - Функционал") + "</h3>" +
-      '<div class="btca-sheet-info-panel__body">В разработке...</div></div></div>';
+      '<h3 class="btca-sheet-info-panel__title">' + escapeHtml(info.title) + "</h3>" +
+      '<div class="btca-sheet-info-panel__body"><p>' +
+      renderSheetInfoRichText(String(info.body || "").trim()) +
+      "</p></div></div></div>";
     state.root.appendChild(overlay);
     overlay.querySelectorAll("[data-btca-sheet-info-close]").forEach(function (el) {
       el.addEventListener("click", closeSheetInfoOverlay);
