@@ -3,7 +3,7 @@
 
   var DB = window.BTCA_LEVEL3_DB;
   var BAZA = window.BTCA_LEVEL3_BAZA;
-  var VERSION = "10.1.111";
+  var VERSION = "10.1.112";
   var BRANDING_UP = "branding/up.png";
   var BRANDING_UP_LIST = "branding/up_list.png";
   var BRANDING_BAZA = "branding/baza.png";
@@ -2242,13 +2242,30 @@
       "</div></div>";
     var listEl = layer.querySelector("[data-btca-picker-list]");
     var scrollNavEl = layer.querySelector("[data-btca-picker-scroll-nav]");
+    var btnDown = scrollNavEl ? scrollNavEl.querySelector("[data-btca-picker-scroll-down]") : null;
+    var btnUp = scrollNavEl ? scrollNavEl.querySelector("[data-btca-picker-scroll-up]") : null;
     scrollPickerToActive(listEl, liveOptions, current, rowHeight);
 
     function updatePickerScrollNav() {
       if (!scrollNavEl || !listEl) return;
-      var needScroll = listEl.scrollHeight > listEl.clientHeight + 2;
-      if (needScroll) scrollNavEl.removeAttribute("hidden");
-      else scrollNavEl.setAttribute("hidden", "hidden");
+      var maxScroll = Math.max(0, listEl.scrollHeight - listEl.clientHeight);
+      var needScroll = maxScroll > 2;
+      if (!needScroll) {
+        scrollNavEl.setAttribute("hidden", "hidden");
+        return;
+      }
+      scrollNavEl.removeAttribute("hidden");
+      var top = listEl.scrollTop;
+      var atTop = top <= 2;
+      var atBottom = top >= maxScroll - 2;
+      if (btnUp) {
+        if (atTop) btnUp.setAttribute("hidden", "hidden");
+        else btnUp.removeAttribute("hidden");
+      }
+      if (btnDown) {
+        if (atBottom) btnDown.setAttribute("hidden", "hidden");
+        else btnDown.removeAttribute("hidden");
+      }
     }
 
     function pickerScrollToEdge(toEnd) {
@@ -2259,24 +2276,16 @@
       } else {
         listEl.scrollTop = next;
       }
+      window.setTimeout(updatePickerScrollNav, 0);
+      window.setTimeout(updatePickerScrollNav, 320);
     }
 
     if (scrollNavEl) {
-      var btnDown = scrollNavEl.querySelector("[data-btca-picker-scroll-down]");
-      var btnUp = scrollNavEl.querySelector("[data-btca-picker-scroll-up]");
       function bindScrollBtn(btn, toEnd) {
         if (!btn) return;
-        function blockListHit(event) {
+        btn.addEventListener("click", function (event) {
           event.preventDefault();
           event.stopPropagation();
-          if (typeof event.stopImmediatePropagation === "function") {
-            event.stopImmediatePropagation();
-          }
-        }
-        btn.addEventListener("pointerdown", blockListHit);
-        btn.addEventListener("touchstart", blockListHit, { passive: false });
-        btn.addEventListener("click", function (event) {
-          blockListHit(event);
           pickerScrollToEdge(toEnd);
         });
       }
@@ -2392,6 +2401,7 @@
         return;
       }
       if (event.target.closest("[data-btca-picker-search-bar]")) return;
+      if (event.target.closest("[data-btca-picker-scroll-nav]")) return;
       var btn = event.target.closest("[data-btca-picker-value]");
       if (!btn) return;
       var value = btn.getAttribute("data-btca-picker-value");

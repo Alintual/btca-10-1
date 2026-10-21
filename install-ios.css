@@ -3676,9 +3676,12 @@ body.btca-apple-comfort .btca-l1-ok-input {
   min-height: 0;
   display: flex;
   flex-direction: column;
+  isolation: isolate;
 }
 
 .btca-level1-picker--anchored .btca-level1-picker__list {
+  position: relative;
+  z-index: 0;
   flex: 1;
   min-height: 0;
   display: flex;
@@ -3688,15 +3691,18 @@ body.btca-apple-comfort .btca-l1-ok-input {
   gap: calc(4rem / 17);
   padding: calc(4rem / 17);
   overflow: auto;
-  -webkit-overflow-scrolling: touch;
+  /* без -webkit-overflow-scrolling: touch — иначе iOS рисует список поверх кнопок */
 }
 
-/* Полезности / Каталог: Вниз — правый верх списка; Наверх — правый низ */
+/* Полезности / Каталог: Вниз — правый верх списка; Наверх — правый низ.
+   Отдельный слой НАД списком (не внутри overflow), иначе iOS перехватывает тап. */
 .btca-level1-picker__scroll-nav {
   position: absolute;
   inset: 0;
-  z-index: 20;
+  z-index: 5;
   pointer-events: none;
+  transform: translateZ(0);
+  -webkit-transform: translateZ(0);
 }
 
 .btca-level1-picker__scroll-nav[hidden] {
@@ -3705,7 +3711,7 @@ body.btca-apple-comfort .btca-l1-ok-input {
 
 .btca-level1-picker__scroll-btn {
   position: absolute;
-  z-index: 21;
+  z-index: 6;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -3723,6 +3729,10 @@ body.btca-apple-comfort .btca-l1-ok-input {
   /* Круг up_list: стрелка ≈58% диаметра → визуально ≈ прежние 23.1rem/17 */
   width: calc(40rem / 17);
   height: calc(40rem / 17);
+}
+
+.btca-level1-picker__scroll-btn[hidden] {
+  display: none !important;
 }
 
 /* Вниз — правый верхний угол; Наверх — правый нижний */
