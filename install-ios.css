@@ -2290,7 +2290,7 @@ body.btca-apple-comfort .btca-l1-chart-panel {
   padding: 14px 14px 16px;
   overflow: auto;
   -webkit-overflow-scrolling: touch;
-  color: #111111;
+  color: #000000;
   background: #c5d9dc;
   border-radius: 0 0 14px 14px;
   box-shadow: 0 4px 24px rgba(0, 0, 0, 0.18);
@@ -2308,15 +2308,22 @@ body.btca-apple-comfort .btca-l1-chart-panel {
 
 .btca-sheet-info-panel__title {
   margin: 0 0 12px;
-  color: #0a0a0a;
+  color: #000000;
   font-size: 1rem;
   font-weight: 600;
   line-height: calc(26rem / 17);
   text-align: center;
 }
 
+.btca-sheet-info-panel__body,
+.btca-sheet-info-panel__body p,
+.btca-sheet-info-panel__body strong,
+.btca-sheet-info-panel__body a,
+.btca-sheet-info-panel__body a:visited {
+  color: #000000;
+}
+
 .btca-sheet-info-panel__body {
-  color: #111111;
   font-size: 1rem;
   font-weight: 400;
   line-height: calc(26rem / 17);
@@ -2332,7 +2339,6 @@ body.btca-apple-comfort .btca-l1-chart-panel {
 }
 
 .btca-sheet-info-panel__body a {
-  color: #06038b;
   text-decoration: underline;
 }
 
