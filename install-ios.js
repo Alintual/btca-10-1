@@ -2,8 +2,8 @@
   "use strict";
 
   var BTCA_BASE = "/btca-10-1/";
-  var INSTALL_CACHE = "btca10-web-10.1.144:static-install";
-  var MEDIA_CACHE = "btca10-web-10.1.144:static-media";
+  var INSTALL_CACHE = "btca10-web-10.1.145:static-install";
+  var MEDIA_CACHE = "btca10-web-10.1.145:static-media";
   var MEDIA_PROBE_RE = /offline-unpacked\/level3\/exercises\/.+\.(jpe?g|png|webp|gif)$/i;
   var MEDIA_STATE_KEY = "btca10-web:static-media-state";
   var APP_READY_KEY = "btca10-web:app-ready";
@@ -31,7 +31,7 @@
     "<a href=\"https://cloud.mail.ru/public/sujN/mpE8mr6aW\">Методика обучения</a> (pdf).\n" +
     "\n*****\n" +
     "В состав проекта входят два Приложения — BTCA-Android 10.1 (дистрибутив .apk) и BTCA-iOS 10.1 (пакет оффлайн PWA).\n" +
-    "Приложения устанавливаются через web-страницу <a href=\"https://clc.li/btca-10-1\">Загрузчик БТКА 10.1</a> - <a href=\"https://clc.li/btca-10-1\">https://clc.li/btca-10-1</a> при условии регистрации персонального аккаунта и активации подписки.\n" +
+    "Приложения устанавливаются через web-страницу <a href=\"https://clc.li/btca-10-1\">Загрузчик БТКА 10.1</a> при условии регистрации персонального аккаунта и активации подписки.\n" +
     "Для регистрации аккаунта требуется:\n" +
     "1. Логин.\n" +
     "2. Пароль.\n" +
@@ -49,13 +49,13 @@
     "•  Включает необходимые инструкции, методическую и справочную информацию;\n" +
     "•  Обеспечивает возможность ввода, хранения и обработки результатов прогресса выполнения учеником практических заданий для последующего статистического анализа с использованием локальной Базы данных;\n" +
     "•  Имеет весь необходимый функционал и автоматизацию, а также интуитивно-понятный интерфейс, что способствует осуществлению полноценного, эффективного тренировочного процесса в комфортных условиях.\n" +
-    "\n*** При клике по иконке открывается полное описание функционала.\n" +
+    "\n*** При клике по иконке {{INFO_ICON}} открывается полное описание функционала.\n" +
     "\nОсновные характеристики версии 10.1 «Уровень 3 — Продвинутый»:\n" +
     "*Упражнений* – более 150, *Задач* – более 700, *Полезности* – интеллектуальная поисковая система по Базе знаний школы: 14 основополагающих документов, 114 рисунков и видео и более 370 тематических материалов.\n" +
     "\nCopyright © Юрий Алинт (Андрей Юрьев) 2026";
   var installedHomeSnapshot = "";
-  var LEVEL1_MODULE_VERSION = "10.1.105";
-  var LEVEL3_MODULE_VERSION = "10.1.105";
+  var LEVEL1_MODULE_VERSION = "10.1.106";
+  var LEVEL3_MODULE_VERSION = "10.1.106";
 
   var CORE_REL_PATHS = [
     "",
@@ -73,6 +73,7 @@
     "branding/gal.png",
     "branding/del.png",
     "branding/support.png",
+    "branding/info.png",
     "branding/generate.png",
     "branding/splash.gif",
     "offline/app-shell.json",
@@ -1863,6 +1864,14 @@
     renderMonth();
   }
 
+  function aboutInfoIconHtml() {
+    return (
+      '<img class="btca-about-info-icon" src="' +
+      escapeHtml(assetPath("branding/info.png")) +
+      '" alt="" decoding="async" draggable="false">'
+    );
+  }
+
   function renderRichText(value) {
     var html = escapeHtml(value)
       .replace(
@@ -1870,7 +1879,8 @@
         '<a href="$1" target="_blank" rel="noopener">$2</a>'
       )
       .replace(/\*([^*\n]+)\*/g, "<strong>$1</strong>")
-      .replace(/\n/g, "<br>");
+      .replace(/\n/g, "<br>")
+      .replace(/\{\{INFO_ICON\}\}/g, aboutInfoIconHtml());
     // Голые https/http и email, ещё не обёрнутые в <a>
     html = html.replace(
       /(^|[^">])(https?:\/\/[^\s<]+)/g,

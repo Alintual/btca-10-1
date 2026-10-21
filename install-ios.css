@@ -1948,6 +1948,15 @@ body.btca-apple-comfort .btca-back-button {
   font-style: italic;
 }
 
+.btca-about-content .btca-about-info-icon {
+  display: inline-block;
+  width: calc(22rem / 17);
+  height: calc(22rem / 17);
+  margin: 0 0.12em;
+  vertical-align: -0.2em;
+  object-fit: contain;
+}
+
 .btca-about-content a {
   color: #06038b;
   text-decoration: underline;
