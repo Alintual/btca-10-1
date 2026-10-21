@@ -3,7 +3,7 @@
 
   var DB = window.BTCA_LEVEL3_DB;
   var BAZA = window.BTCA_LEVEL3_BAZA;
-  var VERSION = "10.1.109";
+  var VERSION = "10.1.110";
   var BRANDING_UP = "branding/up.png";
   var BRANDING_BAZA = "branding/baza.png";
   var BRANDING_INFO = "branding/info.png";
@@ -2233,11 +2233,12 @@
       '<button class="btca-level1-menu-backdrop" type="button" data-btca-picker-close aria-label="Закрыть"></button>' +
       '<div class="' + pickerClass + '" role="dialog" aria-label="' + escapeHtml(title) + '"' + pickerStyle + ">" +
       searchHtml +
+      '<div class="btca-level1-picker__list-wrap">' +
       '<div class="btca-level1-picker__list" data-btca-picker-list>' +
       renderPickerOptionsHtml(liveOptions, current, pickerOpts) +
       "</div>" +
       scrollNavHtml +
-      "</div>";
+      "</div></div>";
     var listEl = layer.querySelector("[data-btca-picker-list]");
     var scrollNavEl = layer.querySelector("[data-btca-picker-scroll-nav]");
     scrollPickerToActive(listEl, liveOptions, current, rowHeight);
@@ -2249,10 +2250,9 @@
       else scrollNavEl.setAttribute("hidden", "hidden");
     }
 
-    function pickerScrollByPage(direction) {
+    function pickerScrollToEdge(toEnd) {
       if (!listEl) return;
-      var page = Math.max(48, Math.floor(listEl.clientHeight * 0.85));
-      var next = listEl.scrollTop + direction * page;
+      var next = toEnd ? Math.max(0, listEl.scrollHeight - listEl.clientHeight) : 0;
       if (typeof listEl.scrollTo === "function") {
         listEl.scrollTo({ top: next, behavior: "smooth" });
       } else {
@@ -2267,14 +2267,14 @@
         btnDown.addEventListener("click", function (event) {
           event.preventDefault();
           event.stopPropagation();
-          pickerScrollByPage(1);
+          pickerScrollToEdge(true);
         });
       }
       if (btnUp) {
         btnUp.addEventListener("click", function (event) {
           event.preventDefault();
           event.stopPropagation();
-          pickerScrollByPage(-1);
+          pickerScrollToEdge(false);
         });
       }
       listEl.addEventListener("scroll", updatePickerScrollNav, { passive: true });

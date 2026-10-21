@@ -3670,6 +3670,14 @@ body.btca-apple-comfort .btca-l1-ok-input {
   color: #111827;
 }
 
+.btca-level1-picker__list-wrap {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
 .btca-level1-picker--anchored .btca-level1-picker__list {
   flex: 1;
   min-height: 0;
@@ -3683,7 +3691,7 @@ body.btca-apple-comfort .btca-l1-ok-input {
   -webkit-overflow-scrolling: touch;
 }
 
-/* Полезности / Каталог: прокрутка списка — up.png (Вниз слева, Наверх справа) */
+/* Полезности / Каталог: Вниз — правый верх списка; Наверх — правый низ */
 .btca-level1-picker__scroll-nav {
   position: absolute;
   inset: 0;
@@ -3697,7 +3705,6 @@ body.btca-apple-comfort .btca-l1-ok-input {
 
 .btca-level1-picker__scroll-btn {
   position: absolute;
-  bottom: 8px;
   z-index: 4;
   display: inline-flex;
   align-items: center;
@@ -3705,7 +3712,7 @@ body.btca-apple-comfort .btca-l1-ok-input {
   padding: 0;
   border: 0;
   background: transparent;
-  opacity: 0.72;
+  opacity: 1;
   pointer-events: auto;
   cursor: pointer;
   touch-action: manipulation;
@@ -3714,28 +3721,32 @@ body.btca-apple-comfort .btca-l1-ok-input {
   appearance: none;
 }
 
+/* Вниз — правый верхний угол; Наверх — правый нижний */
 .btca-level1-picker__scroll-btn--down {
-  left: 8px;
+  top: 8px;
+  right: 8px;
+  bottom: auto;
+  left: auto;
 }
 
 .btca-level1-picker__scroll-btn--up {
+  top: auto;
   right: 8px;
+  bottom: 8px;
+  left: auto;
 }
 
 .btca-level1-picker__scroll-btn img {
   display: block;
-  width: calc(22rem / 17);
-  height: calc(22rem / 17);
+  /* Инфо: 22rem/17; +5% */
+  width: calc(23.1rem / 17);
+  height: calc(23.1rem / 17);
   object-fit: contain;
   pointer-events: none;
 }
 
 .btca-level1-picker__scroll-btn--down img {
   transform: rotate(180deg);
-}
-
-.btca-level1-picker__scroll-btn:active {
-  opacity: 0.95;
 }
 
 .btca-level1-picker--anchored .btca-level1-picker__item {
