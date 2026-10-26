@@ -3626,14 +3626,24 @@ body.btca-apple-comfort .btca-l1-ok-input {
   background: #1f4f5c;
 }
 
+.btca-level1-picker__search-field {
+  position: relative;
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+}
+
 .btca-level1-picker__search-input {
   flex: 1 1 auto;
+  width: 100%;
   min-width: 0;
   box-sizing: border-box;
   height: var(--btca-l1-field-h);
   min-height: var(--btca-l1-field-h);
   max-height: var(--btca-l1-field-h);
-  padding: 0 12px;
+  /* справа запас под clear.png на переднем плане */
+  padding: 0 40px 0 12px;
   border: 1px solid #ffffff;
   border-radius: var(--btca-l1-radius);
   background: #1f4f5c;
@@ -3644,6 +3654,12 @@ body.btca-apple-comfort .btca-l1-ok-input {
   outline: none;
   -webkit-appearance: none;
   appearance: none;
+}
+
+.btca-level1-picker__search-input::-webkit-search-cancel-button {
+  -webkit-appearance: none;
+  appearance: none;
+  display: none;
 }
 
 .btca-level1-picker__search-input::placeholder {
@@ -3657,6 +3673,40 @@ body.btca-apple-comfort .btca-l1-ok-input {
 .btca-level1-picker__search-input--empty {
   color: #ffe08a;
   font-weight: 400;
+}
+
+.btca-level1-picker__search-clear {
+  position: absolute;
+  right: 6px;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 2;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  cursor: pointer;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+.btca-level1-picker__search-clear img {
+  display: block;
+  width: 22px;
+  height: 22px;
+  pointer-events: none;
+  user-select: none;
+}
+
+.btca-level1-picker__search-clear:active {
+  opacity: 0.75;
 }
 
 .btca-level1-picker__search-btn {

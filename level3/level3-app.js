@@ -3,11 +3,12 @@
 
   var DB = window.BTCA_LEVEL3_DB;
   var BAZA = window.BTCA_LEVEL3_BAZA;
-  var VERSION = "10.1.116";
+  var VERSION = "10.1.117";
   var BRANDING_UP = "branding/up.png";
   var BRANDING_UP_LIST = "branding/up_list.png";
   var BRANDING_BAZA = "branding/baza.png";
   var BRANDING_INFO = "branding/info.png";
+  var BRANDING_CLEAR = "branding/clear.png";
   var TRAILING_SLOT_W = 112;
   var NAV_FILTER_ALL = "all";
   var POLEZ_ALL = "all";
@@ -2266,9 +2267,14 @@
       : (typeof state.ui.polez.searchQuery === "string" ? state.ui.polez.searchQuery : "");
     var searchHtml = pickerOpts.searchable
       ? '<div class="btca-level1-picker__search" data-btca-picker-search-bar>' +
+        '<div class="btca-level1-picker__search-field">' +
         '<input type="search" class="btca-level1-picker__search-input" data-btca-picker-search' +
         ' placeholder="Ваш поисковый запрос..." value="' + escapeHtml(searchDraft) + '"' +
         ' enterkeyhint="search" autocomplete="off" spellcheck="false">' +
+        '<button type="button" class="btca-level1-picker__search-clear" data-btca-picker-search-clear' +
+        ' aria-label="Очистить поиск">' +
+        '<img src="' + escapeHtml(brandingUrl(BRANDING_CLEAR)) + '" alt="" draggable="false">' +
+        "</button></div>" +
         '<button type="button" class="btca-level1-picker__search-btn" data-btca-picker-search-go>' +
         '<span class="btca-level1-picker__search-btn-icon" aria-hidden="true">🔎</span>' +
         '<span class="btca-level1-picker__search-btn-label">Найти</span></button>' +
@@ -2427,11 +2433,38 @@
     if (pickerOpts.searchable) {
       var searchInput = layer.querySelector("[data-btca-picker-search]");
       var searchBtn = layer.querySelector("[data-btca-picker-search-go]");
+      var searchClearBtn = layer.querySelector("[data-btca-picker-search-clear]");
+      function clearPickerSearchPhrase() {
+        var input = layer.querySelector("[data-btca-picker-search]");
+        if (!input) return;
+        clearEmptyFlash(input);
+        input.value = "";
+        if (typeof pickerOpts.onSearchChange === "function") pickerOpts.onSearchChange("");
+        liveOptions = typeof pickerOpts.getOptions === "function"
+          ? pickerOpts.getOptions("")
+          : liveOptions;
+        if (listEl) {
+          listEl.innerHTML = renderPickerOptionsHtml(liveOptions, current, pickerOpts);
+          scrollPickerToActive(listEl, liveOptions, current, rowHeight);
+          updatePickerScrollNav();
+          window.setTimeout(updatePickerScrollNav, 0);
+        }
+        try {
+          input.focus();
+        } catch (e) { /* ignore */ }
+      }
       if (searchBtn) {
         searchBtn.addEventListener("click", function (event) {
           event.preventDefault();
           event.stopPropagation();
           applyPickerSearch();
+        });
+      }
+      if (searchClearBtn) {
+        searchClearBtn.addEventListener("click", function (event) {
+          event.preventDefault();
+          event.stopPropagation();
+          clearPickerSearchPhrase();
         });
       }
       if (searchInput) {
