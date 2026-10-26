@@ -119,9 +119,11 @@
     return String(v).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
   }
 
-  /* Жирность как в «О проекте»: *текст* → <strong>; перевод строк → <br> */
+  /* Как в «О проекте» / Описаниях: <b>/<i>, *текст*, ссылки; перевод строк → <br> */
   function renderSheetInfoRichText(value) {
     var html = escapeHtml(value)
+      .replace(/&lt;b&gt;([\s\S]*?)&lt;\/b&gt;/gi, "<strong>$1</strong>")
+      .replace(/&lt;i&gt;([\s\S]*?)&lt;\/i&gt;/gi, "<em>$1</em>")
       .replace(
         /&lt;a href=&quot;([^&]+)&quot;&gt;([\s\S]*?)&lt;\/a&gt;/g,
         '<a href="$1" target="_blank" rel="noopener noreferrer">$2</a>'
@@ -147,34 +149,12 @@
     return html;
   }
 
+  /** Тексты Инфо с листов — public/level3/data/sheetInfo.json (fallback ниже). */
   var SHEET_INFO_BY_TAB = {
-    forma: {
-      title: "Форма ввода — Функционал",
-      body:
-        "Лист «Форма ввода» предназначен для ввода и записи результатов тренировки в Базу данных (БД).\n" +
-        "\n" +
-        "Функционал листа «Форма ввода»:\n" +
-        "\n" +
-        "1. Представление данных в простом табличном виде.\n" +
-        "\n" +
-        "2. Выбор любой даты выполнения упражнения по календарю в поле Дата.\n" +
-        "\n" +
-        "3. Выбор упражнения по номеру из выпадающего списка поля Упражнения с указанием разделов тренировок.\n" +
-        "При этом, происходит:\n" +
-        "а) Загрузка данных по Задачам – Раздел тренировки, Номер задачи, Требуемое число ударов.\n" +
-        "б) Загрузка соответствующего изображения с подробными инструкциями для упражнения.\n" +
-        "Изображение открывается по кнопкам-стрелкам навигации или по свайпу (смахиванию), с возможностью изменения масштаба.\n" +
-        "в) Активация выбранного упражнеия на листах «Форма ввода» и «Упражнения».\n" +
-        "\n" +
-        "4. Ввод результатов тренировки по выбранному упражнению — число успешных ударов для каждой задачи. При вводе, автоматически рассчитывается результативность выполнения задачи в процентах от требуемого числа ударов, а также производится анализ на корректность вводимых данных.\n" +
-        "ВАЖНО. Реальное число сделанных ударов для каждой выполненной задачи должно точно соответствовать требуемому.\n" +
-        "* Допускается выполнение не всех задач из списка упражнения, т.е. – пропуск задач.\n" +
-        "\n" +
-        "5. Запись результатов тренировки (всех данных таблицы) в Базу данных по кнопке «Записать».\n" +
-        "ВАЖНО.Записанные в БД данные могут быть скорректированы только двумя способами: а) Перезапись данных на листе \"Форма ввода\" и б) Удаление отфильтрованных данных на листе \"База данных\".\n" +
-        "* При записи результатов тренировки повторно в один день и по одному и тому же упражнению данные складываются с соответствующим пересчётом результативности.\n" +
-        "** Запись данных прошедшими датами – разрешена.",
-    },
+    forma: { title: "Форма ввода — Функционал", body: "В разработке..." },
+    baza: { title: "База данных — Функционал", body: "В разработке..." },
+    nav: { title: "Упражнения — Функционал", body: "В разработке..." },
+    polez: { title: "Полезности — Функционал", body: "В разработке..." },
   };
 
   function formatIsoDateAsDdMmYyyy(iso) {
@@ -1924,9 +1904,20 @@
     return formatPolezHotDisplay(item.hot) + " 🔥 " + item.title;
   }
 
-  /** Раздел 1 с рисунком/видео на листе — кнопка Описание; остальное — сразу. */
+  /** В Описании есть видео-фигура (5.26 и т.п.) — на лист не выносим. */
+  function polezSourceHasInlineVideo(item) {
+    var entry = item ? polezSourceEntry(polezNavItemKey(item)) : null;
+    var figs = entry && Array.isArray(entry.figures) ? entry.figures : [];
+    for (var i = 0; i < figs.length; i += 1) {
+      if (isPolezVideoFile(figs[i] && figs[i].file)) return true;
+    }
+    return false;
+  }
+
+  /** Раздел 1 с рисунком на листе — кнопка Описание; видео и прочее — сразу Описание. */
   function polezOpensDescImmediately(item) {
     if (!item) return false;
+    if (polezSourceHasInlineVideo(item) && !isPolezSheetFigureItem(item)) return true;
     if (String(item.sectionId || "") !== "1") return true;
     return !isPolezSheetFigureItem(item);
   }
@@ -3962,16 +3953,34 @@
     return state.data.polezSourceIndex[String(hotKey || "")] || null;
   }
 
+  /** Подпись: «Наименование Рис.N…» — имя отдельно от номера, если оба есть. */
+  function polezFigCaptionHtml(caption) {
+    var raw = String(caption || "").trim();
+    if (!raw) return "";
+    var m = /^(.*?)\s*((?:Рис|Видео)\.?\s*[\d.]+)\s*$/iu.exec(raw);
+    if (m && m[1] && m[1].trim()) {
+      return (
+        '<figcaption class="btca-l1-polez-inline-fig__cap">' +
+        '<span class="btca-l1-polez-inline-fig__name">' + escapeHtml(m[1].trim()) + "</span>" +
+        '<span class="btca-l1-polez-inline-fig__num">' + escapeHtml(m[2].trim()) + "</span>" +
+        "</figcaption>"
+      );
+    }
+    return '<figcaption class="btca-l1-polez-inline-fig__cap">' + escapeHtml(raw) + "</figcaption>";
+  }
+
   function polezInlineFiguresHtml(figures) {
     if (!figures || !figures.length) return "";
     return figures.map(function (fig) {
       var url = polezImageUrl(fig.file);
       if (!url) return "";
-      var media = polezSheetMediaHtml(url, fig.caption || "", fig.file);
+      var cap = fig.caption || "";
+      var media = polezSheetMediaHtml(url, cap, fig.file);
       if (!media) return "";
       return '<figure class="btca-l1-polez-inline-fig">' +
         media +
-        '<figcaption>' + escapeHtml(fig.caption || "") + "</figcaption></figure>";
+        polezFigCaptionHtml(cap) +
+        "</figure>";
     }).join("");
   }
 
@@ -4680,6 +4689,7 @@
       fetchJsonCached(assetPath("level3/data/polezDescriptions.json")),
       fetchJsonCached(assetPath("level3/data/polezNavCatalog.json")),
       fetchJsonCached(assetPath("level3/data/polezSourceIndex.json")),
+      fetchJsonCached(assetPath("level3/data/sheetInfo.json")),
     ]).then(function (parts) {
       var list = parts[0];
       state.data.exercises = list.map(function (r) {
@@ -4703,6 +4713,17 @@
       state.data.polezDescriptions = parts[3];
       state.data.polezNavCatalog = parts[4] && parts[4].sections ? parts[4] : { sections: [] };
       state.data.polezSourceIndex = parts[5] && typeof parts[5] === "object" ? parts[5] : {};
+      var sheetInfo = parts[6] && typeof parts[6] === "object" ? parts[6] : null;
+      if (sheetInfo) {
+        ["forma", "baza", "nav", "polez"].forEach(function (tabKey) {
+          var info = sheetInfo[tabKey];
+          if (!info) return;
+          SHEET_INFO_BY_TAB[tabKey] = {
+            title: String(info.title || (SHEET_INFO_BY_TAB[tabKey] && SHEET_INFO_BY_TAB[tabKey].title) || ""),
+            body: String(info.body || ""),
+          };
+        });
+      }
     });
   }
 

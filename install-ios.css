@@ -2957,13 +2957,24 @@ body.btca-apple-comfort .btca-l1-chart-panel {
   touch-action: manipulation;
 }
 
-.btca-l1-polez-inline-fig figcaption {
+.btca-l1-polez-inline-fig figcaption,
+.btca-l1-polez-inline-fig__cap {
   margin-top: 6px;
   color: #0a0a0a;
   font-size: 0.95rem;
   font-weight: 600;
-  line-height: 1.3;
+  line-height: 1.35;
   text-align: center;
+}
+
+.btca-l1-polez-inline-fig__name {
+  display: block;
+}
+
+.btca-l1-polez-inline-fig__num {
+  display: block;
+  margin-top: 2px;
+  font-weight: 600;
 }
 
 .btca-l1-nav-section {
