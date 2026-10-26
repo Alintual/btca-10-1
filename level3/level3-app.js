@@ -3,7 +3,7 @@
 
   var DB = window.BTCA_LEVEL3_DB;
   var BAZA = window.BTCA_LEVEL3_BAZA;
-  var VERSION = "10.1.115";
+  var VERSION = "10.1.116";
   var BRANDING_UP = "branding/up.png";
   var BRANDING_UP_LIST = "branding/up_list.png";
   var BRANDING_BAZA = "branding/baza.png";
@@ -3967,15 +3967,22 @@
     return figures.map(function (fig) {
       var url = polezImageUrl(fig.file);
       if (!url) return "";
+      var media = polezSheetMediaHtml(url, fig.caption || "", fig.file);
+      if (!media) return "";
       return '<figure class="btca-l1-polez-inline-fig">' +
-        '<img src="' + escapeHtml(url) + '" alt="' + escapeHtml(fig.caption || "") + '" loading="lazy" draggable="false">' +
+        media +
         '<figcaption>' + escapeHtml(fig.caption || "") + "</figcaption></figure>";
     }).join("");
   }
 
-  /** Медиа на листе — 1.4 fig/video (не links). */
+  /** Медиа на листе — только 1.4 figN (видео идут в Описание). */
   function isPolezSheetFigureItem(item) {
-    return !!(item && item.docId === "1.4" && item.figKey && item.figKey !== "links");
+    return !!(
+      item &&
+      item.docId === "1.4" &&
+      item.figKey &&
+      /^fig\d+$/i.test(String(item.figKey))
+    );
   }
 
   function renderPolezDescCard(item, mediaHtml, swipeHot) {
@@ -4278,9 +4285,14 @@
         }
       }
     }
-    overlay.querySelector("[data-btca-overlay-close]").addEventListener("click", closeOverlay);
+    bindPolezVideos(overlay);
+    var closeAndRevoke = function () {
+      revokePolezVideoBlobs(overlay);
+      closeOverlay();
+    };
+    overlay.querySelector("[data-btca-overlay-close]").addEventListener("click", closeAndRevoke);
     bindHorizontalSwipe(overlay, {
-      onSwipeLeft: closeOverlay,
+      onSwipeLeft: closeAndRevoke,
     });
     var content = state.root.querySelector("[data-btca-level3-content]");
     bindPolezSourceLinks(overlay, content);
