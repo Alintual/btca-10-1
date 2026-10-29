@@ -3,7 +3,7 @@
 
   var DB = window.BTCA_LEVEL3_DB;
   var BAZA = window.BTCA_LEVEL3_BAZA;
-  var VERSION = "10.1.119";
+  var VERSION = "10.1.120";
   var BRANDING_UP = "branding/up.png";
   var BRANDING_UP_LIST = "branding/up_list.png";
   var BRANDING_BAZA = "branding/baza.png";
@@ -2141,7 +2141,7 @@
     if (tab === "nav") {
       return label && label !== "—" ? { text: "Упр. " + label + " - активно! ", tone: "active" } : { text: "", tone: "base" };
     }
-    return { text: "Справочное пособие", tone: "muted" };
+    return { text: "Справочные пособия", tone: "muted" };
   }
 
   function renderTitleBar() {
@@ -4047,7 +4047,11 @@
   }
 
   function renderPolezBodyHtml(catalogKey) {
-    if (catalogKey === POLEZ_ALL) return "";
+    if (catalogKey === POLEZ_ALL) {
+      return (
+        '<p class="btca-l1-polez-hint">Выберите пособие в Каталоге или воспользуйтесь поиском.</p>'
+      );
+    }
     var item = polezNavItemByHot(catalogKey);
     if (!item) return "";
     // Сразу Описание — под Каталогом пусто (в т.ч. 131/133 без рисунка на листе)

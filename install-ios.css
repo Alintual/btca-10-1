@@ -1181,8 +1181,13 @@ body.btca-level3-mode .btca-level1-sheet-menu__item--active {
   color: #ffffff;
 }
 
+/* «Выбрать» — серая граница, как у остальных chrome-кнопок (не акцент уровня). */
+body.btca-level3-mode .btca-l1-nav .btca-l1-pick {
+  border-color: rgba(17, 24, 39, 0.18);
+}
+
 body.btca-level3-mode .btca-l1-pick--consumed {
-  border-color: #d31472;
+  border-color: rgba(17, 24, 39, 0.12);
 }
 
 .btca-l2-chart-panel {
@@ -2876,6 +2881,17 @@ body.btca-apple-comfort .btca-l1-chart-panel {
 
 .btca-l1-polez-cards--empty {
   min-height: 12rem;
+}
+
+.btca-l1-polez-hint {
+  margin: 24px auto 0;
+  padding: 0 12px;
+  max-width: 36rem;
+  color: rgba(255, 255, 255, 0.82);
+  font-size: var(--btca-l1-font, 1rem);
+  line-height: calc(26rem / 17);
+  font-weight: 400;
+  text-align: center;
 }
 
 .btca-l1-polez-source {
@@ -4810,6 +4826,11 @@ body.btca-level3-mode .btca-date-picker-day--selected {
 .btca-installed-mode .footer__side--left,
 .btca-installed-mode .footer__side--right {
   display: block;
+  /* Как кегль текста на кнопках меню (1.18rem), без жирности. */
+  font-size: 1.18rem;
+  font-weight: 400;
+  line-height: 1.35;
+  color: rgba(255, 255, 255, 0.92);
 }
 
 /* Пустая строка под иконкой всегда занимает место; текст — только после клика. */
