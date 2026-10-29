@@ -3,7 +3,7 @@
 
   var DB = window.BTCA_LEVEL3_DB;
   var BAZA = window.BTCA_LEVEL3_BAZA;
-  var VERSION = "10.1.120";
+  var VERSION = "10.1.121";
   var BRANDING_UP = "branding/up.png";
   var BRANDING_UP_LIST = "branding/up_list.png";
   var BRANDING_BAZA = "branding/baza.png";
@@ -2269,7 +2269,7 @@
       ? '<div class="btca-level1-picker__search" data-btca-picker-search-bar>' +
         '<div class="btca-level1-picker__search-field">' +
         '<input type="search" class="btca-level1-picker__search-input" data-btca-picker-search' +
-        ' placeholder="Ваш поисковый запрос..." value="' + escapeHtml(searchDraft) + '"' +
+        ' placeholder="Ваш запрос..." value="' + escapeHtml(searchDraft) + '"' +
         ' enterkeyhint="search" autocomplete="off" spellcheck="false">' +
         '<button type="button" class="btca-level1-picker__search-clear" data-btca-picker-search-clear' +
         ' aria-label="Очистить поиск">' +

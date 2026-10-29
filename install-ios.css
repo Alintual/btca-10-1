@@ -4826,8 +4826,8 @@ body.btca-level3-mode .btca-date-picker-day--selected {
 .btca-installed-mode .footer__side--left,
 .btca-installed-mode .footer__side--right {
   display: block;
-  /* Как кегль текста на кнопках меню (1.18rem), без жирности. */
-  font-size: 1.18rem;
+  /* Как «О проекте» (.btca-work-menu__item span = 1rem), без жирности. */
+  font-size: 1rem;
   font-weight: 400;
   line-height: 1.35;
   color: rgba(255, 255, 255, 0.92);
