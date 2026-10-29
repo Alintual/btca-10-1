@@ -3,7 +3,7 @@
 
   var DB = window.BTCA_LEVEL3_DB;
   var BAZA = window.BTCA_LEVEL3_BAZA;
-  var VERSION = "10.1.121";
+  var VERSION = "10.1.122";
   var BRANDING_UP = "branding/up.png";
   var BRANDING_UP_LIST = "branding/up_list.png";
   var BRANDING_BAZA = "branding/baza.png";
@@ -1122,8 +1122,8 @@
       ? titlebar.getBoundingClientRect().bottom
       : rootRect.top + 46;
     var topPx = Math.max(0, Math.round(barBottom - rootRect.top));
-    // Верх у titlebar; низ окна — на 2/3 высоты экрана
-    var bottomOnScreen = Math.round(window.innerHeight * (2 / 3));
+    // Верх у titlebar; низ — до низа экрана (без лимита 2/3)
+    var bottomOnScreen = Math.round(window.innerHeight - safeGutter());
     var bottomPx = Math.max(topPx + 120, Math.round(bottomOnScreen - rootRect.top));
     var panelH = Math.max(120, bottomPx - topPx);
     var overlay = document.createElement("div");
@@ -1406,16 +1406,19 @@
     return SCREEN_EDGE_GUTTER;
   }
 
-  function computeAnchoredPickerLayout(anchorEl) {
+  function computeAnchoredPickerLayout(anchorEl, opts) {
     var rect = anchorEl.getBoundingClientRect();
     var gap = 6;
     var panelW = Math.max(96, Math.round(rect.width));
     var gutterL = safeGutter();
     var gutterR = safeGutter();
     var left = Math.max(gutterL, Math.min(Math.round(rect.left), window.innerWidth - gutterR - panelW));
-    // Верх — сразу под полем; низ у всех списков — на 2/3 высоты экрана
+    // Верх — сразу под полем; по умолчанию низ на 2/3; toBottom — до низа экрана (Каталог Полезностей)
     var top = Math.round(rect.bottom + gap);
-    var bottomOnScreen = Math.round(window.innerHeight * (2 / 3));
+    var bottomOnScreen =
+      opts && opts.toBottom
+        ? Math.round(window.innerHeight - safeGutter())
+        : Math.round(window.innerHeight * (2 / 3));
     var panelH = Math.max(120, bottomOnScreen - top);
     return { top: top, left: left, width: panelW, height: panelH };
   }
@@ -2256,7 +2259,9 @@
     var pickerStyle = "";
     var layout =
       pickerOpts.anchorLayout ||
-      (anchorEl && anchorEl.getBoundingClientRect ? computeAnchoredPickerLayout(anchorEl) : null);
+      (anchorEl && anchorEl.getBoundingClientRect
+        ? computeAnchoredPickerLayout(anchorEl, { toBottom: !!pickerOpts.catalogList })
+        : null);
     if (layout) {
       pickerStyle =
         ' style="position:fixed;top:' + layout.top + "px;left:" + layout.left + "px;width:" + layout.width +
