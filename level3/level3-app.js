@@ -3,7 +3,7 @@
 
   var DB = window.BTCA_LEVEL3_DB;
   var BAZA = window.BTCA_LEVEL3_BAZA;
-  var VERSION = "10.1.123";
+  var VERSION = "10.1.124";
   var BRANDING_UP = "branding/up.png";
   var BRANDING_UP_LIST = "branding/up_list.png";
   var BRANDING_BAZA = "branding/baza.png";

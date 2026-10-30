@@ -4721,7 +4721,10 @@ body.btca-level3-mode .btca-date-picker-day--selected {
   gap: 6px;
   padding-top: 16px;
   color: #a9d7df;
-  font-size: 0.88rem;
+  /* Как пояснения под кнопками (.platform-button small = 1rem). */
+  font-size: 1rem;
+  font-weight: 400;
+  line-height: 1.55;
 }
 
 .footer__row {
