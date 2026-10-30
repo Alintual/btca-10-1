@@ -3,7 +3,7 @@
 
   var DB = window.BTCA_LEVEL3_DB;
   var BAZA = window.BTCA_LEVEL3_BAZA;
-  var VERSION = "10.1.125";
+  var VERSION = "10.1.126";
   var BRANDING_UP = "branding/up.png";
   var BRANDING_UP_LIST = "branding/up_list.png";
   var BRANDING_BAZA = "branding/baza.png";
@@ -4376,6 +4376,44 @@
     bindPolezSourceLinks(overlay, content);
     if (String(searchQ || "").trim()) {
       applyPolezDescHighlightDom(overlay, searchQ);
+      window.requestAnimationFrame(function () {
+        window.requestAnimationFrame(function () {
+          scrollPolezDescToFirstHit(overlay);
+        });
+      });
+    }
+  }
+
+  /**
+   * Если первый hit не виден — прокрутить так, чтобы он был под шапкой
+   * с отступом в 3 строки тела Описания.
+   */
+  function scrollPolezDescToFirstHit(overlay) {
+    if (!overlay) return;
+    var hit = overlay.querySelector(".btca-l1-polez-dict-hit");
+    if (!hit) return;
+    var header = overlay.querySelector(".btca-screen-header");
+    var headerH = header ? header.getBoundingClientRect().height : 48;
+    var lineH = 26;
+    var body = overlay.querySelector(".btca-l1-polez-source__body");
+    if (body) {
+      var cs = window.getComputedStyle(body);
+      var parsed = parseFloat(cs.lineHeight);
+      if (parsed && !isNaN(parsed)) lineH = parsed;
+    }
+    var topGap = headerH + lineH * 3;
+    var rootRect = overlay.getBoundingClientRect();
+    var hitRect = hit.getBoundingClientRect();
+    var hitTopInView = hitRect.top - rootRect.top;
+    var hitBottomInView = hitRect.bottom - rootRect.top;
+    var viewH = overlay.clientHeight;
+    // Уже в зоне под шапкой+3 строки и не ниже экрана — не трогаем.
+    if (hitTopInView >= topGap - 2 && hitBottomInView <= viewH - 2) return;
+    var nextTop = overlay.scrollTop + (hitTopInView - topGap);
+    if (typeof overlay.scrollTo === "function") {
+      overlay.scrollTo({ top: Math.max(0, nextTop), behavior: "smooth" });
+    } else {
+      overlay.scrollTop = Math.max(0, nextTop);
     }
   }
 
