@@ -3,7 +3,7 @@
 
   var DB = window.BTCA_LEVEL3_DB;
   var BAZA = window.BTCA_LEVEL3_BAZA;
-  var VERSION = "10.1.122";
+  var VERSION = "10.1.123";
   var BRANDING_UP = "branding/up.png";
   var BRANDING_UP_LIST = "branding/up_list.png";
   var BRANDING_BAZA = "branding/baza.png";
@@ -50,6 +50,44 @@
       if (dx >= SWIPE_DISTANCE_PX && handlers.onSwipeRight) handlers.onSwipeRight();
       else if (dx <= -SWIPE_DISTANCE_PX && handlers.onSwipeLeft) handlers.onSwipeLeft();
     }, { passive: true });
+  }
+
+  /** Двойной тап / dblclick → как кнопка «Назад». */
+  function bindDoubleTapBack(el, onBack) {
+    if (!el || typeof onBack !== "function") return;
+    var lastTap = 0;
+    el.addEventListener("dblclick", function (e) {
+      e.preventDefault();
+      onBack();
+    });
+    el.addEventListener(
+      "touchend",
+      function (event) {
+        if (!event.changedTouches || event.changedTouches.length !== 1) return;
+        var t = event.target;
+        if (t && t.closest && (t.closest("video") || t.closest("audio") || t.closest("button") || t.closest("a"))) {
+          return;
+        }
+        var now = Date.now();
+        if (now - lastTap < 320) {
+          lastTap = 0;
+          onBack();
+          return;
+        }
+        lastTap = now;
+      },
+      { passive: true }
+    );
+  }
+
+  function bindBackGestures(el, onBack, swipeExtra) {
+    if (!el || typeof onBack !== "function") return;
+    var handlers = { onSwipeLeft: onBack };
+    if (swipeExtra && typeof swipeExtra.onSwipeRight === "function") {
+      handlers.onSwipeRight = swipeExtra.onSwipeRight;
+    }
+    bindHorizontalSwipe(el, handlers);
+    bindDoubleTapBack(el, onBack);
   }
 
   function openNavExerciseImage(payload) {
@@ -1141,15 +1179,7 @@
       el.addEventListener("click", closeSheetInfoOverlay);
     });
     var infoPanel = overlay.querySelector(".btca-sheet-info-panel");
-    if (infoPanel) {
-      infoPanel.addEventListener("dblclick", function (e) {
-        e.preventDefault();
-        closeSheetInfoOverlay();
-      });
-    }
-    bindHorizontalSwipe(infoPanel || overlay, {
-      onSwipeLeft: closeSheetInfoOverlay,
-    });
+    bindBackGestures(infoPanel || overlay, closeSheetInfoOverlay);
     void overlay.offsetWidth;
     window.setTimeout(function () {
       overlay.classList.add("is-open");
@@ -3810,7 +3840,7 @@
       overlay.remove();
     }
     overlay.querySelector("[data-btca-overlay-close]").addEventListener("click", closeTable);
-    bindHorizontalSwipe(overlay, { onSwipeLeft: closeTable });
+    bindBackGestures(overlay, closeTable);
     loadBazaTableDisplayItems(baza, fullDb).then(function (items) {
       if (!bodyEl || !overlay.isConnected) return;
       bodyEl.innerHTML = items.length ? renderBazaTableItemsHtml(items) : "";
@@ -4208,8 +4238,7 @@
     overlay.querySelector("[data-btca-forma-img-close]").addEventListener("click", closePortrait);
     var landscapeBtn = overlay.querySelector("[data-btca-forma-img-landscape]");
     if (landscapeBtn) landscapeBtn.addEventListener("click", openLandscape);
-    bindHorizontalSwipe(overlay.querySelector("[data-btca-forma-img-swipe]") || overlay, {
-      onSwipeLeft: closePortrait,
+    bindBackGestures(overlay.querySelector("[data-btca-forma-img-swipe]") || overlay, closePortrait, {
       onSwipeRight: openLandscape,
     });
   }
@@ -4234,7 +4263,7 @@
     }
     setBazaTableLandscape(true);
     overlay.querySelector("[data-btca-overlay-close]").addEventListener("click", closeOverlay);
-    bindHorizontalSwipe(overlay, { onSwipeLeft: closeOverlay });
+    bindBackGestures(overlay, closeOverlay);
   }
 
   function openExerciseImage(payload) {
@@ -4342,9 +4371,7 @@
       closeOverlay();
     };
     overlay.querySelector("[data-btca-overlay-close]").addEventListener("click", closeAndRevoke);
-    bindHorizontalSwipe(overlay, {
-      onSwipeLeft: closeAndRevoke,
-    });
+    bindBackGestures(overlay, closeAndRevoke);
     var content = state.root.querySelector("[data-btca-level3-content]");
     bindPolezSourceLinks(overlay, content);
     if (String(searchQ || "").trim()) {
@@ -4424,8 +4451,7 @@
     overlay.querySelector("[data-btca-polez-img-close]").addEventListener("click", closePortrait);
     var landscapeBtn = overlay.querySelector("[data-btca-polez-img-landscape]");
     if (landscapeBtn) landscapeBtn.addEventListener("click", openLandscape);
-    bindHorizontalSwipe(overlay.querySelector("[data-btca-polez-img-swipe]") || overlay, {
-      onSwipeLeft: closePortrait,
+    bindBackGestures(overlay.querySelector("[data-btca-polez-img-swipe]") || overlay, closePortrait, {
       onSwipeRight: openLandscape,
     });
   }
@@ -4452,7 +4478,7 @@
     }
     setBazaTableLandscape(true);
     overlay.querySelector("[data-btca-overlay-close]").addEventListener("click", closeOverlay);
-    bindHorizontalSwipe(overlay, { onSwipeLeft: closeOverlay });
+    bindBackGestures(overlay, closeOverlay);
   }
 
   function polezFootnotesForDoc(docId) {

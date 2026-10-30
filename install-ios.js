@@ -2,8 +2,8 @@
   "use strict";
 
   var BTCA_BASE = "/btca-10-1/";
-  var INSTALL_CACHE = "btca10-web-10.1.161:static-install";
-  var MEDIA_CACHE = "btca10-web-10.1.161:static-media";
+  var INSTALL_CACHE = "btca10-web-10.1.162:static-install";
+  var MEDIA_CACHE = "btca10-web-10.1.162:static-media";
   var MEDIA_PROBE_RE = /offline-unpacked\/level3\/exercises\/.+\.(jpe?g|png|webp|gif)$/i;
   var MEDIA_STATE_KEY = "btca10-web:static-media-state";
   var APP_READY_KEY = "btca10-web:app-ready";
@@ -54,8 +54,8 @@
     "*Упражнений* – более 150, *Задач* – более 700, *Полезности* – интеллектуальная поисковая система по Базе знаний школы: 14 основополагающих документов, 114 рисунков и видео и более 370 тематических материалов.\n" +
     "\nCopyright © Юрий Алинт (Андрей Юрьев) 2026";
   var installedHomeSnapshot = "";
-  var LEVEL1_MODULE_VERSION = "10.1.122";
-  var LEVEL3_MODULE_VERSION = "10.1.122";
+  var LEVEL1_MODULE_VERSION = "10.1.123";
+  var LEVEL3_MODULE_VERSION = "10.1.123";
 
   var CORE_REL_PATHS = [
     "",
@@ -1949,6 +1949,69 @@
     );
   }
 
+  var ABOUT_SWIPE_DISTANCE_PX = 56;
+  var ABOUT_SWIPE_HORIZONTAL_DOMINANCE = 1.6;
+
+  function bindAboutBackGestures(el, onBack) {
+    if (!el || typeof onBack !== "function") return;
+    var startX = 0;
+    var startY = 0;
+    var tracking = false;
+    var lastTap = 0;
+    el.addEventListener(
+      "touchstart",
+      function (event) {
+        if (!event.touches || event.touches.length !== 1) return;
+        var t = event.target;
+        if (t && t.closest && (t.closest("a") || t.closest("button"))) {
+          tracking = false;
+          return;
+        }
+        startX = event.touches[0].clientX;
+        startY = event.touches[0].clientY;
+        tracking = true;
+      },
+      { passive: true }
+    );
+    el.addEventListener(
+      "touchend",
+      function (event) {
+        var touch = event.changedTouches && event.changedTouches[0];
+        if (tracking && touch) {
+          tracking = false;
+          var dx = touch.clientX - startX;
+          var dy = touch.clientY - startY;
+          if (
+            Math.abs(dx) >= 12 &&
+            Math.abs(dx) > Math.abs(dy) * ABOUT_SWIPE_HORIZONTAL_DOMINANCE &&
+            dx <= -ABOUT_SWIPE_DISTANCE_PX
+          ) {
+            onBack();
+            return;
+          }
+        } else {
+          tracking = false;
+        }
+        var t = event.target;
+        if (t && t.closest && (t.closest("a") || t.closest("button"))) return;
+        if (!event.changedTouches || event.changedTouches.length !== 1) return;
+        var now = Date.now();
+        if (now - lastTap < 320) {
+          lastTap = 0;
+          onBack();
+          return;
+        }
+        lastTap = now;
+      },
+      { passive: true }
+    );
+    el.addEventListener("dblclick", function (e) {
+      if (e.target && e.target.closest && (e.target.closest("a") || e.target.closest("button"))) return;
+      e.preventDefault();
+      onBack();
+    });
+  }
+
   function renderAboutScreen() {
     var root = document.getElementById("root");
     if (!root) return;
@@ -1969,14 +2032,17 @@
       '<p>' + renderRichText(ABOUT_POST_TEXT.trim()) + "</p>" +
       "</section>" +
       "</main>";
+    function goBackAbout() {
+      root.innerHTML = installedHomeSnapshot;
+      installedHomeSnapshot = "";
+      renderInstalledHome();
+    }
     var back = document.querySelector("[data-btca-back]");
     if (back) {
-      back.addEventListener("click", function () {
-        root.innerHTML = installedHomeSnapshot;
-        installedHomeSnapshot = "";
-        renderInstalledHome();
-      });
+      back.addEventListener("click", goBackAbout);
     }
+    var aboutMain = root.querySelector(".btca-about-screen");
+    bindAboutBackGestures(aboutMain || root, goBackAbout);
     // Загрузчик БТКА — во внешний Safari, не внутрь установленного PWA.
     root.querySelectorAll('a[href*="clc.li/btca-10-1"]').forEach(function (a) {
       a.addEventListener("click", function (e) {
