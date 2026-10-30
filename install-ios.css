@@ -4720,8 +4720,8 @@ body.btca-level3-mode .btca-date-picker-day--selected {
   box-sizing: border-box;
   gap: 6px;
   padding-top: 16px;
-  color: #a9d7df;
-  /* Как пояснения под кнопками (.platform-button small = 1rem). */
+  /* Как пояснения под кнопками (.platform-button small). */
+  color: #dcecef;
   font-size: 1rem;
   font-weight: 400;
   line-height: 1.55;
@@ -4736,16 +4736,25 @@ body.btca-level3-mode .btca-date-picker-day--selected {
   gap: 8px;
 }
 
+.footer__side,
+.footer__side--left,
+.footer__side--right {
+  /* Явно на Вход/Регистрация и на загрузочной — тот же кегль, что у «Скачать дистрибутив…». */
+  color: #dcecef;
+  font-size: 1rem;
+  font-weight: 400;
+  line-height: 1.55;
+  white-space: nowrap;
+}
+
 .footer__side--left {
   justify-self: start;
   text-align: left;
-  white-space: nowrap;
 }
 
 .footer__side--right {
   justify-self: end;
   text-align: right;
-  white-space: nowrap;
 }
 
 .footer__support-btn {
@@ -4829,11 +4838,11 @@ body.btca-level3-mode .btca-date-picker-day--selected {
 .btca-installed-mode .footer__side--left,
 .btca-installed-mode .footer__side--right {
   display: block;
-  /* Как «О проекте» (.btca-work-menu__item span = 1rem), без жирности. */
+  /* Как пояснения под кнопками (.platform-button small = 1rem). */
   font-size: 1rem;
   font-weight: 400;
-  line-height: 1.35;
-  color: rgba(255, 255, 255, 0.92);
+  line-height: 1.55;
+  color: #dcecef;
 }
 
 /* Пустая строка под иконкой всегда занимает место; текст — только после клика. */
