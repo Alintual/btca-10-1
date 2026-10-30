@@ -3,7 +3,7 @@
 
   var DB = window.BTCA_LEVEL3_DB;
   var BAZA = window.BTCA_LEVEL3_BAZA;
-  var VERSION = "10.1.126";
+  var VERSION = "10.1.127";
   var BRANDING_UP = "branding/up.png";
   var BRANDING_UP_LIST = "branding/up_list.png";
   var BRANDING_BAZA = "branding/baza.png";
@@ -2023,15 +2023,6 @@
     return polezDescriptionContentMatch(item, q);
   }
 
-  function polezSectionMatchesSearch(sectionTitle, searchRaw) {
-    var q = String(searchRaw || "").trim();
-    if (!q) return true;
-    if (/^\d+$/.test(q)) return false;
-    var nq = normalizePolezSearch(q);
-    if (!nq) return true;
-    return normalizePolezSearch(sectionTitle).indexOf(nq) >= 0;
-  }
-
   function buildPolezCatalogOptions(searchRaw) {
     var options = [{ value: POLEZ_ALL, label: "Весь список", catalogAll: true }];
     var sections = polezNavSections();
@@ -2039,14 +2030,13 @@
     for (var s = 0; s < sections.length; s += 1) {
       var sec = sections[s];
       var sectionTitle = sec.title || "";
-      var matched = (sec.items || []).filter(function (it) {
-        return polezItemMatchesSearch(it, q);
-      });
-      var sectionMatches = !q || polezSectionMatchesSearch(sectionTitle, q);
-      if (!matched.length && !sectionMatches) continue;
-      // Фраза в названии раздела → весь раздел; иначе только совпавшие пункты
-      var itemsToShow = sectionMatches && !/^\d+$/.test(q) ? (sec.items || []) : matched;
-      if (!itemsToShow.length && sectionMatches) itemsToShow = sec.items || [];
+      // Поиск только по hot / названию пункта / тексту Описания — не по названию раздела.
+      var itemsToShow = !q
+        ? (sec.items || [])
+        : (sec.items || []).filter(function (it) {
+            return polezItemMatchesSearch(it, q);
+          });
+      if (!itemsToShow.length) continue;
       options.push({
         value: "__section:" + sec.id,
         label: sectionTitle,
