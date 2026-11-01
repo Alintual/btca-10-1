@@ -2,8 +2,8 @@
   "use strict";
 
   var BTCA_BASE = "/btca-10-1/";
-  var INSTALL_CACHE = "btca10-web-10.1.167:static-install";
-  var MEDIA_CACHE = "btca10-web-10.1.167:static-media";
+  var INSTALL_CACHE = "btca10-web-10.1.168:static-install";
+  var MEDIA_CACHE = "btca10-web-10.1.168:static-media";
   var MEDIA_PROBE_RE = /offline-unpacked\/level3\/exercises\/.+\.(jpe?g|png|webp|gif)$/i;
   var MEDIA_STATE_KEY = "btca10-web:static-media-state";
   var APP_READY_KEY = "btca10-web:app-ready";
@@ -54,8 +54,8 @@
     "*Упражнений* – более 150, *Задач* – более 700, *Полезности* – интеллектуальная поисковая система по Базе знаний школы: 14 основополагающих документов, 114 рисунков и видео и более 370 тематических материалов.\n" +
     "\nCopyright © Юрий Алинт (Андрей Юрьев) 2026";
   var installedHomeSnapshot = "";
-  var LEVEL1_MODULE_VERSION = "10.1.128";
-  var LEVEL3_MODULE_VERSION = "10.1.128";
+  var LEVEL1_MODULE_VERSION = "10.1.129";
+  var LEVEL3_MODULE_VERSION = "10.1.129";
 
   var CORE_REL_PATHS = [
     "",
@@ -3525,6 +3525,76 @@
     var android = menu.querySelector(".platform-button--android");
     var windows = menu.querySelector(".platform-button--windows");
 
+    function androidInstallGuidanceHtml() {
+      return (
+        '<p class="hint">Файл APK скачивается на устройство. После загрузки откройте его в «Загрузки» и установите приложение BTCA-Android 10.1.</p>' +
+        '<p class="prepare-status prepare-status--warning">ВНИМАНИЕ. Если на устройстве уже установлена предыдущая версия Приложения (в том числе 8.1), перед установкой удалите её. Иначе возможны сбой запуска и конфликт данных.</p>'
+      );
+    }
+
+    function renderAndroidDownloadProgress(percent, message) {
+      var pct = Math.max(0, Math.min(100, Math.round(percent)));
+      setPanel(
+        '<div class="ios-panel__header"><span>Android</span><span>' + pct + "%</span></div>" +
+        '<div class="progress" aria-label="Прогресс загрузки APK"><div class="progress__bar" style="width:' + pct + '%"></div></div>' +
+        '<p class="prepare-status prepare-status--running">' + escapeHtml(message) + "</p>" +
+        (pct >= 100 ? androidInstallGuidanceHtml() : "")
+      );
+    }
+
+    function startAndroidApkDownload(btn, href) {
+      var small = btn.querySelector("small");
+      var progressTimer = null;
+      var shown = 8;
+      btn.disabled = true;
+      if (small) small.textContent = "Подготовка скачивания...";
+      renderAndroidDownloadProgress(shown, "Подготовка персонального APK…");
+
+      function tickProgress(target, message) {
+        shown = Math.max(shown, Math.min(95, target));
+        renderAndroidDownloadProgress(shown, message);
+        if (small) small.textContent = message;
+      }
+
+      progressTimer = window.setInterval(function () {
+        if (shown >= 88) return;
+        shown += 3;
+        renderAndroidDownloadProgress(shown, "Идёт загрузка APK на Ваше устройство…");
+      }, 450);
+
+      claimPlatformDownload("android", "Android")
+        .then(function () {
+          tickProgress(92, "Идёт загрузка APK на Ваше устройство…");
+          // Короткий показ 100% + предупреждение, затем переход по ссылке (скачивание).
+          if (progressTimer) {
+            window.clearInterval(progressTimer);
+            progressTimer = null;
+          }
+          renderAndroidDownloadProgress(100, "Готово. Начинаем скачивание файла…");
+          if (small) small.textContent = "Скачивание…";
+          return new Promise(function (resolve) {
+            window.setTimeout(resolve, 900);
+          }).then(function () {
+            window.location.href = href;
+          });
+        })
+        .catch(function (error) {
+          if (progressTimer) {
+            window.clearInterval(progressTimer);
+            progressTimer = null;
+          }
+          btn.disabled = false;
+          if (small) small.textContent = "Скачать дистрибутив APK";
+          showDownloadLimitWarning(
+            localizeUserFacingError(error, "Не удалось начать скачивание. Повторите попытку.")
+          );
+          renderInfo(
+            "Android",
+            localizeUserFacingError(error, "Не удалось начать скачивание APK. Повторите попытку.")
+          );
+        });
+    }
+
     function bindClaimThenOpen(el, platform, href, label) {
       if (!el || !href) return;
       var btn = replaceWithPlatformButton(el);
@@ -3534,11 +3604,15 @@
       btn.onclick = function (event) {
         if (event) event.preventDefault();
         clearDownloadLimitWarning();
-        if (platform === "android" && !isAndroidDevice() && !isDebugAndroidMode()) {
-          renderInfo(
-            "Android",
-            "Вы открыли страницу не на устройстве Android. Для скачивания APK откройте эту ссылку в браузере на телефоне или планшете Android."
-          );
+        if (platform === "android") {
+          if (!isAndroidDevice() && !isDebugAndroidMode()) {
+            renderInfo(
+              "Android",
+              "Вы открыли страницу не на устройстве Android. Для скачивания APK откройте эту ссылку в браузере на телефоне или планшете Android."
+            );
+            return;
+          }
+          startAndroidApkDownload(btn, href);
           return;
         }
         btn.disabled = true;
