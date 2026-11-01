@@ -4802,7 +4802,7 @@ body.btca-level3-mode .btca-date-picker-day--selected {
   display: none !important;
 }
 
-.footer:has(.footer__support-btn:hover) .footer__support-line,
+/* Только по клику (повторный клик скрывает). Hover не держит строку открытой. */
 .footer.is-support-open .footer__support-line {
   display: block !important;
 }

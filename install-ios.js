@@ -2,8 +2,8 @@
   "use strict";
 
   var BTCA_BASE = "/btca-10-1/";
-  var INSTALL_CACHE = "btca10-web-10.1.168:static-install";
-  var MEDIA_CACHE = "btca10-web-10.1.168:static-media";
+  var INSTALL_CACHE = "btca10-web-10.1.169:static-install";
+  var MEDIA_CACHE = "btca10-web-10.1.169:static-media";
   var MEDIA_PROBE_RE = /offline-unpacked\/level3\/exercises\/.+\.(jpe?g|png|webp|gif)$/i;
   var MEDIA_STATE_KEY = "btca10-web:static-media-state";
   var APP_READY_KEY = "btca10-web:app-ready";
@@ -54,8 +54,8 @@
     "*Упражнений* – более 150, *Задач* – более 700, *Полезности* – интеллектуальная поисковая система по Базе знаний школы: 14 основополагающих документов, 114 рисунков и видео и более 370 тематических материалов.\n" +
     "\nCopyright © Юрий Алинт (Андрей Юрьев) 2026";
   var installedHomeSnapshot = "";
-  var LEVEL1_MODULE_VERSION = "10.1.129";
-  var LEVEL3_MODULE_VERSION = "10.1.129";
+  var LEVEL1_MODULE_VERSION = "10.1.130";
+  var LEVEL3_MODULE_VERSION = "10.1.130";
 
   var CORE_REL_PATHS = [
     "",
@@ -3527,70 +3527,126 @@
 
     function androidInstallGuidanceHtml() {
       return (
-        '<p class="hint">Файл APK скачивается на устройство. После загрузки откройте его в «Загрузки» и установите приложение BTCA-Android 10.1.</p>' +
-        '<p class="prepare-status prepare-status--warning">ВНИМАНИЕ. Если на устройстве уже установлена предыдущая версия Приложения (в том числе 8.1), перед установкой удалите её. Иначе возможны сбой запуска и конфликт данных.</p>'
+        '<p class="hint">Запустите скачанный файл в «Загрузки» на устройстве и установите приложение BTCA-Android 10.1.</p>' +
+        '<p class="prepare-status prepare-status--warning">ВНИМАНИЕ. Если на устройстве уже установлена предыдущая версия 10.1 приложения, то перед установкой удалите её. Иначе, возможны сбой запуска и конфликт данных.</p>'
       );
     }
 
-    function renderAndroidDownloadProgress(percent, message) {
+    function renderAndroidDownloadProgress(percent, message, done) {
       var pct = Math.max(0, Math.min(100, Math.round(percent)));
       setPanel(
         '<div class="ios-panel__header"><span>Android</span><span>' + pct + "%</span></div>" +
         '<div class="progress" aria-label="Прогресс загрузки APK"><div class="progress__bar" style="width:' + pct + '%"></div></div>' +
         '<p class="prepare-status prepare-status--running">' + escapeHtml(message) + "</p>" +
-        (pct >= 100 ? androidInstallGuidanceHtml() : "")
+        (done ? androidInstallGuidanceHtml() : "")
       );
+    }
+
+    function filenameFromContentDisposition(header, fallback) {
+      var raw = String(header || "");
+      var star = raw.match(/filename\*\s*=\s*UTF-8''([^;]+)/i);
+      if (star && star[1]) {
+        try {
+          return decodeURIComponent(star[1].trim().replace(/^["']|["']$/g, ""));
+        } catch (e) { }
+      }
+      var plain = raw.match(/filename\s*=\s*("([^"]+)"|([^;]+))/i);
+      if (plain) {
+        return String(plain[2] || plain[3] || "").trim().replace(/^["']|["']$/g, "");
+      }
+      return fallback || "BTCA-Android 10.1.apk";
+    }
+
+    function saveBlobToDevice(blob, filename) {
+      var objectUrl = URL.createObjectURL(blob);
+      var a = document.createElement("a");
+      a.href = objectUrl;
+      a.download = filename || "BTCA-Android 10.1.apk";
+      a.style.display = "none";
+      document.body.appendChild(a);
+      a.click();
+      window.setTimeout(function () {
+        try {
+          URL.revokeObjectURL(objectUrl);
+        } catch (e) { }
+        try {
+          a.remove();
+        } catch (e2) { }
+      }, 2500);
+    }
+
+    function downloadApkWithRealProgress(url, onProgress) {
+      return new Promise(function (resolve, reject) {
+        var xhr = new XMLHttpRequest();
+        xhr.open("GET", url, true);
+        xhr.responseType = "blob";
+        xhr.withCredentials = false;
+        xhr.onprogress = function (ev) {
+          if (!onProgress) return;
+          if (ev.lengthComputable && ev.total > 0) {
+            onProgress(Math.round((ev.loaded / ev.total) * 100), ev.loaded, ev.total);
+          }
+        };
+        xhr.onload = function () {
+          var type = String(xhr.getResponseHeader("Content-Type") || "").toLowerCase();
+          if (xhr.status < 200 || xhr.status >= 300) {
+            reject(new Error("Ошибка скачивания APK (" + xhr.status + ")."));
+            return;
+          }
+          if (type.indexOf("text/html") >= 0) {
+            reject(new Error("Ссылка на APK недоступна. Обновите страницу и повторите."));
+            return;
+          }
+          var name = filenameFromContentDisposition(
+            xhr.getResponseHeader("Content-Disposition"),
+            "BTCA-Android 10.1.apk"
+          );
+          resolve({ blob: xhr.response, filename: name });
+        };
+        xhr.onerror = function () {
+          reject(new Error("Сеть недоступна при скачивании APK."));
+        };
+        xhr.onabort = function () {
+          reject(new Error("Скачивание APK прервано."));
+        };
+        xhr.send();
+      });
     }
 
     function startAndroidApkDownload(btn, href) {
       var small = btn.querySelector("small");
-      var progressTimer = null;
-      var shown = 8;
       btn.disabled = true;
       if (small) small.textContent = "Подготовка скачивания...";
-      renderAndroidDownloadProgress(shown, "Подготовка персонального APK…");
-
-      function tickProgress(target, message) {
-        shown = Math.max(shown, Math.min(95, target));
-        renderAndroidDownloadProgress(shown, message);
-        if (small) small.textContent = message;
-      }
-
-      progressTimer = window.setInterval(function () {
-        if (shown >= 88) return;
-        shown += 3;
-        renderAndroidDownloadProgress(shown, "Идёт загрузка APK на Ваше устройство…");
-      }, 450);
+      renderAndroidDownloadProgress(0, "Подготовка персонального APK…", false);
 
       claimPlatformDownload("android", "Android")
         .then(function () {
-          tickProgress(92, "Идёт загрузка APK на Ваше устройство…");
-          // Короткий показ 100% + предупреждение, затем переход по ссылке (скачивание).
-          if (progressTimer) {
-            window.clearInterval(progressTimer);
-            progressTimer = null;
-          }
-          renderAndroidDownloadProgress(100, "Готово. Начинаем скачивание файла…");
           if (small) small.textContent = "Скачивание…";
-          return new Promise(function (resolve) {
-            window.setTimeout(resolve, 900);
-          }).then(function () {
-            window.location.href = href;
+          renderAndroidDownloadProgress(0, "Идёт загрузка APK на Ваше устройство…", false);
+          return downloadApkWithRealProgress(href, function (pct) {
+            renderAndroidDownloadProgress(pct, "Идёт загрузка APK на Ваше устройство…", false);
+            if (small) small.textContent = "Скачивание " + pct + "%";
           });
         })
+        .then(function (result) {
+          saveBlobToDevice(result.blob, result.filename);
+          renderAndroidDownloadProgress(
+            100,
+            "Готово, дистрибутив скачан на устройство.",
+            true
+          );
+          if (small) small.textContent = "Скачано";
+          btn.disabled = false;
+        })
         .catch(function (error) {
-          if (progressTimer) {
-            window.clearInterval(progressTimer);
-            progressTimer = null;
-          }
           btn.disabled = false;
           if (small) small.textContent = "Скачать дистрибутив APK";
           showDownloadLimitWarning(
-            localizeUserFacingError(error, "Не удалось начать скачивание. Повторите попытку.")
+            localizeUserFacingError(error, "Не удалось скачать APK. Повторите попытку.")
           );
           renderInfo(
             "Android",
-            localizeUserFacingError(error, "Не удалось начать скачивание APK. Повторите попытку.")
+            localizeUserFacingError(error, "Не удалось скачать APK. Повторите попытку.")
           );
         });
     }
@@ -5080,11 +5136,12 @@
       }
     }
 
-    // Наведение — через CSS :has(...:hover) на загрузочной. Клик — закрепить строку.
+    // Клик переключает строку; повторный клик скрывает.
     btn.addEventListener("click", function (event) {
       event.preventDefault();
       event.stopPropagation();
-      setPinned(btn.getAttribute("aria-expanded") !== "true");
+      var open = btn.getAttribute("aria-expanded") === "true";
+      setPinned(!open);
     });
     line.addEventListener("click", function (event) {
       event.stopPropagation();
