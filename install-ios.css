@@ -2958,6 +2958,12 @@ body.btca-apple-comfort .btca-l1-chart-panel {
   border: 0;
 }
 
+.btca-l1-polez-inline-fig.btca-l1-nav-card-frame--swipe {
+  cursor: pointer;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
 .btca-l1-polez-inline-fig img,
 .btca-l1-polez-inline-fig .btca-l1-polez-video {
   display: block;

@@ -3,7 +3,7 @@
 
   var DB = window.BTCA_LEVEL3_DB;
   var BAZA = window.BTCA_LEVEL3_BAZA;
-  var VERSION = "10.1.130";
+  var VERSION = "10.1.131";
   var BRANDING_UP = "branding/up.png";
   var BRANDING_UP_LIST = "branding/up_list.png";
   var BRANDING_BAZA = "branding/baza.png";
@@ -2216,30 +2216,30 @@
     var currentSource = pickerOpts.currentSource || null;
     var itemExtraClass = pickerOpts.itemClass || "";
     return options.map(function (opt) {
-      if (opt.groupHeader) {
-        var groupClass = "btca-level1-picker__group";
-        if (opt.sectionHeader) groupClass += " btca-level1-picker__group--section";
-        if (opt.importHeader) groupClass += " btca-level1-picker__group--import";
-        if (opt.disabledHeader) groupClass += " btca-level1-picker__group--disabled";
-        if (opt.importHeader) {
-          return (
-            '<div class="' + groupClass + '">' +
-            '<span class="btca-level1-picker__group-line">--- ИМПОРТ ---</span>' +
-            '<span class="btca-level1-picker__group-line">' + escapeHtml(String(opt.importId || "")) + "</span>" +
-            "</div>"
-          );
-        }
+        if (opt.groupHeader) {
+          var groupClass = "btca-level1-picker__group";
+          if (opt.sectionHeader) groupClass += " btca-level1-picker__group--section";
+          if (opt.importHeader) groupClass += " btca-level1-picker__group--import";
+          if (opt.disabledHeader) groupClass += " btca-level1-picker__group--disabled";
+          if (opt.importHeader) {
+            return (
+              '<div class="' + groupClass + '">' +
+              '<span class="btca-level1-picker__group-line">--- ИМПОРТ ---</span>' +
+              '<span class="btca-level1-picker__group-line">' + escapeHtml(String(opt.importId || "")) + "</span>" +
+              "</div>"
+            );
+          }
         return '<div class="' + groupClass + '"><span class="btca-level1-picker__group-text">' +
           escapeHtml(opt.label) + "</span></div>";
-      }
-      var optSource = opt.source || "own";
-      var pickerCurrent = bazaExercisePickerValue(current, currentSource || "own");
-      var active = pickerOpts.showAllMode
-        ? !opt.groupHeader && (opt.value === "all" || opt.value === "__foreign_data__")
-        : opt.value === pickerCurrent;
-      var itemClass = "btca-level1-picker__item";
-      if (pickerOpts.catalogList) itemClass += " btca-level1-picker__item--catalog";
-      if (itemExtraClass) itemClass += itemExtraClass;
+        }
+        var optSource = opt.source || "own";
+        var pickerCurrent = bazaExercisePickerValue(current, currentSource || "own");
+        var active = pickerOpts.showAllMode
+          ? !opt.groupHeader && (opt.value === "all" || opt.value === "__foreign_data__")
+          : opt.value === pickerCurrent;
+        var itemClass = "btca-level1-picker__item";
+        if (pickerOpts.catalogList) itemClass += " btca-level1-picker__item--catalog";
+        if (itemExtraClass) itemClass += itemExtraClass;
       var textHtml;
       if (pickerOpts.catalogList && opt.catalogAll) {
         itemClass += " btca-level1-picker__item--catalog-all";
@@ -2260,10 +2260,10 @@
       } else {
         textHtml = '<span class="btca-level1-picker__text">' + escapeHtml(opt.label) + "</span>";
       }
-      return '<button type="button" class="' + itemClass +
-        (active ? " btca-level1-picker__item--active" : "") +
-        '" data-btca-picker-value="' + escapeHtml(opt.value) +
-        '" data-btca-picker-source="' + escapeHtml(optSource) +
+        return '<button type="button" class="' + itemClass +
+          (active ? " btca-level1-picker__item--active" : "") +
+          '" data-btca-picker-value="' + escapeHtml(opt.value) +
+          '" data-btca-picker-source="' + escapeHtml(optSource) +
         '">' + textHtml + "</button>";
     }).join("");
   }
@@ -4030,16 +4030,71 @@
   function polezInlineFiguresHtml(figures) {
     if (!figures || !figures.length) return "";
     return figures.map(function (fig) {
-      var url = polezImageUrl(fig.file);
+      var file = String(fig && fig.file || "");
+      var url = polezImageUrl(file);
       if (!url) return "";
       var cap = fig.caption || "";
-      var media = polezSheetMediaHtml(url, cap, fig.file);
+      var media = polezSheetMediaHtml(url, cap, file);
       if (!media) return "";
-      return '<figure class="btca-l1-polez-inline-fig">' +
+      var canOpenViewer = file && !isPolezVideoFile(file);
+      var frameClass = "btca-l1-polez-inline-fig";
+      var frameAttr = "";
+      if (canOpenViewer) {
+        frameClass += " btca-l1-nav-card-frame--swipe";
+        frameAttr =
+          ' data-btca-polez-inline-image="' +
+          escapeHtml(file) +
+          '" data-btca-polez-inline-title="' +
+          escapeHtml(cap || "Рисунок") +
+          '"';
+      }
+      return '<figure class="' + frameClass + '"' + frameAttr + ">" +
         media +
         polezFigCaptionHtml(cap) +
         "</figure>";
     }).join("");
+  }
+
+  /** Свайп вправо / двойной тап по рисунку внутри Описания → портретный просмотр. */
+  function bindPolezInlineFigureGestures(root) {
+    if (!root) return;
+    root.querySelectorAll("[data-btca-polez-inline-image]").forEach(function (frame) {
+      if (frame.getAttribute("data-btca-inline-img-bound") === "1") return;
+      frame.setAttribute("data-btca-inline-img-bound", "1");
+      var file = frame.getAttribute("data-btca-polez-inline-image") || "";
+      var title = frame.getAttribute("data-btca-polez-inline-title") || "Рисунок";
+      if (!file) return;
+      function openViewer() {
+        openPolezImagePortrait({ file: file, title: title, fromDescription: true });
+      }
+      bindHorizontalSwipe(frame, { onSwipeRight: openViewer });
+      var lastTap = 0;
+      frame.addEventListener("dblclick", function (e) {
+        e.preventDefault();
+        e.stopPropagation();
+        openViewer();
+      });
+      frame.addEventListener(
+        "touchend",
+        function (event) {
+          if (!event.changedTouches || event.changedTouches.length !== 1) return;
+          var t = event.target;
+          if (t && t.closest && (t.closest("video") || t.closest("audio") || t.closest("button") || t.closest("a"))) {
+            return;
+          }
+          var now = Date.now();
+          if (now - lastTap < 320) {
+            lastTap = 0;
+            event.preventDefault();
+            event.stopPropagation();
+            openViewer();
+            return;
+          }
+          lastTap = now;
+        },
+        { passive: false }
+      );
+    });
   }
 
   /** Медиа на листе — только 1.4 figN (видео идут в Описание). */
@@ -4356,6 +4411,7 @@
       }
     }
     bindPolezVideos(overlay);
+    bindPolezInlineFigureGestures(overlay);
     var closeAndRevoke = function () {
       revokePolezVideoBlobs(overlay);
       closeOverlay();
@@ -4446,11 +4502,37 @@
     }
   }
 
-  function openPolezImagePortrait(hotOrFig) {
+  /**
+   * Резолв файла для просмотра:
+   * - строка hot/figKey (лист Полезности);
+   * - объект `{ file, title, fromDescription }` (рисунок из Описания).
+   */
+  function resolvePolezImageTarget(hotOrFig) {
+    if (hotOrFig && typeof hotOrFig === "object") {
+      var directFile = String(hotOrFig.file || "").trim();
+      if (!directFile) return null;
+      return {
+        file: directFile,
+        label: String(hotOrFig.title || hotOrFig.label || "Рисунок"),
+        fromDescription: Boolean(hotOrFig.fromDescription),
+        raw: hotOrFig,
+      };
+    }
     var figKey = resolvePolezFigKey(hotOrFig);
     var row = polezFigRow(figKey);
-    if (!row || !row.file) return;
-    var url = polezImageUrl(row.file);
+    if (!row || !row.file) return null;
+    return {
+      file: row.file,
+      label: row.label || "Рисунок",
+      fromDescription: false,
+      raw: hotOrFig,
+    };
+  }
+
+  function openPolezImagePortrait(hotOrFig) {
+    var target = resolvePolezImageTarget(hotOrFig);
+    if (!target || !target.file || isPolezVideoFile(target.file)) return;
+    var url = polezImageUrl(target.file);
     if (!url) return;
     var overlay = document.createElement("div");
     overlay.className = "btca-l1-overlay btca-l1-overlay--forma-image-portrait";
@@ -4461,19 +4543,23 @@
       greenArrowHtml({ dataAttr: 'data-btca-polez-img-landscape aria-label="Просмотр в альбомной ориентации"' }) +
       "</header>" +
       '<div class="btca-l1-image-view" data-btca-polez-img-swipe>' +
-      polezSheetMediaHtml(url, row.label, row.file) + "</div>";
+      polezSheetMediaHtml(url, target.label, target.file) + "</div>";
     state.root.appendChild(overlay);
     bindPolezVideos(overlay);
 
     function closePortrait() {
       revokePolezVideoBlobs(overlay);
       overlay.remove();
-      scrollPolezAfterImageClose();
+      if (!target.fromDescription) scrollPolezAfterImageClose();
     }
     function openLandscape() {
       revokePolezVideoBlobs(overlay);
       overlay.remove();
-      openPolezImageLandscape(hotOrFig);
+      openPolezImageLandscape(target.raw && typeof target.raw === "object" ? target.raw : {
+        file: target.file,
+        title: target.label,
+        fromDescription: target.fromDescription,
+      });
     }
 
     overlay.querySelector("[data-btca-polez-img-close]").addEventListener("click", closePortrait);
@@ -4485,24 +4571,24 @@
   }
 
   function openPolezImageLandscape(hotOrFig) {
-    var figKey = resolvePolezFigKey(hotOrFig);
-    var row = polezFigRow(figKey);
-    if (!row || !row.file) return;
-    var url = polezImageUrl(row.file);
+    var target = resolvePolezImageTarget(hotOrFig);
+    if (!target || !target.file || isPolezVideoFile(target.file)) return;
+    var url = polezImageUrl(target.file);
+    if (!url) return;
     var overlay = document.createElement("div");
     overlay.className = "btca-l1-overlay btca-l1-overlay--forma-image";
     overlay.innerHTML =
       '<header class="btca-l1-overlay__header btca-l1-overlay__header--forma-image btca-l1-overlay__header--compact">' +
       '<button type="button" class="btca-back-button" data-btca-overlay-close aria-label="Назад">←</button>' +
       "</header>" +
-      '<div class="btca-l1-image-view">' + polezSheetMediaHtml(url, row.label, row.file) + "</div>";
+      '<div class="btca-l1-image-view">' + polezSheetMediaHtml(url, target.label, target.file) + "</div>";
     state.root.appendChild(overlay);
     bindPolezVideos(overlay);
     function closeOverlay() {
       revokePolezVideoBlobs(overlay);
       setBazaTableLandscape(false);
       overlay.remove();
-      scrollPolezAfterImageClose();
+      if (!target.fromDescription) scrollPolezAfterImageClose();
     }
     setBazaTableLandscape(true);
     overlay.querySelector("[data-btca-overlay-close]").addEventListener("click", closeOverlay);
