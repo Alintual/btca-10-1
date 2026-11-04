@@ -3,7 +3,7 @@
 
   <head>
     <meta charset="UTF-8" />
-  <meta name="btca-cache-version" content="btca10-web-10.1.174" />
+  <meta name="btca-cache-version" content="btca10-web-10.1.175" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <meta name="theme-color" content="#1a4854" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
@@ -19,7 +19,7 @@
     <link rel="shortcut icon" href="https://alintual.github.io/btca-10-1/favicon.ico" />
     <!-- btca-css -->
     <style>html,body{margin:0;background:#1a4854;color:#fff}</style>
-    <link rel="stylesheet" href="/btca-10-1/install-ios.css?v=btca10-web-10.1.174" />
+    <link rel="stylesheet" href="/btca-10-1/install-ios.css?v=btca10-web-10.1.175" />
     <!-- /btca-css -->
   <title>BTCA 10.1</title>
     <script>
@@ -28,6 +28,8 @@
         var iPadDesktop = navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1;
         if (/iPhone|iPad|iPod/.test(ua) || iPadDesktop) {
           document.documentElement.classList.add("btca-early-apple");
+          // Safari «На экран Домой» часто берёт document.title, а не только apple-mobile-web-app-title.
+          document.title = "BTCA-iOS 10.1";
         }
         var standalone = false;
         try {
@@ -181,7 +183,7 @@
       } catch (e) {}
     })();
     </script>
-    <script src="/btca-10-1/install-ios.js?v=btca10-web-10.1.174" defer></script>
+    <script src="/btca-10-1/install-ios.js?v=btca10-web-10.1.175" defer></script>
     <!-- /btca-install -->
   </body>
 
