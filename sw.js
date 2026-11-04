@@ -1,4 +1,4 @@
-const CACHE_VERSION = "btca10-web-10.1.170";
+const CACHE_VERSION = "btca10-web-10.1.171";
 const APP_CACHE = `${CACHE_VERSION}:app`;
 const RUNTIME_CACHE = `${CACHE_VERSION}:runtime`;
 const BASE_PATH = "/btca-10-1";
@@ -40,9 +40,9 @@ function offlineFallback(request) {
     return matchShell(request).then(function (page) {
       if (page) return page;
       return new Response(
-        "<!doctype html><meta charset=utf-8><title>BTCA-iOS 10.1</title>" +
+        "<!doctype html><meta charset=utf-8><title>BTCA 10.1</title>" +
           "<body style='font-family:system-ui;background:#1a4854;color:#fff;padding:2rem'>" +
-          "<h1>BTCA-iOS 10.1</h1><p>Нет сети и offline-кэш ещё не готов. Откройте загрузочную в Safari, войдите и загрузите пакет.</p></body>",
+          "<h1>BTCA 10.1</h1><p>Нет сети и offline-кэш ещё не готов. Откройте загрузочную в Safari, войдите и загрузите пакет.</p></body>",
         { status: 200, headers: { "Content-Type": "text/html; charset=utf-8" } }
       );
     });

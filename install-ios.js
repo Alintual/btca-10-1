@@ -2,8 +2,8 @@
   "use strict";
 
   var BTCA_BASE = "/btca-10-1/";
-  var INSTALL_CACHE = "btca10-web-10.1.170:static-install";
-  var MEDIA_CACHE = "btca10-web-10.1.170:static-media";
+  var INSTALL_CACHE = "btca10-web-10.1.171:static-install";
+  var MEDIA_CACHE = "btca10-web-10.1.171:static-media";
   var MEDIA_PROBE_RE = /offline-unpacked\/level3\/exercises\/.+\.(jpe?g|png|webp|gif)$/i;
   var MEDIA_STATE_KEY = "btca10-web:static-media-state";
   var APP_READY_KEY = "btca10-web:app-ready";
@@ -54,8 +54,8 @@
     "*Упражнений* – более 150, *Задач* – более 700, *Полезности* – интеллектуальная поисковая система по Базе знаний школы: 14 основополагающих документов, 114 рисунков и видео и более 370 тематических материалов.\n" +
     "\nCopyright © Юрий Алинт (Андрей Юрьев) 2026";
   var installedHomeSnapshot = "";
-  var LEVEL1_MODULE_VERSION = "10.1.131";
-  var LEVEL3_MODULE_VERSION = "10.1.131";
+  var LEVEL1_MODULE_VERSION = "10.1.132";
+  var LEVEL3_MODULE_VERSION = "10.1.132";
 
   var CORE_REL_PATHS = [
     "",
@@ -239,8 +239,8 @@
     options = options || {};
     var panel = getEls().panel;
     if (panel) {
-      panel.className = "ios-panel";
-      panel.innerHTML = "";
+    panel.className = "ios-panel";
+    panel.innerHTML = "";
       panel.setAttribute("hidden", "hidden");
     }
     // Форму входа открываем только явной командой после полного splash/boot.
@@ -1136,7 +1136,7 @@
       var manifestName = String(manifestLink.getAttribute("data-short-name") || "").trim();
       if (manifestName) return manifestName;
     }
-    return "BTCA-iOS 10.1";
+    return "BTCA 10.1";
   }
 
   function clearBrowserPrepMarkers() {
@@ -1169,8 +1169,8 @@
       var tasks = [];
       if (window.BTCA_LEVEL3_DB && window.BTCA_LEVEL3_DB.wipeTrainingDatabase) {
         tasks.push(window.BTCA_LEVEL3_DB.wipeTrainingDatabase());
-      }
-      return Promise.all(tasks);
+        }
+        return Promise.all(tasks);
     }).catch(function (error) {
       console.warn("BTCA Safari training DB wipe failed", error);
     });
@@ -1417,7 +1417,7 @@
     if (!("serviceWorker" in navigator)) return Promise.resolve();
     return navigator.serviceWorker.getRegistrations().then(function (regs) {
       return Promise.all((regs || []).map(function (registration) {
-        return registration.unregister();
+      return registration.unregister();
       }));
     }).catch(function () { });
   }
@@ -2042,9 +2042,9 @@
       "</section>" +
       "</main>";
     function goBackAbout() {
-      root.innerHTML = installedHomeSnapshot;
-      installedHomeSnapshot = "";
-      renderInstalledHome();
+        root.innerHTML = installedHomeSnapshot;
+        installedHomeSnapshot = "";
+        renderInstalledHome();
     }
     var back = document.querySelector("[data-btca-back]");
     if (back) {
@@ -4306,7 +4306,7 @@
     applyInstalledHomeFooter();
 
     if (!isLaunchUnlocked()) {
-      if (menu) {
+    if (menu) {
         menu.className = "platform-menu";
         menu.innerHTML = "";
         menu.setAttribute("hidden", "hidden");
@@ -5170,18 +5170,18 @@
         .then(function () {
           return ensureMediaCacheReady();
         })
-        .then(function (mediaReady) {
-          return purgeObsoleteInstallCaches().then(function () {
-            if (!mediaReady) return false;
+      .then(function (mediaReady) {
+        return purgeObsoleteInstallCaches().then(function () {
+          if (!mediaReady) return false;
             return purgeObsoleteMediaCaches().then(function () {
               return true;
             });
-          });
-        })
-        .then(function (mediaReady) {
-          return ensureShellUpToDate().then(function (reloading) {
-            return { mediaReady: mediaReady, reloading: reloading };
-          });
+        });
+      })
+      .then(function (mediaReady) {
+        return ensureShellUpToDate().then(function (reloading) {
+          return { mediaReady: mediaReady, reloading: reloading };
+        });
         }),
       2000,
       "boot-timeout"
@@ -5192,7 +5192,7 @@
         if (!ctx || ctx.reloading) return;
         if (bootOpenDownloadsOnly) return;
         if (isAppShellMode()) {
-          ensureFreshShellAfterDeploy();
+        ensureFreshShellAfterDeploy();
           recordInstallSession();
           return bootstrapStandaloneShell(ctx.mediaReady);
         }
