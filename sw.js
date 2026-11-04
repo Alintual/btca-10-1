@@ -1,4 +1,4 @@
-const CACHE_VERSION = "btca10-web-10.1.176";
+const CACHE_VERSION = "btca10-web-10.1.177";
 const APP_CACHE = `${CACHE_VERSION}:app`;
 const RUNTIME_CACHE = `${CACHE_VERSION}:runtime`;
 const BASE_PATH = "/btca-10-1";
@@ -228,11 +228,22 @@ self.addEventListener("fetch", (event) => {
     return;
   }
 
+  // Манифест — всегда сеть (иначе :static-install держит старое short_name / name).
+  if (path === BASE_PATH + "/manifest.webmanifest") {
+    event.respondWith(
+      safeFetch(event.request).catch(function () {
+        return caches.match(event.request, { ignoreSearch: true }).then(function (hit) {
+          return hit || new Response("", { status: 503, statusText: "Service Unavailable" });
+        });
+      })
+    );
+    return;
+  }
+
   // Только branding/icons + CSS/JS оболочки из :static-install (не все картинки!).
   var isShellAsset =
     path.indexOf(BASE_PATH + "/branding/") === 0 ||
     path.indexOf(BASE_PATH + "/icons/") === 0 ||
-    path === BASE_PATH + "/manifest.webmanifest" ||
     (/\.(?:css|js|mjs|wasm)$/i.test(path) &&
       path.indexOf(BASE_PATH + "/offline/") !== 0);
   if (isShellAsset) {
