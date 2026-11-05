@@ -2,8 +2,8 @@
   "use strict";
 
   var BTCA_BASE = "/btca-10-1/";
-  var INSTALL_CACHE = "btca10-web-10.1.177:static-install";
-  var MEDIA_CACHE = "btca10-web-10.1.177:static-media";
+  var INSTALL_CACHE = "btca10-web-10.1.180:static-install";
+  var MEDIA_CACHE = "btca10-web-10.1.180:static-media";
   var MEDIA_PROBE_RE = /offline-unpacked\/level3\/exercises\/.+\.(jpe?g|png|webp|gif)$/i;
   var MEDIA_STATE_KEY = "btca10-web:static-media-state";
   var APP_READY_KEY = "btca10-web:app-ready";
@@ -54,8 +54,8 @@
     "*Упражнений* – более 150, *Задач* – более 700, *Полезности* – интеллектуальная поисковая система по Базе знаний школы: 14 основополагающих документов, 114 рисунков и видео и более 370 тематических материалов.\n" +
     "\nCopyright © Юрий Алинт (Андрей Юрьев) 2026";
   var installedHomeSnapshot = "";
-  var LEVEL1_MODULE_VERSION = "10.1.138";
-  var LEVEL3_MODULE_VERSION = "10.1.138";
+  var LEVEL1_MODULE_VERSION = "10.1.141";
+  var LEVEL3_MODULE_VERSION = "10.1.141";
 
   var CORE_REL_PATHS = [
     "",
@@ -1126,15 +1126,11 @@
   }
 
   function resolvePwaShortcutName() {
+    // Как в 8.1: ярлык = apple-mobile-web-app-title / short_name; вкладка = <title> «BTCA 10.1 Web».
     var meta = document.querySelector('meta[name="apple-mobile-web-app-title"]');
     if (meta) {
       var title = String(meta.getAttribute("content") || "").trim();
       if (title) return title;
-    }
-    var manifestLink = document.querySelector('link[rel="manifest"]');
-    if (manifestLink && manifestLink.href) {
-      var manifestName = String(manifestLink.getAttribute("data-short-name") || "").trim();
-      if (manifestName) return manifestName;
     }
     return "BTCA-iOS 10.1";
   }
