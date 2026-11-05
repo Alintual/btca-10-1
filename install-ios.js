@@ -2,8 +2,8 @@
   "use strict";
 
   var BTCA_BASE = "/btca-10-1/";
-  var INSTALL_CACHE = "btca10-web-10.1.180:static-install";
-  var MEDIA_CACHE = "btca10-web-10.1.180:static-media";
+  var INSTALL_CACHE = "btca10-web-10.1.181:static-install";
+  var MEDIA_CACHE = "btca10-web-10.1.181:static-media";
   var MEDIA_PROBE_RE = /offline-unpacked\/level3\/exercises\/.+\.(jpe?g|png|webp|gif)$/i;
   var MEDIA_STATE_KEY = "btca10-web:static-media-state";
   var APP_READY_KEY = "btca10-web:app-ready";
@@ -54,8 +54,8 @@
     "*Упражнений* – более 150, *Задач* – более 700, *Полезности* – интеллектуальная поисковая система по Базе знаний школы: 14 основополагающих документов, 114 рисунков и видео и более 370 тематических материалов.\n" +
     "\nCopyright © Юрий Алинт (Андрей Юрьев) 2026";
   var installedHomeSnapshot = "";
-  var LEVEL1_MODULE_VERSION = "10.1.141";
-  var LEVEL3_MODULE_VERSION = "10.1.141";
+  var LEVEL1_MODULE_VERSION = "10.1.142";
+  var LEVEL3_MODULE_VERSION = "10.1.142";
 
   var CORE_REL_PATHS = [
     "",
@@ -3095,6 +3095,12 @@
     if (/unique constraint/i.test(raw) || /integrityerror/i.test(raw)) {
       return "Повторное скачивание разрешено. Обновите страницу и нажмите ещё раз.";
     }
+    if (/ошибка скачивания apk \(410\)/i.test(raw) || (/\b410\b/.test(raw) && /apk|ссылка/i.test(raw))) {
+      return "Ссылка на APK устарела. Обновите страницу, войдите снова и нажмите Android ещё раз.";
+    }
+    if (/ссылка на apk недоступна/i.test(raw)) {
+      return "Ссылка на APK недоступна. Обновите страницу и повторите скачивание.";
+    }
     if (/не\s*правильный код|неверный код|код введён неправильно/i.test(raw)) {
       return "Не правильный Код.";
     }
@@ -3616,10 +3622,22 @@
       renderAndroidDownloadProgress(0, "Подготовка персонального APK…", false);
 
       claimPlatformDownload("android", "Android")
-        .then(function () {
+        .then(function (data) {
+          // Свежий /d/… с claim — OTP-ссылка часто уже 410 (одноразовая, без cookie в XHR).
+          var url = String((data && data.download_url) || href || "").trim();
+          if (!url) {
+            throw new Error("Сервер не выдал ссылку на APK. Обновите страницу и повторите.");
+          }
+          if (data && data.download_url) {
+            try {
+              var stored = readStoredDownloadLinks() || {};
+              stored.android = url;
+              sessionStorage.setItem(LICENSE_DOWNLOAD_LINKS_KEY, JSON.stringify(stored));
+            } catch (e) { }
+          }
           if (small) small.textContent = "Скачивание....";
           renderAndroidDownloadProgress(0, "Идёт загрузка APK на Ваше устройство…", false);
-          return downloadApkWithRealProgress(href, function (pct) {
+          return downloadApkWithRealProgress(url, function (pct) {
             renderAndroidDownloadProgress(pct, "Идёт загрузка APK на Ваше устройство…", false);
             if (small) small.textContent = "Скачивание....";
           });
