@@ -106,6 +106,15 @@
     return { req: reqMerged, ok: okMerged, pct: pctMerged, sets: setsMerged };
   }
 
+  /** Строка «с данными» для фильтра Задача (не пустой слот после записи Формы). */
+  function bazaRowHasTaskData(row) {
+    if (!row) return false;
+    var ok = row.ok == null ? null : Number(row.ok);
+    if (ok != null && Number.isFinite(ok) && ok > 0) return true;
+    var sets = row.sets == null ? null : Number(row.sets);
+    return sets != null && Number.isFinite(sets) && sets > 0;
+  }
+
   function defaultUiState() {
     var today = formatYmd(new Date());
     return {
@@ -313,7 +322,8 @@
               sets: row.sets,
             });
             exercises[row.exercise] = true;
-            tasks[row.task] = true;
+            // В поле Задача — только номера с реальными данными (ok/sets), не пустые слоты.
+            if (bazaRowHasTaskData(row)) tasks[row.task] = true;
           }
           cursor.continue();
         };

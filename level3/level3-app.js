@@ -3,7 +3,7 @@
 
   var DB = window.BTCA_LEVEL3_DB;
   var BAZA = window.BTCA_LEVEL3_BAZA;
-  var VERSION = "10.1.151";
+  var VERSION = "10.1.152";
   var BRANDING_UP = "branding/up.png";
   var BRANDING_UP_LIST = "branding/up_list.png";
   var BRANDING_BAZA = "branding/baza.png";
@@ -2920,16 +2920,33 @@
     return exercise === "__foreign_data__" ? "all" : exercise;
   }
 
-  /** Номера задач из ответа БД (только те, по которым есть строки). */
+  /** Номера задач с реальными данными (ok/sets > 0), не пустые слоты Формы. */
+  function tasksWithDataFromBazaResult(result) {
+    var seen = {};
+    (result && result.rows ? result.rows : []).forEach(function (r) {
+      var t = Number(r.task);
+      if (!Number.isFinite(t) || t < 1) return;
+      var ok = r.ok == null ? null : Number(r.ok);
+      var sets = r.sets == null ? null : Number(r.sets);
+      if ((ok != null && Number.isFinite(ok) && ok > 0) || (sets != null && Number.isFinite(sets) && sets > 0)) {
+        seen[t] = true;
+      }
+    });
+    var fromRows = Object.keys(seen).map(Number).sort(function (a, b) { return a - b; });
+    if (fromRows.length) return fromRows;
+    // Fallback: поле tasks из запроса БД (уже отфильтровано по ok/sets).
+    return (result && result.tasks ? result.tasks : [])
+      .map(Number)
+      .filter(function (n) { return Number.isFinite(n) && n >= 1; })
+      .sort(function (a, b) { return a - b; });
+  }
+
   function applyBazaTasksFromQuery(queryEx, result) {
     if (queryEx === "all") {
       state.bazaRuleTasks = [];
       return;
     }
-    var tasks = (result && result.tasks ? result.tasks : [])
-      .map(Number)
-      .filter(function (n) { return Number.isFinite(n) && n >= 1; })
-      .sort(function (a, b) { return a - b; });
+    var tasks = tasksWithDataFromBazaResult(result);
     state.bazaRuleTasks = tasks;
     var tk = String(state.ui.baza.task || "all");
     if (tk !== "all" && tasks.indexOf(Number(tk)) < 0) {
