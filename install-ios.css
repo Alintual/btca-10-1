@@ -1958,6 +1958,18 @@ body.btca-apple-comfort .btca-back-button {
   background: #c5d9dc;
 }
 
+/* 2.4: название раздела над пунктом — ЗАГЛАВНЫЕ, по центру, без жирности. */
+.btca-about-content .btca-polez-desc-doc-section,
+.btca-polez-desc-root .btca-polez-desc-doc-section {
+  margin: 0 0 8px;
+  color: #111111;
+  font-size: 1rem;
+  font-weight: 400;
+  line-height: calc(26rem / 17);
+  text-align: center;
+  text-transform: uppercase;
+}
+
 .btca-about-content h1 {
   margin: 0 0 16px;
   color: #0a0a0a;
@@ -4499,6 +4511,17 @@ body.btca-level3-mode .btca-date-picker-day--selected {
   letter-spacing: 0.2px;
   line-height: calc(26rem / 17);
   text-align: center;
+}
+
+.btca-about-content .btca-polez-desc-doc-section,
+.btca-polez-desc-root .btca-polez-desc-doc-section {
+  margin: 0 0 8px;
+  color: #111111;
+  font-size: 1rem;
+  font-weight: 400;
+  line-height: calc(26rem / 17);
+  text-align: center;
+  text-transform: uppercase;
 }
 
 .btca-about-content p,
