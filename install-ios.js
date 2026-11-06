@@ -2,8 +2,8 @@
   "use strict";
 
   var BTCA_BASE = "/btca-10-1/";
-  var INSTALL_CACHE = "btca10-web-10.1.182:static-install";
-  var MEDIA_CACHE = "btca10-web-10.1.182:static-media";
+  var INSTALL_CACHE = "btca10-web-10.1.183:static-install";
+  var MEDIA_CACHE = "btca10-web-10.1.183:static-media";
   var MEDIA_PROBE_RE = /offline-unpacked\/level3\/exercises\/.+\.(jpe?g|png|webp|gif)$/i;
   var MEDIA_STATE_KEY = "btca10-web:static-media-state";
   var APP_READY_KEY = "btca10-web:app-ready";
@@ -54,8 +54,8 @@
     "*Упражнений* – более 150, *Задач* – более 700, *Полезности* – интеллектуальная поисковая система по Базе знаний школы: 14 основополагающих документов, 114 рисунков и видео и более 370 тематических материалов.\n" +
     "\nCopyright © Юрий Алинт (Андрей Юрьев) 2026";
   var installedHomeSnapshot = "";
-  var LEVEL1_MODULE_VERSION = "10.1.143";
-  var LEVEL3_MODULE_VERSION = "10.1.143";
+  var LEVEL1_MODULE_VERSION = "10.1.144";
+  var LEVEL3_MODULE_VERSION = "10.1.144";
 
   var CORE_REL_PATHS = [
     "",
@@ -4396,10 +4396,18 @@
     return m ? m[1] : "";
   }
 
+  function setEyebrowReleaseDate(date) {
+    var clean = String(date || "").trim();
+    if (!/^\d{2}\.\d{2}\.\d{4}$/.test(clean)) return "";
+    var el = document.querySelector(".eyebrow--release");
+    if (el) el.textContent = "версия от " + clean;
+    return clean;
+  }
+
   /**
    * Дата установленной версии: в PWA — из хранилища (синхрон с админкой / claim).
    * DOM с деплоя не источник истины для установленного приложения.
-   * На загрузочной — дата с экрана (текущий деплой).
+   * На загрузочной — дата с экрана (текущий деплой), пока shell/meta не уточнят.
    */
   function readLocalPackageReleaseDate() {
     if (isStandalone()) {
@@ -4408,7 +4416,7 @@
     return readDomPackageReleaseDate() || readStoredPackageReleaseDate();
   }
 
-  /** На стартовой PWA показываем только зафиксированную дату установки (как в админке). */
+  /** На стартовой PWA показываем только зафиксированную дату установки. */
   function applyInstalledReleaseDateToEyebrow(releaseEl) {
     if (!releaseEl) return "";
     var installedDate = readStoredPackageReleaseDate();
@@ -4418,7 +4426,7 @@
     return installedDate;
   }
 
-  /** После splash: дата с сервера (админка) перезаписывает локальную «установленную». */
+  /** После splash: дата claim пакета (если локальной ещё нет). */
   function syncInstalledVersionDateFromServer(versionDate) {
     var clean = String(versionDate || "").trim();
     if (!/^\d{2}\.\d{2}\.\d{4}$/.test(clean)) return "";
@@ -4426,6 +4434,41 @@
     var releaseEl = document.querySelector(".eyebrow--release");
     if (releaseEl) applyInstalledReleaseDateToEyebrow(releaseEl);
     return clean;
+  }
+
+  /**
+   * Загрузочная (не standalone): жёстко выставляем «версия от …» из единого источника
+   * (app-shell → License meta). DOM/index.html и кэш браузера не должны оставлять старую дату.
+   */
+  function syncLoadingPageReleaseDate() {
+    if (isStandalone()) return Promise.resolve("");
+    var fromShell = fetchRemoteAppShellPayload()
+      .then(function (payload) {
+        return remoteLatestVersionDate(payload) || "";
+      })
+      .catch(function () {
+        return "";
+      });
+    var fromMeta = fetch(LICENSE_API_BASE.replace(/\/$/, "") + "/v1/meta/last-version-date", {
+      method: "GET",
+      headers: { Accept: "application/json" },
+      cache: "no-store",
+    })
+      .then(function (res) {
+        if (!res || !res.ok) return "";
+        return res.json();
+      })
+      .then(function (data) {
+        return data && data.version_date ? String(data.version_date).trim() : "";
+      })
+      .catch(function () {
+        return "";
+      });
+    return Promise.all([fromShell, fromMeta]).then(function (pair) {
+      var date = pickNewestReleaseDate(pair[0], pair[1], readDomPackageReleaseDate());
+      if (date) setEyebrowReleaseDate(date);
+      return date || "";
+    });
   }
 
   /** Самая новая дата среди платформ (PWA / Android / Windows) из shell или локальной. */
@@ -5178,6 +5221,8 @@
     paintBootUi();
     bindShellUi();
     wireSupportFooter();
+    // Загрузочная: дата «версия от …» из shell/License, не из устаревшего кэша index.html.
+    void syncLoadingPageReleaseDate();
 
     var boot = withTimeout(
       releaseStaleServiceWorkerForLoadingPage()
