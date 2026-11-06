@@ -3,7 +3,7 @@
 
   var DB = window.BTCA_LEVEL3_DB;
   var BAZA = window.BTCA_LEVEL3_BAZA;
-  var VERSION = "10.1.141";
+  var VERSION = "10.1.143";
   var BRANDING_UP = "branding/up.png";
   var BRANDING_UP_LIST = "branding/up_list.png";
   var BRANDING_BAZA = "branding/baza.png";
@@ -2219,6 +2219,9 @@
         if (opt.groupHeader) {
           var groupClass = "btca-level1-picker__group";
           if (opt.sectionHeader) groupClass += " btca-level1-picker__group--section";
+          if (pickerOpts.catalogList && opt.sectionHeader) {
+            groupClass += " btca-level1-picker__group--polez-catalog";
+          }
           if (opt.importHeader) groupClass += " btca-level1-picker__group--import";
           if (opt.disabledHeader) groupClass += " btca-level1-picker__group--disabled";
           if (opt.importHeader) {
@@ -2255,7 +2258,7 @@
         textHtml =
           '<span class="btca-level1-picker__text btca-level1-picker__text--wrap">' +
           '<span class="btca-level1-picker__item-hot">' + escapeHtml(String(opt.catalogHot)) +
-          " 🔥</span> " +
+          "&nbsp;🔥&nbsp;</span>" +
           '<span class="btca-level1-picker__item-title">' + escapeHtml(String(opt.catalogTitle || "")) + "</span></span>";
       } else {
         textHtml = '<span class="btca-level1-picker__text">' + escapeHtml(opt.label) + "</span>";
