@@ -3,7 +3,7 @@
 
   var DB = window.BTCA_LEVEL3_DB;
   var BAZA = window.BTCA_LEVEL3_BAZA;
-  var VERSION = "10.1.145";
+  var VERSION = "10.1.146";
   var BRANDING_UP = "branding/up.png";
   var BRANDING_UP_LIST = "branding/up_list.png";
   var BRANDING_BAZA = "branding/baza.png";
@@ -1956,12 +1956,16 @@
     return !isPolezSheetFigureItem(item);
   }
 
+  /**
+   * Нормализация для поиска в Каталоге: регистр + пробелы.
+   * Знаки препинания и символы сохраняем — «см.» ≠ «см».
+   */
   function normalizePolezSearch(s) {
     return String(s || "")
       .toLowerCase()
       .replace(/\u00a0/g, " ")
       .replace(/[\u2013\u2014\u2212\u2010]/g, "-")
-      .replace(/[-:.,;!?()/\\[\]{}«»"'`]+/g, " ")
+      .replace(/[ \t\f\v]+/g, " ")
       .replace(/\s+/g, " ")
       .trim();
   }
@@ -4369,6 +4373,9 @@
     if (!item || !text) return;
     var figures = entry && Array.isArray(entry.figures) ? entry.figures : [];
     var sectionTitle = polezSectionTitleForItem(item);
+    var docSectionTitle = String(
+      (entry && entry.docSectionTitle) || item.docSectionTitle || ""
+    ).trim();
     var searchQ =
       typeof searchOverride === "string"
         ? searchOverride
@@ -4396,7 +4403,11 @@
       '<strong class="btca-polez-desc-header__section">' + escapeHtml(sectionTitle) + "</strong>" +
       hotHtml +
       "</header>" +
-      '<section class="btca-about-content"><h1>' + escapeHtml(item.title) + "</h1>" +
+      '<section class="btca-about-content">' +
+      (docSectionTitle
+        ? '<p class="btca-polez-desc-doc-section">' + escapeHtml(docSectionTitle) + "</p>"
+        : "") +
+      "<h1>" + escapeHtml(item.title) + "</h1>" +
       '<div class="btca-l1-polez-source__body">' + bodyHtml + "</div></section></main>";
     state.root.appendChild(overlay);
     function closeOverlay() {
