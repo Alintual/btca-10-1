@@ -2,8 +2,8 @@
   "use strict";
 
   var BTCA_BASE = "/btca-10-1/";
-  var INSTALL_CACHE = "btca10-web-10.1.183:static-install";
-  var MEDIA_CACHE = "btca10-web-10.1.183:static-media";
+  var INSTALL_CACHE = "btca10-web-10.1.184:static-install";
+  var MEDIA_CACHE = "btca10-web-10.1.184:static-media";
   var MEDIA_PROBE_RE = /offline-unpacked\/level3\/exercises\/.+\.(jpe?g|png|webp|gif)$/i;
   var MEDIA_STATE_KEY = "btca10-web:static-media-state";
   var APP_READY_KEY = "btca10-web:app-ready";
@@ -54,8 +54,8 @@
     "*Упражнений* – более 150, *Задач* – более 700, *Полезности* – интеллектуальная поисковая система по Базе знаний школы: 14 основополагающих документов, 114 рисунков и видео и более 370 тематических материалов.\n" +
     "\nCopyright © Юрий Алинт (Андрей Юрьев) 2026";
   var installedHomeSnapshot = "";
-  var LEVEL1_MODULE_VERSION = "10.1.144";
-  var LEVEL3_MODULE_VERSION = "10.1.144";
+  var LEVEL1_MODULE_VERSION = "10.1.145";
+  var LEVEL3_MODULE_VERSION = "10.1.145";
 
   var CORE_REL_PATHS = [
     "",
@@ -3292,6 +3292,13 @@
       return Promise.reject(new Error("Сессия не найдена. Войдите ещё раз."));
     }
     var versionDate = readLatestPackageReleaseDate();
+    var platformKey = String(platform || "").trim().toLowerCase();
+    // Дата на стартовой PWA меняется только при переустановке PWA (claim ios/pwa).
+    // Claim Android/Windows не должен перетирать дату уже установленного PWA (общий origin).
+    var mayPersistInstalledDate =
+      platformKey === "pwa" ||
+      platformKey === "ios" ||
+      !readStoredPackageReleaseDate();
     return licensePost("/v1/downloads/claim", {
       session_token: token,
       device_id: getLicenseDeviceId() || "",
@@ -3304,7 +3311,7 @@
       if (assigned.length >= 6) {
         persistLicenseDeviceId(assigned);
       }
-      if (versionDate) persistPackageReleaseDate(versionDate);
+      if (versionDate && mayPersistInstalledDate) persistPackageReleaseDate(versionDate);
       try {
         var login = String(localStorage.getItem(LICENSE_LOGIN_KEY) || "").trim() || readLoginCookie();
         if (login) {
@@ -4428,6 +4435,12 @@
 
   /** После splash: дата claim пакета (если локальной ещё нет). */
   function syncInstalledVersionDateFromServer(versionDate) {
+    var existing = readStoredPackageReleaseDate();
+    if (existing) {
+      var releaseElExisting = document.querySelector(".eyebrow--release");
+      if (releaseElExisting) applyInstalledReleaseDateToEyebrow(releaseElExisting);
+      return existing;
+    }
     var clean = String(versionDate || "").trim();
     if (!/^\d{2}\.\d{2}\.\d{4}$/.test(clean)) return "";
     persistPackageReleaseDate(clean);
