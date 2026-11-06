@@ -3,7 +3,7 @@
 
   var DB = window.BTCA_LEVEL3_DB;
   var BAZA = window.BTCA_LEVEL3_BAZA;
-  var VERSION = "10.1.146";
+  var VERSION = "10.1.147";
   var BRANDING_UP = "branding/up.png";
   var BRANDING_UP_LIST = "branding/up_list.png";
   var BRANDING_BAZA = "branding/baza.png";
@@ -4650,9 +4650,10 @@
     s = s.replace(/п\.\s*\n+\s*/gi, "п. ");
     s = s.replace(/см\.\s*\n+\s*/gi, "см. ");
     s = gluePolezLinkNewlines(s);
+    // Только рядом с {N}: «см. п. 5.14 {120}» → «см. {120}».
+    // Не трогаем родные сноски 2.1.1 «(см. п.6.2)».
     s = s.replace(/см\.\s*п\.\s*\d+(?:\.\d+)+\s*(?=\{)/gi, "см. ");
     s = s.replace(/п\.\s*\d+(?:\.\d+)+\s*(?=\{)/gi, "");
-    s = s.replace(/п\.\s*\d+(?:\.\d+)+/gi, "");
     s = s.replace(/[^\S\n]{2,}/g, " ");
     s = s.replace(/\(\s+/g, "(").replace(/\s+\)/g, ")");
     return s;
@@ -4765,7 +4766,11 @@
   function formatPolezSourceBody(body, docId, searchRaw) {
     var footnotes = polezFootnotesForDoc(docId);
     // 1.4 — один в один с txt; остальные доки — прежняя нормализация
-    var raw = (docId === "1.4" || docId === "2.3" ? softGluePolezMarkers(String(body || "")) : stripPolezBotPointRefs(String(body || "")))
+    var raw = (
+      docId === "1.4" || docId === "2.1.1" || docId === "2.1.2" || docId === "2.3"
+        ? softGluePolezMarkers(String(body || ""))
+        : stripPolezBotPointRefs(String(body || ""))
+    )
       .replace(/\{\s*(\d+)\s*\}/g, "{$1}")
       .replace(/\[\s*(\d+)\s*\]/g, "[$1]");
     var html = applyPolezInlineMarkup(escapeHtml(raw));
