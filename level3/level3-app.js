@@ -3,7 +3,7 @@
 
   var DB = window.BTCA_LEVEL3_DB;
   var BAZA = window.BTCA_LEVEL3_BAZA;
-  var VERSION = "10.1.149";
+  var VERSION = "10.1.150";
   var BRANDING_UP = "branding/up.png";
   var BRANDING_UP_LIST = "branding/up_list.png";
   var BRANDING_BAZA = "branding/baza.png";
@@ -4373,9 +4373,14 @@
     if (!item || !text) return;
     var figures = entry && Array.isArray(entry.figures) ? entry.figures : [];
     var sectionTitle = polezSectionTitleForItem(item);
-    // 2.1.1: раздел уже в шапке каталога («N - Раздел …») — не дублируем в теле.
+    // 2.1.1 / 250: строка раздела в теле Описания не нужна.
     var docSectionTitle = "";
-    if (String(item.docId || (entry && entry.docId) || "") !== "2.1.1") {
+    var docIdForDesc = String(item.docId || (entry && entry.docId) || "");
+    var hotNumForDesc = Number(item.hot);
+    if (
+      docIdForDesc !== "2.1.1" &&
+      !(Number.isFinite(hotNumForDesc) && hotNumForDesc === 250)
+    ) {
       docSectionTitle = String(
         (entry && entry.docSectionTitle) || item.docSectionTitle || ""
       ).trim();

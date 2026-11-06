@@ -717,8 +717,7 @@
     "query": "# Список литературы",
     "text": "[1] А.И.Леман, “Теория бильярдной игры” (Москва, 1885) Стр.25-26\n[2] Shepard, R., “Amateur Physics for the Amateur Pool Player (APAPP),” 3rd. edition, 1997. Стр.22-24\n[3] Shepard, R., “Everything you Always Wanted to Know About Cue Ball Squirt, but Were Afraid to Ask,” 2001. Стр.1\n[4] Crown, S., “Modeling the Effects of Velocity, Spin, Frictional Coefficient, and Impact Angle on Deflection Angle in Near-elastic Collisions of Phenolic Resin Spheres,” Cornell University Library arXiv.org, 2004. Стр.3\n[5] http://billiards.colostate.edu/high_speed_videos/new/HSVA-147.htm http://billiards.colostate.edu/high_speed_videos/new/HSVA-148.htm",
     "figures": [],
-    "kind": "text",
-    "docSectionTitle": "Раздел 2. Технические приёмы сыгрывания шаров и их связь с теорией"
+    "kind": "text"
   },
   "301": {
     "docId": "2.1.1",
