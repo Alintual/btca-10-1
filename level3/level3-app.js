@@ -3,7 +3,7 @@
 
   var DB = window.BTCA_LEVEL3_DB;
   var BAZA = window.BTCA_LEVEL3_BAZA;
-  var VERSION = "10.1.147";
+  var VERSION = "10.1.148";
   var BRANDING_UP = "branding/up.png";
   var BRANDING_UP_LIST = "branding/up_list.png";
   var BRANDING_BAZA = "branding/baza.png";
@@ -4373,9 +4373,13 @@
     if (!item || !text) return;
     var figures = entry && Array.isArray(entry.figures) ? entry.figures : [];
     var sectionTitle = polezSectionTitleForItem(item);
-    var docSectionTitle = String(
-      (entry && entry.docSectionTitle) || item.docSectionTitle || ""
-    ).trim();
+    // Раздел документа в теле Описания — только 2.4 (201–249), без дубля для 2.1.1.
+    var docSectionTitle = "";
+    if (String(item.docId || (entry && entry.docId) || "") === "2.4") {
+      docSectionTitle = String(
+        (entry && entry.docSectionTitle) || item.docSectionTitle || ""
+      ).trim();
+    }
     var searchQ =
       typeof searchOverride === "string"
         ? searchOverride
@@ -4405,7 +4409,9 @@
       "</header>" +
       '<section class="btca-about-content">' +
       (docSectionTitle
-        ? '<p class="btca-polez-desc-doc-section">' + escapeHtml(docSectionTitle) + "</p>"
+        ? '<p class="btca-polez-desc-doc-section">' +
+          escapeHtml(docSectionTitle.toLocaleUpperCase("ru-RU")) +
+          "</p>"
         : "") +
       "<h1>" + escapeHtml(item.title) + "</h1>" +
       '<div class="btca-l1-polez-source__body">' + bodyHtml + "</div></section></main>";
