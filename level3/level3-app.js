@@ -3,7 +3,7 @@
 
   var DB = window.BTCA_LEVEL3_DB;
   var BAZA = window.BTCA_LEVEL3_BAZA;
-  var VERSION = "10.1.150";
+  var VERSION = "10.1.151";
   var BRANDING_UP = "branding/up.png";
   var BRANDING_UP_LIST = "branding/up_list.png";
   var BRANDING_BAZA = "branding/baza.png";
@@ -1288,7 +1288,7 @@
     var to = period.to;
     var fromLabel = formatIsoDateAsDdMmYyyy(from) || from;
     var toLabel = formatIsoDateAsDdMmYyyy(to) || to;
-    var exercisePart = baza.exercise === "all"
+    var exercisePart = baza.exercise === "all" || baza.exercise === "__foreign_data__"
       ? "по всем упражнениям"
       : "по Упражнению " + labelForExerciseValue(baza.exercise);
     var periodPart = from && to && from === to
@@ -2905,12 +2905,6 @@
           return;
         }
 
-        if (ex !== "all" && ex !== "__foreign_data__") {
-          state.bazaRuleTasks = taskNumbersForExercise(ex);
-        } else {
-          state.bazaRuleTasks = [];
-        }
-
         return refreshBazaRowsWithReconcile();
       });
     });
@@ -2926,6 +2920,24 @@
     return exercise === "__foreign_data__" ? "all" : exercise;
   }
 
+  /** Номера задач из ответа БД (только те, по которым есть строки). */
+  function applyBazaTasksFromQuery(queryEx, result) {
+    if (queryEx === "all") {
+      state.bazaRuleTasks = [];
+      return;
+    }
+    var tasks = (result && result.tasks ? result.tasks : [])
+      .map(Number)
+      .filter(function (n) { return Number.isFinite(n) && n >= 1; })
+      .sort(function (a, b) { return a - b; });
+    state.bazaRuleTasks = tasks;
+    var tk = String(state.ui.baza.task || "all");
+    if (tk !== "all" && tasks.indexOf(Number(tk)) < 0) {
+      state.ui.baza.task = "all";
+      applyUiPatch({ baza: { task: "all" } });
+    }
+  }
+
   function refreshBazaRows() {
     var baza = state.ui.baza;
     var queryEx = bazaExerciseForQuery(baza.exercise);
@@ -2937,6 +2949,7 @@
       task: "all",
     }).then(function (result) {
       state.bazaRows = result.rows || [];
+      applyBazaTasksFromQuery(queryEx, result);
       if (!BAZA || queryEx === "all") {
         state.bazaExpandedRows = [];
         return result;
@@ -2960,12 +2973,16 @@
     if (!isBazaExerciseSelectionValid(ex, src)) {
       state.ui.baza.exercise = "all";
       state.ui.baza.task = "all";
+      state.bazaRuleTasks = [];
       applyUiPatch({ baza: { exercise: "all", task: "all" } });
       return true;
     }
     if (state.bazaExpandedRows.length > 0) return false;
+    // Есть сырые строки БД — не сбрасываем упражнение (задачи уже из БД).
+    if ((state.bazaRows || []).length > 0) return false;
     state.ui.baza.exercise = "all";
     state.ui.baza.task = "all";
+    state.bazaRuleTasks = [];
     applyUiPatch({ baza: { exercise: "all", task: "all" } });
     return true;
   }
@@ -2982,7 +2999,7 @@
       DIAG.mountBazaDiagram(
         root,
         state.bazaExpandedRows,
-        taskNumbersForExercise(baza.exercise),
+        state.bazaRuleTasks.slice(),
         baza.task,
         fallback
       );
@@ -3801,14 +3818,17 @@
     var taskBtn = content.querySelector("[data-btca-baza-task]");
     if (taskBtn && !taskDisabled) {
       taskBtn.addEventListener("click", function (event) {
-        var options = [{ value: "all", label: "Все" }].concat(
-          state.bazaRuleTasks.map(function (t) { return { value: String(t), label: String(t) }; })
-        );
-        openPicker("Задача", options, baza.task, function (value) {
-          state.ui.baza.task = value;
-          applyUiPatch({ baza: { task: value } });
-          refreshBazaRowsWithReconcile().then(function () { renderBazaTab(content); });
-        }, event.currentTarget);
+        var anchorEl = event.currentTarget;
+        refreshBazaRows().then(function () {
+          var options = [{ value: "all", label: "Все" }].concat(
+            state.bazaRuleTasks.map(function (t) { return { value: String(t), label: String(t) }; })
+          );
+          openPicker("Задача", options, state.ui.baza.task, function (value) {
+            state.ui.baza.task = value;
+            applyUiPatch({ baza: { task: value } });
+            refreshBazaRowsWithReconcile().then(function () { renderBazaTab(content); });
+          }, anchorEl);
+        });
       });
     }
     var tableBtn = content.querySelector("[data-btca-baza-table]");
