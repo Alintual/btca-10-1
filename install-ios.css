@@ -512,6 +512,17 @@ body:not(.btca-installed-mode) .home__tagline-slot .home__phrase2-line2 {
   text-align: center;
 }
 
+.btca-work-menu__update-hint--offline {
+  color: #b6e5b0;
+}
+
+.btca-work-menu__account-link.is-disabled {
+  opacity: 0.45;
+  pointer-events: none;
+  text-decoration: none;
+  cursor: default;
+}
+
 .home__intro {
   margin-top: -162px;
   text-align: center;

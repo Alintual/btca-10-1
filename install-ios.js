@@ -2,8 +2,8 @@
   "use strict";
 
   var BTCA_BASE = "/btca-10-1/";
-  var INSTALL_CACHE = "btca10-web-10.1.192:static-install";
-  var MEDIA_CACHE = "btca10-web-10.1.192:static-media";
+  var INSTALL_CACHE = "btca10-web-10.1.193:static-install";
+  var MEDIA_CACHE = "btca10-web-10.1.193:static-media";
   var MEDIA_PROBE_RE = /offline-unpacked\/level3\/exercises\/.+\.(jpe?g|png|webp|gif)$/i;
   var MEDIA_STATE_KEY = "btca10-web:static-media-state";
   var APP_READY_KEY = "btca10-web:app-ready";
@@ -54,8 +54,8 @@
     "*Упражнений* – более 150, *Задач* – более 700, *Полезности* – интеллектуальная поисковая система по Базе знаний школы: 14 основополагающих документов, 114 рисунков и видео и более 370 тематических материалов.\n" +
     "\nCopyright © Юрий Алинт (Андрей Юрьев) 2026";
   var installedHomeSnapshot = "";
-  var LEVEL1_MODULE_VERSION = "10.1.153";
-  var LEVEL3_MODULE_VERSION = "10.1.153";
+  var LEVEL1_MODULE_VERSION = "10.1.154";
+  var LEVEL3_MODULE_VERSION = "10.1.154";
 
   var CORE_REL_PATHS = [
     "",
@@ -2070,6 +2070,89 @@
     return /\(function\s*\(/.test(text);
   }
 
+  /** Offline-first: модули из :static-install, иначе сеть (иначе Safari «Load failed»). */
+  function matchInstallCacheResponse(url) {
+    if (!("caches" in window)) return Promise.resolve(null);
+    var absolute = url;
+    try {
+      absolute = new URL(url, window.location.href).href;
+    } catch (e) { }
+    var pathOnly = "";
+    try {
+      pathOnly = new URL(absolute).pathname;
+    } catch (e2) { }
+    return caches.keys().then(function (keys) {
+      var preferred = [INSTALL_CACHE].concat(
+        keys.filter(function (k) {
+          return k !== INSTALL_CACHE && /:static-install$/.test(k);
+        })
+      );
+      return preferred.reduce(function (chain, key) {
+        return chain.then(function (hit) {
+          if (hit) return hit;
+          return caches.open(key).then(function (cache) {
+            return cache.match(absolute, { ignoreSearch: true }).then(function (entry) {
+              if (entry) return entry;
+              if (!pathOnly) return null;
+              return cache.keys().then(function (reqs) {
+                for (var i = 0; i < reqs.length; i++) {
+                  try {
+                    if (new URL(reqs[i].url).pathname === pathOnly) {
+                      return cache.match(reqs[i]);
+                    }
+                  } catch (e3) { }
+                }
+                return null;
+              });
+            });
+          }).catch(function () {
+            return null;
+          });
+        });
+      }, Promise.resolve(null));
+    }).catch(function () {
+      return null;
+    });
+  }
+
+  function fetchModuleSource(src) {
+    var offline = typeof navigator !== "undefined" && navigator.onLine === false;
+    function fromNetwork() {
+      return fetch(src, { cache: offline ? "force-cache" : "no-store" }).then(function (response) {
+        if (!response || !response.ok) {
+          throw new Error("Не удалось загрузить модуль (" + ((response && response.status) || "сеть") + ")");
+        }
+        return response.text();
+      });
+    }
+    return matchInstallCacheResponse(src)
+      .then(function (cached) {
+        if (cached) {
+          return cached.text().then(function (code) {
+            if (isInjectableModuleSource(code)) return code;
+            if (offline) {
+              throw new Error("Кэш модуля повреждён. Нужна сеть для восстановления.");
+            }
+            return fromNetwork();
+          });
+        }
+        return fromNetwork().catch(function (err) {
+          return matchInstallCacheResponse(src).then(function (retry) {
+            if (!retry) throw err;
+            return retry.text();
+          });
+        });
+      })
+      .catch(function (err) {
+        throw new Error(
+          localizeUserFacingError(
+            err,
+            "Не удалось загрузить модуль. Проверьте сеть или переустановите пакет."
+          )
+        );
+      });
+  }
+
   function loadDataGuardScript() {
     return new Promise(function (resolve, reject) {
       var src = assetPath("btca-data-guard.js?v=" + LEVEL1_MODULE_VERSION);
@@ -2078,11 +2161,7 @@
         return;
       }
       delete window.BTCA_DATA_GUARD;
-      fetch(src, { cache: "no-store" })
-        .then(function (response) {
-          if (!response.ok) throw new Error("Не удалось загрузить " + src + ": " + response.status);
-          return response.text();
-        })
+      fetchModuleSource(src)
         .then(function (code) {
           if (!isInjectableModuleSource(code)) {
             throw new Error("Неверный ответ для " + src);
@@ -2109,11 +2188,7 @@
         return;
       }
       delete window.BTCA_BAZA_DIAGRAM;
-      fetch(src, { cache: "no-store" })
-        .then(function (response) {
-          if (!response.ok) throw new Error("Не удалось загрузить " + src + ": " + response.status);
-          return response.text();
-        })
+      fetchModuleSource(src)
         .then(function (code) {
           if (!isInjectableModuleSource(code)) {
             throw new Error("Неверный ответ для " + src);
@@ -2140,11 +2215,7 @@
         return;
       }
       delete window.BTCA_BAZA_DIALOGS;
-      fetch(src, { cache: "no-store" })
-        .then(function (response) {
-          if (!response.ok) throw new Error("Не удалось загрузить " + src + ": " + response.status);
-          return response.text();
-        })
+      fetchModuleSource(src)
         .then(function (code) {
           if (!isInjectableModuleSource(code)) {
             throw new Error("Неверный ответ для " + src);
@@ -2171,11 +2242,7 @@
         return;
       }
       delete window.BTCA_BAZA_SCREENSHOT;
-      fetch(src, { cache: "no-store" })
-        .then(function (response) {
-          if (!response.ok) throw new Error("Не удалось загрузить " + src + ": " + response.status);
-          return response.text();
-        })
+      fetchModuleSource(src)
         .then(function (code) {
           if (!isInjectableModuleSource(code)) {
             throw new Error("Неверный ответ для " + src);
@@ -2204,11 +2271,7 @@
         return;
       }
       delete window.BTCA_BAZA_SQLITE;
-      fetch(src, { cache: "no-store" })
-        .then(function (response) {
-          if (!response.ok) throw new Error("Не удалось загрузить " + src + ": " + response.status);
-          return response.text();
-        })
+      fetchModuleSource(src)
         .then(function (code) {
           if (!isInjectableModuleSource(code)) {
             throw new Error("Неверный ответ для " + src);
@@ -2237,11 +2300,7 @@
         return;
       }
       delete window.BTCA_SLIDE_MENU;
-      fetch(src, { cache: "no-store" })
-        .then(function (response) {
-          if (!response.ok) throw new Error("Не удалось загрузить " + src + ": " + response.status);
-          return response.text();
-        })
+      fetchModuleSource(src)
         .then(function (code) {
           if (!isInjectableModuleSource(code)) {
             throw new Error("Неверный ответ для " + src);
@@ -2297,11 +2356,7 @@
       if (isBaza) delete window.BTCA_LEVEL3_BAZA;
       if (isApp) delete window.BTCA_LEVEL3;
 
-      fetch(src, { cache: "no-store" })
-        .then(function (response) {
-          if (!response.ok) throw new Error("Не удалось загрузить " + src + ": " + response.status);
-          return response.text();
-        })
+      fetchModuleSource(src)
         .then(function (code) {
           if (!isInjectableModuleSource(code)) {
             throw new Error("Неверный ответ для " + src);
@@ -2420,7 +2475,15 @@
         return window.BTCA_LEVEL3.mount(main);
       }).catch(function (error) {
         if (content) {
-          content.innerHTML = '<p class="btca-l1-error">' + escapeHtml(error && (error.message || error)) + "</p>";
+          content.innerHTML =
+            '<p class="btca-l1-error">' +
+            escapeHtml(
+              localizeUserFacingError(
+                error,
+                "Не удалось открыть Уровень 3. Проверьте сеть или переустановите пакет."
+              )
+            ) +
+            "</p>";
         }
       }).then(function () {
         syncPortraitMode();
@@ -2458,7 +2521,8 @@
       return;
     }
     if (route === "account-update") {
-      openDownloadsFromAccountLink();
+      if (typeof navigator !== "undefined" && navigator.onLine === false) return;
+      openAccountLoginPage();
     }
   }
 
@@ -2834,6 +2898,14 @@
     }
   }
 
+  function wantsOpenLogin() {
+    try {
+      return new URLSearchParams(window.location.search).get("open") === "login";
+    } catch (e) {
+      return false;
+    }
+  }
+
   function stripOpenDownloadsQuery() {
     try {
       var url = new URL(window.location.href);
@@ -2889,8 +2961,13 @@
   }
 
   function openDownloadsFromAccountLink() {
+    openAccountLoginPage();
+  }
+
+  /** «Аккаунт | Обновление» → всегда загрузочная с «Вход в систему». */
+  function openAccountLoginPage() {
     var url =
-      LOADING_PAGE_URL + (LOADING_PAGE_URL.indexOf("?") >= 0 ? "&" : "?") + "open=downloads";
+      LOADING_PAGE_URL + (LOADING_PAGE_URL.indexOf("?") >= 0 ? "&" : "?") + "open=login";
     openUrlInExternalSafari(url);
   }
 
@@ -4368,9 +4445,11 @@
         '<button class="platform-button btca-work-menu__item btca-work-menu__item--level3" type="button" data-btca-route="level3"><span>Уровень 3 — Продвинутый</span></button>' +
         '<button class="platform-button btca-work-menu__item btca-work-menu__item--about" type="button" data-btca-route="about"><span>О проекте</span></button>' +
         '<a class="btca-work-menu__account-link" href="' +
-        escapeHtml(LOADING_PAGE_URL + (LOADING_PAGE_URL.indexOf("?") >= 0 ? "&" : "?") + "open=downloads") +
-        '" target="_blank" rel="noopener noreferrer" data-btca-route="account-update">Аккаунт | Обновление</a>';
+        escapeHtml(LOADING_PAGE_URL + (LOADING_PAGE_URL.indexOf("?") >= 0 ? "&" : "?") + "open=login") +
+        '" target="_blank" rel="noopener noreferrer" data-btca-route="account-update">Аккаунт | Обновление</a>' +
+        '<p id="btca-home-status-hint" class="btca-work-menu__update-hint btca-work-menu__update-hint--offline" hidden></p>';
     }
+    syncAccountLinkOnlineState();
     if (preserveSplash && panel && panel.classList.contains("btca-home-splash-panel")) {
       placeHomeSplashPanel("menu");
     }
@@ -4380,6 +4459,7 @@
     installedHomeSnapshot = "";
     syncPortraitMode();
     markStandaloneShellReady();
+    showHomeOfflineStatusHint(false);
     ensureUpdateAvailableHint();
     // Если zip ещё не распакован в Cache — докачать в фоне (иначе картинки пустые).
     verifyMediaCacheReady()
@@ -4513,43 +4593,96 @@
     );
   }
 
-  function applyUpdateAvailableHint(remoteDate, localDate) {
+  var HOME_OFFLINE_STATUS_HINT = "Режим оффлайн доступен...";
+  var homeStatusHintTimer = 0;
+
+  function ensureHomeStatusHintEl() {
     var menu = document.querySelector(".btca-work-menu");
-    var existing = document.getElementById("btca-update-available");
+    if (!menu) return null;
+    var el = document.getElementById("btca-home-status-hint");
+    if (!el) {
+      el = document.createElement("p");
+      el.id = "btca-home-status-hint";
+      el.className = "btca-work-menu__update-hint btca-work-menu__update-hint--offline";
+      var link = menu.querySelector(".btca-work-menu__account-link");
+      if (link) link.insertAdjacentElement("afterend", el);
+      else menu.appendChild(el);
+    }
+    return el;
+  }
+
+  function showHomeOfflineStatusHint(flashUpdate) {
+    var el = ensureHomeStatusHintEl();
+    if (!el) return;
+    el.removeAttribute("hidden");
+    if (homeStatusHintTimer) {
+      window.clearTimeout(homeStatusHintTimer);
+      homeStatusHintTimer = 0;
+    }
+    if (flashUpdate) {
+      el.classList.remove("btca-work-menu__update-hint--offline");
+      el.textContent = "Есть обновление...";
+      homeStatusHintTimer = window.setTimeout(function () {
+        homeStatusHintTimer = 0;
+        el.classList.add("btca-work-menu__update-hint--offline");
+        el.textContent = HOME_OFFLINE_STATUS_HINT;
+      }, 2000);
+      return;
+    }
+    el.classList.add("btca-work-menu__update-hint--offline");
+    el.textContent = HOME_OFFLINE_STATUS_HINT;
+  }
+
+  function syncAccountLinkOnlineState() {
+    var link = document.querySelector(".btca-work-menu__account-link");
+    if (!link) return;
+    var online = typeof navigator === "undefined" || navigator.onLine !== false;
+    if (online) {
+      link.classList.remove("is-disabled");
+      link.removeAttribute("aria-disabled");
+      link.tabIndex = 0;
+    } else {
+      link.classList.add("is-disabled");
+      link.setAttribute("aria-disabled", "true");
+      link.tabIndex = -1;
+    }
+  }
+
+  function applyUpdateAvailableHint(remoteDate, localDate) {
     var local = String(localDate || readLocalPackageReleaseDate() || "").trim();
     var remote = String(remoteDate || "").trim();
-    if (!remote || !local || remote === local) {
-      if (existing) existing.remove();
-      return false;
-    }
-    if (!menu) return true;
-    if (!existing) {
-      existing = document.createElement("p");
-      existing.id = "btca-update-available";
-      existing.className = "btca-work-menu__update-hint";
-      var link = menu.querySelector(".btca-work-menu__account-link");
-      if (link) link.insertAdjacentElement("afterend", existing);
-      else menu.appendChild(existing);
-    }
-    existing.textContent = "Есть обновление...";
+    var hasUpdate = Boolean(remote && local && remote !== local);
+    showHomeOfflineStatusHint(hasUpdate);
     var splashPanel = getEls().panel;
-    if (splashPanel && splashPanel.classList.contains("btca-home-splash-panel")) {
+    if (hasUpdate && splashPanel && splashPanel.classList.contains("btca-home-splash-panel")) {
       placeHomeSplashPanel("menu");
     }
-    return true;
+    return hasUpdate;
   }
 
   function ensureUpdateAvailableHint() {
     if (!isStandalone()) return Promise.resolve(false);
+    syncAccountLinkOnlineState();
     var localDate = readLocalPackageReleaseDate();
-    if (!localDate) return Promise.resolve(false);
+    if (!localDate) {
+      showHomeOfflineStatusHint(false);
+      return Promise.resolve(false);
+    }
+    if (typeof navigator !== "undefined" && navigator.onLine === false) {
+      showHomeOfflineStatusHint(false);
+      return Promise.resolve(false);
+    }
     return fetchRemoteAppShellPayload()
       .then(function (payload) {
-        if (!payload) return false;
+        if (!payload) {
+          showHomeOfflineStatusHint(false);
+          return false;
+        }
         var remoteDate = remoteLatestVersionDate(payload);
         return applyUpdateAvailableHint(remoteDate, localDate);
       })
       .catch(function () {
+        showHomeOfflineStatusHint(false);
         return false;
       });
   }
@@ -4557,6 +4690,12 @@
   function renderDeviceBlockedGate(message) {
     pendingInstalledLoginReveal = false;
     hideHomeSplashIndicator();
+    var menu = document.querySelector(".platform-menu");
+    if (menu) {
+      menu.className = "platform-menu";
+      menu.innerHTML = "";
+      menu.setAttribute("hidden", "hidden");
+    }
     var gate = ensureAuthGateMount();
     if (!gate) return;
     gate.removeAttribute("hidden");
@@ -5154,6 +5293,12 @@
     }
     // visibilitychange: без сетевых проверок лицензии — только лимит сессии 12 ч.
     if (isStandalone()) startPwaSessionWatch();
+    window.addEventListener("online", function () {
+      syncAccountLinkOnlineState();
+    });
+    window.addEventListener("offline", function () {
+      syncAccountLinkOnlineState();
+    });
   }
 
   var bootOpenDownloadsOnly = false;
@@ -5161,8 +5306,17 @@
   function paintBootUi() {
     cleanupOrphanHomePhraseMarkup();
     stripIosPwaQueryInBrowser();
+    if (wantsOpenLogin()) {
+      // «Аккаунт | Обновление» → всегда «Вход в систему».
+      stripOpenDownloadsQuery();
+      document.body.classList.remove("btca-installed-mode");
+      clearLaunchUnlock();
+      gateLoadingHome();
+      syncPortraitModeImmediate();
+      return;
+    }
     if (wantsOpenDownloads()) {
-      // «Аккаунт | Обновление» → загрузочная сразу к кнопкам скачивания.
+      // Совместимость старых ссылок open=downloads.
       bootOpenDownloadsOnly = true;
       if (readSessionToken()) {
         enterDownloadsViewFromSession();

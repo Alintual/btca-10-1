@@ -1,4 +1,4 @@
-const CACHE_VERSION = "btca10-web-10.1.192";
+const CACHE_VERSION = "btca10-web-10.1.193";
 const APP_CACHE = `${CACHE_VERSION}:app`;
 const RUNTIME_CACHE = `${CACHE_VERSION}:runtime`;
 const BASE_PATH = "/btca-10-1";
@@ -239,10 +239,13 @@ self.addEventListener("fetch", (event) => {
     return;
   }
 
-  // Только branding/icons + CSS/JS оболочки из :static-install (не все картинки!).
+  // branding/icons + CSS/JS оболочки + модули/данные Уровня 3 из :static-install.
+  // Без /level3/ offline JSON/TXT уходят в сеть → «Load failed» на старте листов.
   var isShellAsset =
     path.indexOf(BASE_PATH + "/branding/") === 0 ||
     path.indexOf(BASE_PATH + "/icons/") === 0 ||
+    path.indexOf(BASE_PATH + "/level3/") === 0 ||
+    path.indexOf(BASE_PATH + "/vendor/") === 0 ||
     (/\.(?:css|js|mjs|wasm)$/i.test(path) &&
       path.indexOf(BASE_PATH + "/offline/") !== 0);
   if (isShellAsset) {
