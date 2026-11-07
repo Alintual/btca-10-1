@@ -2,8 +2,8 @@
   "use strict";
 
   var BTCA_BASE = "/btca-10-1/";
-  var INSTALL_CACHE = "btca10-web-10.1.193:static-install";
-  var MEDIA_CACHE = "btca10-web-10.1.193:static-media";
+  var INSTALL_CACHE = "btca10-web-10.1.194:static-install";
+  var MEDIA_CACHE = "btca10-web-10.1.194:static-media";
   var MEDIA_PROBE_RE = /offline-unpacked\/level3\/exercises\/.+\.(jpe?g|png|webp|gif)$/i;
   var MEDIA_STATE_KEY = "btca10-web:static-media-state";
   var APP_READY_KEY = "btca10-web:app-ready";
@@ -54,8 +54,8 @@
     "*Упражнений* – более 150, *Задач* – более 700, *Полезности* – интеллектуальная поисковая система по Базе знаний школы: 14 основополагающих документов, 114 рисунков и видео и более 370 тематических материалов.\n" +
     "\nCopyright © Юрий Алинт (Андрей Юрьев) 2026";
   var installedHomeSnapshot = "";
-  var LEVEL1_MODULE_VERSION = "10.1.154";
-  var LEVEL3_MODULE_VERSION = "10.1.154";
+  var LEVEL1_MODULE_VERSION = "10.1.155";
+  var LEVEL3_MODULE_VERSION = "10.1.155";
 
   var CORE_REL_PATHS = [
     "",
@@ -98,10 +98,12 @@
     "level3/data/polezDescriptions.json",
     "level3/data/polezNavCatalog.json",
     "level3/data/polezSourceIndex.json",
+    "level3/data/sheetInfo.json",
     "level3/data/sources/1.4_structured.txt",
     "level3/data/sources/2.1.1_structured.txt",
     "level3/data/sources/2.1.2_structured.txt",
     "level3/data/sources/2.2_structured.txt",
+    "level3/data/sources/2.3_structured.txt",
     "level3/data/sources/2.4_structured.txt",
   ];
 
@@ -2125,32 +2127,35 @@
         return response.text();
       });
     }
-    return matchInstallCacheResponse(src)
-      .then(function (cached) {
-        if (cached) {
-          return cached.text().then(function (code) {
-            if (isInjectableModuleSource(code)) return code;
-            if (offline) {
-              throw new Error("Кэш модуля повреждён. Нужна сеть для восстановления.");
-            }
-            return fromNetwork();
-          });
-        }
-        return fromNetwork().catch(function (err) {
-          return matchInstallCacheResponse(src).then(function (retry) {
-            if (!retry) throw err;
-            return retry.text();
+    function fromInstallCache() {
+      return matchInstallCacheResponse(src).then(function (cached) {
+        if (!cached) return null;
+        return cached.text().then(function (code) {
+          return isInjectableModuleSource(code) ? code : null;
+        });
+      });
+    }
+    // Онлайн: сеть первой (как 8.1), иначе :static-install навечно держит старый level3-app.
+    // Оффлайн: только кэш установки.
+    var load = offline
+      ? fromInstallCache().then(function (code) {
+          if (code) return code;
+          return fromNetwork();
+        })
+      : fromNetwork().catch(function (err) {
+          return fromInstallCache().then(function (code) {
+            if (code) return code;
+            throw err;
           });
         });
-      })
-      .catch(function (err) {
-        throw new Error(
-          localizeUserFacingError(
-            err,
-            "Не удалось загрузить модуль. Проверьте сеть или переустановите пакет."
-          )
-        );
-      });
+    return load.catch(function (err) {
+      throw new Error(
+        localizeUserFacingError(
+          err,
+          "Не удалось загрузить модуль. Проверьте сеть или переустановите пакет."
+        )
+      );
+    });
   }
 
   function loadDataGuardScript() {

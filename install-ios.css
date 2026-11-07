@@ -513,7 +513,8 @@ body:not(.btca-installed-mode) .home__tagline-slot .home__phrase2-line2 {
 }
 
 .btca-work-menu__update-hint--offline {
-  color: #b6e5b0;
+  /* Как border у кнопки «Аккаунт» на загрузочной (.platform-button--account). */
+  color: #0ab10a;
 }
 
 .btca-work-menu__account-link.is-disabled {

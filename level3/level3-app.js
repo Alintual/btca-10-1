@@ -3,7 +3,7 @@
 
   var DB = window.BTCA_LEVEL3_DB;
   var BAZA = window.BTCA_LEVEL3_BAZA;
-  var VERSION = "10.1.154";
+  var VERSION = "10.1.155";
   var BRANDING_UP = "branding/up.png";
   var BRANDING_UP_LIST = "branding/up_list.png";
   var BRANDING_BAZA = "branding/baza.png";
@@ -4915,18 +4915,51 @@
   }
 
   function fetchJsonCached(url) {
-    if ("caches" in window) {
-      return caches.match(url).then(function (cached) {
-        if (cached) return cached.json();
-        return fetch(url).then(function (response) {
-          if (!response.ok) throw new Error("Не удалось загрузить " + url);
-          return response.json();
-        });
+    function fromNetwork() {
+      return fetch(url).then(function (response) {
+        if (!response || !response.ok) throw new Error("Не удалось загрузить " + url);
+        return response.json();
       });
     }
-    return fetch(url).then(function (response) {
-      if (!response.ok) throw new Error("Не удалось загрузить " + url);
-      return response.json();
+    function matchByPathname() {
+      if (!("caches" in window)) return Promise.resolve(null);
+      var pathOnly = "";
+      try {
+        pathOnly = new URL(url, window.location.href).pathname;
+      } catch (e) {
+        return Promise.resolve(null);
+      }
+      return caches.keys().then(function (keys) {
+        return keys.reduce(function (chain, key) {
+          return chain.then(function (hit) {
+            if (hit) return hit;
+            return caches.open(key).then(function (cache) {
+              return cache.keys().then(function (reqs) {
+                for (var i = 0; i < reqs.length; i++) {
+                  try {
+                    if (new URL(reqs[i].url).pathname === pathOnly) {
+                      return cache.match(reqs[i]);
+                    }
+                  } catch (e2) { }
+                }
+                return null;
+              });
+            }).catch(function () {
+              return null;
+            });
+          });
+        }, Promise.resolve(null));
+      }).catch(function () {
+        return null;
+      });
+    }
+    if (!("caches" in window)) return fromNetwork();
+    return caches.match(url, { ignoreSearch: true }).then(function (cached) {
+      if (cached) return cached.json();
+      return matchByPathname().then(function (byPath) {
+        if (byPath) return byPath.json();
+        return fromNetwork();
+      });
     });
   }
 
@@ -4938,7 +4971,10 @@
       fetchJsonCached(assetPath("level3/data/polezDescriptions.json")),
       fetchJsonCached(assetPath("level3/data/polezNavCatalog.json")),
       fetchJsonCached(assetPath("level3/data/polezSourceIndex.json")),
-      fetchJsonCached(assetPath("level3/data/sheetInfo.json")),
+      // sheetInfo опционален (fallback в SHEET_INFO_BY_TAB); иначе offline «Load failed».
+      fetchJsonCached(assetPath("level3/data/sheetInfo.json")).catch(function () {
+        return null;
+      }),
     ]).then(function (parts) {
       var list = parts[0];
       state.data.exercises = list.map(function (r) {

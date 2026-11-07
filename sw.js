@@ -1,4 +1,4 @@
-const CACHE_VERSION = "btca10-web-10.1.193";
+const CACHE_VERSION = "btca10-web-10.1.194";
 const APP_CACHE = `${CACHE_VERSION}:app`;
 const RUNTIME_CACHE = `${CACHE_VERSION}:runtime`;
 const BASE_PATH = "/btca-10-1";
@@ -239,51 +239,140 @@ self.addEventListener("fetch", (event) => {
     return;
   }
 
-  // branding/icons + CSS/JS оболочки + модули/данные Уровня 3 из :static-install.
-  // Без /level3/ offline JSON/TXT уходят в сеть → «Load failed» на старте листов.
-  var isShellAsset =
-    path.indexOf(BASE_PATH + "/branding/") === 0 ||
-    path.indexOf(BASE_PATH + "/icons/") === 0 ||
-    path.indexOf(BASE_PATH + "/level3/") === 0 ||
+  function matchStaticInstall(request, pathname) {
+    return caches.keys().then(function (keys) {
+      var installKeys = keys.filter(function (key) {
+        return /:static-install$/.test(key);
+      });
+      if (!installKeys.length) return null;
+      return installKeys.reduce(function (chain, key) {
+        return chain.then(function (hit) {
+          if (hit) return hit;
+          return caches.open(key).then(function (cache) {
+            return cache.match(request, { ignoreSearch: true }).then(function (entry) {
+              if (entry) return entry;
+              return cache.keys().then(function (reqs) {
+                for (var i = 0; i < reqs.length; i++) {
+                  try {
+                    if (new URL(reqs[i].url).pathname === pathname) {
+                      return cache.match(reqs[i]);
+                    }
+                  } catch (_e) {}
+                }
+                return null;
+              });
+            });
+          });
+        });
+      }, Promise.resolve(null));
+    });
+  }
+
+  // Уровень 3 (как 8.1): сеть → runtime, иначе :static-install / caches.match.
+  if (path.indexOf(BASE_PATH + "/level3/") === 0) {
+    event.respondWith(
+      new Promise(function (resolve) {
+        var settled = false;
+        function finish(response) {
+          if (settled) return;
+          settled = true;
+          resolve(response);
+        }
+        function fromCache() {
+          return matchStaticInstall(event.request, path).then(function (hit) {
+            if (hit) return hit;
+            return caches.match(event.request, { ignoreSearch: true }).then(function (cached) {
+              return (
+                cached ||
+                new Response("", { status: 503, statusText: "Service Unavailable" })
+              );
+            });
+          });
+        }
+        var timer = setTimeout(function () {
+          fromCache().then(finish);
+        }, 2800);
+        safeFetch(event.request)
+          .then(function (response) {
+            clearTimeout(timer);
+            if (response && response.ok) {
+              putInCache(RUNTIME_CACHE, event.request, response);
+              finish(response);
+              return;
+            }
+            fromCache().then(function (cached) {
+              finish(cached || response || new Response("", { status: 503 }));
+            });
+          })
+          .catch(function () {
+            clearTimeout(timer);
+            fromCache().then(finish);
+          });
+      })
+    );
+    return;
+  }
+
+  // CSS/JS/vendor оболочки: сеть → runtime, иначе :static-install (иначе вечный старый install-ios.js).
+  var isShellScript =
     path.indexOf(BASE_PATH + "/vendor/") === 0 ||
     (/\.(?:css|js|mjs|wasm)$/i.test(path) &&
       path.indexOf(BASE_PATH + "/offline/") !== 0);
-  if (isShellAsset) {
+  if (isShellScript) {
     event.respondWith(
-      caches.keys().then(function (keys) {
-        var installKeys = keys.filter(function (key) {
-          return /:static-install$/.test(key);
-        });
-        function fromNetwork() {
-          return safeFetch(event.request).catch(function () {
-            return new Response("", { status: 503, statusText: "Service Unavailable" });
+      new Promise(function (resolve) {
+        var settled = false;
+        function finish(response) {
+          if (settled) return;
+          settled = true;
+          resolve(response);
+        }
+        function fromCache() {
+          return matchStaticInstall(event.request, path).then(function (hit) {
+            if (hit) return hit;
+            return caches.match(event.request, { ignoreSearch: true }).then(function (cached) {
+              return (
+                cached ||
+                new Response("", { status: 503, statusText: "Service Unavailable" })
+              );
+            });
           });
         }
-        if (!installKeys.length) return fromNetwork();
-        return installKeys
-          .reduce(function (chain, key) {
-            return chain.then(function (hit) {
-              if (hit) return hit;
-              return caches.open(key).then(function (cache) {
-                return cache.match(event.request, { ignoreSearch: true }).then(function (entry) {
-                  if (entry) return entry;
-                  return cache.keys().then(function (reqs) {
-                    for (var i = 0; i < reqs.length; i++) {
-                      try {
-                        if (new URL(reqs[i].url).pathname === path) {
-                          return cache.match(reqs[i]);
-                        }
-                      } catch (_e) {}
-                    }
-                    return null;
-                  });
-                });
-              });
+        var timer = setTimeout(function () {
+          fromCache().then(finish);
+        }, 2800);
+        safeFetch(event.request)
+          .then(function (response) {
+            clearTimeout(timer);
+            if (response && response.ok) {
+              putInCache(RUNTIME_CACHE, event.request, response);
+              finish(response);
+              return;
+            }
+            fromCache().then(function (cached) {
+              finish(cached || response || new Response("", { status: 503 }));
             });
-          }, Promise.resolve(null))
-          .then(function (hit) {
-            return hit || fromNetwork();
+          })
+          .catch(function () {
+            clearTimeout(timer);
+            fromCache().then(finish);
           });
+      })
+    );
+    return;
+  }
+
+  // branding/icons — только :static-install (оффлайн-оболочка).
+  var isShellMedia =
+    path.indexOf(BASE_PATH + "/branding/") === 0 ||
+    path.indexOf(BASE_PATH + "/icons/") === 0;
+  if (isShellMedia) {
+    event.respondWith(
+      matchStaticInstall(event.request, path).then(function (hit) {
+        if (hit) return hit;
+        return safeFetch(event.request).catch(function () {
+          return new Response("", { status: 503, statusText: "Service Unavailable" });
+        });
       })
     );
     return;
