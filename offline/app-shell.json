@@ -3,10 +3,10 @@
   "version": "10.1",
   "stage": "app-shell",
   "description": "Offline-пакет PWA-оболочки БТКА 10.1 (Уровень 3 — Продвинутый).",
-  "cacheVersion": "btca10-web-10.1.194",
-  "level1ModuleVersion": "10.1.155",
-  "level3ModuleVersion": "10.1.155",
-  "packageReleaseDate": "07.11.2026",
+  "cacheVersion": "btca10-web-10.1.195",
+  "level1ModuleVersion": "10.1.156",
+  "level3ModuleVersion": "10.1.156",
+  "packageReleaseDate": "08.11.2026",
   "androidReleaseDate": "07.11.2026",
   "windowsReleaseDate": ""
 }

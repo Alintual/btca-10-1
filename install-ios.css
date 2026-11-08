@@ -778,6 +778,21 @@ body:not(.btca-apple-comfort) .platform-button.account-modal__save {
   font-weight: 600;
 }
 
+/* Универсальный экран «Сессия завершена» (PWA standalone, 12 ч). */
+.btca-session-expired__title,
+.btca-session-expired .auth-gate__title {
+  color: #ffffff;
+  font-weight: 700;
+  text-decoration: underline;
+  text-underline-offset: 0.2em;
+}
+
+.btca-session-expired__body,
+.btca-session-expired .btca-session-expired__body {
+  color: #ffe08a;
+  font-weight: 400;
+}
+
 .auth-gate__link {
   border: 0;
   background: transparent;

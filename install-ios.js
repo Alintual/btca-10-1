@@ -2,8 +2,8 @@
   "use strict";
 
   var BTCA_BASE = "/btca-10-1/";
-  var INSTALL_CACHE = "btca10-web-10.1.194:static-install";
-  var MEDIA_CACHE = "btca10-web-10.1.194:static-media";
+  var INSTALL_CACHE = "btca10-web-10.1.195:static-install";
+  var MEDIA_CACHE = "btca10-web-10.1.195:static-media";
   var MEDIA_PROBE_RE = /offline-unpacked\/level3\/exercises\/.+\.(jpe?g|png|webp|gif)$/i;
   var MEDIA_STATE_KEY = "btca10-web:static-media-state";
   var APP_READY_KEY = "btca10-web:app-ready";
@@ -54,8 +54,8 @@
     "*Упражнений* – более 150, *Задач* – более 700, *Полезности* – интеллектуальная поисковая система по Базе знаний школы: 14 основополагающих документов, 114 рисунков и видео и более 370 тематических материалов.\n" +
     "\nCopyright © Юрий Алинт (Андрей Юрьев) 2026";
   var installedHomeSnapshot = "";
-  var LEVEL1_MODULE_VERSION = "10.1.155";
-  var LEVEL3_MODULE_VERSION = "10.1.155";
+  var LEVEL1_MODULE_VERSION = "10.1.156";
+  var LEVEL3_MODULE_VERSION = "10.1.156";
 
   var CORE_REL_PATHS = [
     "",
@@ -233,8 +233,9 @@
   var PWA_SESSION_STARTED_KEY = "btca101.pwaSessionStartedAt";
   var PWA_SESSION_EXPIRED_KEY = "btca101.pwaSessionExpired";
   var PWA_SESSION_MAX_MS = 12 * 60 * 60 * 1000;
+  var PWA_SESSION_EXPIRED_TITLE = "Сессия завершена";
   var PWA_SESSION_EXPIRED_MSG =
-    "Сессия завершена (более 12 часов без перезапуска). Смахните приложение и откройте снова — так проверяются подписка и обновления.";
+    "Прошло более 12 часов без активности, в спящем режиме. Для продолжения работы закройте приложение полностью и откройте заново, включив сеть Интернет.";
   var pwaSessionWatchTimer = 0;
 
   function hideHomeSplashIndicator(options) {
@@ -2781,8 +2782,9 @@
   /** Старт часов сессии после успешного splash (online или offline-unlock). */
   function markPwaSessionStarted() {
     if (!isStandalone()) return;
+    // Не сбрасывать lock после истечения 12 ч — иначе сессия откроется без смахивания.
+    if (isPwaSessionTimedOut()) return;
     try {
-      sessionStorage.removeItem(PWA_SESSION_EXPIRED_KEY);
       if (!readPwaSessionStartedAt()) {
         sessionStorage.setItem(PWA_SESSION_STARTED_KEY, String(Date.now()));
       }
@@ -2801,9 +2803,11 @@
     if (root) {
       root.innerHTML =
         '<main class="app btca-session-expired" aria-live="assertive">' +
-        '<section class="auth-gate" style="display:block;padding:2rem 1.25rem;max-width:28rem;margin:20vh auto 0;text-align:center">' +
-        '<p class="auth-gate__title">Сессия завершена</p>' +
-        '<p class="auth-gate__hint auth-gate__hint--danger">' +
+        '<section class="auth-gate btca-session-expired__gate" style="display:block;padding:2rem 1.25rem;max-width:28rem;margin:20vh auto 0;text-align:center">' +
+        '<p class="auth-gate__title btca-session-expired__title">' +
+        escapeHtml(PWA_SESSION_EXPIRED_TITLE) +
+        "</p>" +
+        '<p class="auth-gate__hint btca-session-expired__body">' +
         escapeHtml(PWA_SESSION_EXPIRED_MSG) +
         "</p></section></main>";
     }
@@ -5224,6 +5228,8 @@
   }
 
   function bootstrapStandaloneShell(mediaReady) {
+    // Уже истекшие 12 ч — только экран сессии, без сетевого boot.
+    if (enforcePwaSessionLimit()) return Promise.resolve();
     // Холодный старт / после смахивания: splash + device_id / подписка / дата версии.
     renderInstalledHome({ preserveSplash: true });
     // Не открываем форму входа по таймауту — решение примет device-session.
@@ -5253,6 +5259,7 @@
         });
       })
       .then(function (check) {
+        if (enforcePwaSessionLimit()) return;
         if (check && check.ok) {
           markPwaSessionStarted();
           startPwaSessionWatch();
