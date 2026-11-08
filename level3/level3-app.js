@@ -3,7 +3,7 @@
 
   var DB = window.BTCA_LEVEL3_DB;
   var BAZA = window.BTCA_LEVEL3_BAZA;
-  var VERSION = "10.1.158";
+  var VERSION = "10.1.160";
   var BRANDING_UP = "branding/up.png";
   var BRANDING_UP_LIST = "branding/up_list.png";
   var BRANDING_BAZA = "branding/baza.png";
@@ -3737,7 +3737,14 @@
     state.ui.baza.dataSource = nextSource;
     state.ui.baza.exercise = item.value;
     state.ui.baza.task = "all";
-    applyUiPatch({ baza: { dataSource: nextSource, exercise: item.value, task: "all" } });
+    // Как клик по картинке на «Упражнение» при «Все»: зафиксировать фильтр без «Выбрать».
+    var navSec = sectionKeyForExerciseValue(item.value);
+    state.ui.nav.sectionKey = navSec;
+    state.ui.nav.exerciseFilterKey = item.value;
+    applyUiPatch({
+      baza: { dataSource: nextSource, exercise: item.value, task: "all" },
+      nav: { sectionKey: navSec, exerciseFilterKey: item.value },
+    });
     return refreshBazaRowsWithReconcile().then(function () {
       renderActiveTab();
       renderTitleBar();
