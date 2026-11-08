@@ -139,26 +139,59 @@
     return y + "-" + mo + "-" + day;
   }
 
-  function maxIsoDate(fromIso, toIso) {
-    var from = ISO_RE.test(String(fromIso ?? "").trim()) ? String(fromIso).trim() : "";
-    var to = ISO_RE.test(String(toIso ?? "").trim()) ? String(toIso).trim() : "";
-    if (from && to) return from > to ? from : to;
-    if (to) return to;
-    if (from) return from;
-    return formatYmd(new Date());
+  function sanitizeBazaFileIdentifier(raw) {
+    var trimmed = String(raw ?? "").trim();
+    if (!trimmed || !/^[A-Za-z0-9_-]+$/.test(trimmed)) return "";
+    return trimmed;
   }
 
-  /** `{id}{L}81_upr{N}_ddmmyyyy.png` — дата = максимум периода на графике. */
+  function exerciseChapterForB5(b5) {
+    if (typeof b5 === "string" && b5.indexOf("Тест") === 0) return 8;
+    var n = typeof b5 === "number" ? b5 : Number(b5);
+    if (!Number.isFinite(n)) return 0;
+    if (n >= 1 && n <= 5) return 1;
+    if (n >= 6 && n <= 13) return 2;
+    if (n >= 14 && n <= 22) return 3;
+    if (n === 23) return 4;
+    if (n === 24) return 5;
+    if (n >= 25 && n <= 30) return 6;
+    if (n >= 31 && n <= 32) return 7;
+    return 0;
+  }
+
+  function exerciseCodeForBazaFileName(exerciseVal) {
+    var raw = String(exerciseVal ?? "").trim();
+    if (!raw || raw === "all" || raw === "__foreign_data__") return "x";
+    var testMatch = /^Тест\s*(\d+)$/i.exec(raw);
+    if (testMatch) return "8-" + testMatch[1];
+    var n = Number(raw);
+    if (!Number.isFinite(n)) return raw.replace(/[\\/:*?"<>|]+/g, "_");
+    var chapter = exerciseChapterForB5(n);
+    if (!chapter) return String(Math.trunc(n));
+    return chapter + "-" + Math.trunc(n);
+  }
+
+  /** Период на листе База: `ddmmyyyy` или `ddmmyyyy-ddmmyyyy`. */
+  function formatBazaPeriodForFileName(fromIso, toIso) {
+    var fromRaw = String(fromIso ?? "").trim();
+    var toRaw = String(toIso ?? "").trim();
+    var from = formatIsoDateAsDdMmYyyyCompact(fromRaw);
+    var to = formatIsoDateAsDdMmYyyyCompact(toRaw);
+    if (from && to) {
+      if (from === to) return from;
+      return fromRaw <= toRaw ? from + "-" + to : to + "-" + from;
+    }
+    if (to) return to;
+    if (from) return from;
+    return formatIsoDateAsDdMmYyyyCompact(formatYmd(new Date())) || "--------";
+  }
+
+  /** `{id}upr_{t-n}_{d1-d2}.png` (если d1=d2 — одна дата). */
   function buildBazaScreenshotFileName(userIdentifier, exerciseVal, fromIso, toIso, level) {
-    var levelNum = level === 2 ? 2 : 1;
-    var systemId = buildSystemFileIdentifier(userIdentifier, levelNum) || "user" + levelNum + "8.1";
-    var prefix = systemIdToFilePrefix(systemId);
-    var n = String(exerciseVal ?? "x").replace(/[\\/:*?"<>|]+/g, "_");
-    var date =
-      formatIsoDateAsDdMmYyyyCompact(maxIsoDate(fromIso, toIso)) ||
-      formatIsoDateAsDdMmYyyyCompact(formatYmd(new Date())) ||
-      "--------";
-    return prefix + "_upr" + n + "_" + date + ".png";
+    var id = sanitizeBazaFileIdentifier(userIdentifier) || "user";
+    var tn = exerciseCodeForBazaFileName(exerciseVal);
+    var period = formatBazaPeriodForFileName(fromIso, toIso);
+    return id + "upr_" + tn + "_" + period + ".png";
   }
 
   function copyComputedStyles(source, target) {

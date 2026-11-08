@@ -2,8 +2,8 @@
   "use strict";
 
   var BTCA_BASE = "/btca-10-1/";
-  var INSTALL_CACHE = "btca10-web-10.1.195:static-install";
-  var MEDIA_CACHE = "btca10-web-10.1.195:static-media";
+  var INSTALL_CACHE = "btca10-web-10.1.196:static-install";
+  var MEDIA_CACHE = "btca10-web-10.1.196:static-media";
   var MEDIA_PROBE_RE = /offline-unpacked\/level3\/exercises\/.+\.(jpe?g|png|webp|gif)$/i;
   var MEDIA_STATE_KEY = "btca10-web:static-media-state";
   var APP_READY_KEY = "btca10-web:app-ready";
@@ -54,8 +54,8 @@
     "*Упражнений* – более 150, *Задач* – более 700, *Полезности* – интеллектуальная поисковая система по Базе знаний школы: 14 основополагающих документов, 114 рисунков и видео и более 370 тематических материалов.\n" +
     "\nCopyright © Юрий Алинт (Андрей Юрьев) 2026";
   var installedHomeSnapshot = "";
-  var LEVEL1_MODULE_VERSION = "10.1.156";
-  var LEVEL3_MODULE_VERSION = "10.1.156";
+  var LEVEL1_MODULE_VERSION = "10.1.157";
+  var LEVEL3_MODULE_VERSION = "10.1.157";
 
   var CORE_REL_PATHS = [
     "",
@@ -246,6 +246,10 @@
     panel.innerHTML = "";
       panel.setAttribute("hidden", "hidden");
     }
+    // Подсказки «Есть обновление…» / «Режим оффлайн…» — только после splash.
+    try {
+      flushPendingHomeStatusHint();
+    } catch (e) { }
     // Форму входа открываем только явной командой после полного splash/boot.
     if (options.revealLogin && pendingInstalledLoginReveal) {
       window.setTimeout(revealInstalledLoginGate, 0);
@@ -4604,6 +4608,17 @@
 
   var HOME_OFFLINE_STATUS_HINT = "Режим оффлайн доступен...";
   var homeStatusHintTimer = 0;
+  /** "" | "offline" | "update" — показать после исчезновения splash. */
+  var pendingHomeStatusHint = "";
+
+  function isHomeSplashVisible() {
+    var panel = getEls().panel;
+    return Boolean(
+      panel &&
+        panel.classList.contains("btca-home-splash-panel") &&
+        !panel.hasAttribute("hidden")
+    );
+  }
 
   function ensureHomeStatusHintEl() {
     var menu = document.querySelector(".btca-work-menu");
@@ -4621,8 +4636,15 @@
   }
 
   function showHomeOfflineStatusHint(flashUpdate) {
+    if (isHomeSplashVisible()) {
+      pendingHomeStatusHint = flashUpdate ? "update" : "offline";
+      var hiddenEl = ensureHomeStatusHintEl();
+      if (hiddenEl) hiddenEl.setAttribute("hidden", "hidden");
+      return;
+    }
     var el = ensureHomeStatusHintEl();
     if (!el) return;
+    pendingHomeStatusHint = "";
     el.removeAttribute("hidden");
     if (homeStatusHintTimer) {
       window.clearTimeout(homeStatusHintTimer);
@@ -4635,11 +4657,18 @@
         homeStatusHintTimer = 0;
         el.classList.add("btca-work-menu__update-hint--offline");
         el.textContent = HOME_OFFLINE_STATUS_HINT;
-      }, 2000);
+      }, 3000);
       return;
     }
     el.classList.add("btca-work-menu__update-hint--offline");
     el.textContent = HOME_OFFLINE_STATUS_HINT;
+  }
+
+  function flushPendingHomeStatusHint() {
+    if (!pendingHomeStatusHint) return;
+    var mode = pendingHomeStatusHint;
+    pendingHomeStatusHint = "";
+    showHomeOfflineStatusHint(mode === "update");
   }
 
   function syncAccountLinkOnlineState() {

@@ -3,6 +3,7 @@
   var IDENTIFIER_RE = /^[A-Za-z0-9_-]+$/;
   var KV_KEY_L2 = "baza_file_identifier_user_l2_v1";
   var IDENTIFIER_KV_FALLBACK_L2 = ["baza_file_identifier_user_l2_v1", "baza_file_identifier_v1"];
+  var BACKUP_NAME_V101_RE = /^(.+)101_(\d{8})\.sqlite$/i;
   var BACKUP_NAME_COMPACT_L2_RE = /^(.+)([12])81_(\d{8})\.sqlite$/i;
   var SYSTEM_ID_RE = /^(.+)([12])8\.1$/i;
   var SQLITE_MAGIC = "SQLite format 3\u0000";
@@ -80,14 +81,14 @@
     return user + String(level) + "8.1";
   }
 
-  /** У2: `{id}281_ddmmyyyy.sqlite` — как на Android. */
+  /** 10.1: `{id}101_ddmmyyyy.sqlite` — как на Android. */
   function buildBazaBackupFileNameL2(userIdentifier, dateIso) {
     var id = sanitizeBazaFileIdentifier(userIdentifier) || "user";
     var date =
       formatIsoDateAsDdMmYyyyCompact(dateIso) ||
       formatIsoDateAsDdMmYyyyCompact(formatYmd(new Date())) ||
       "--------";
-    return id + "281_" + date + ".sqlite";
+    return id + "101_" + date + ".sqlite";
   }
 
   function basename(fileName) {
@@ -130,6 +131,17 @@
     var base = basename(fileName);
     if (!base) return null;
 
+    var v101 = BACKUP_NAME_V101_RE.exec(base);
+    if (v101) {
+      var userId101 = sanitizeBazaFileIdentifier(v101[1] || "");
+      if (!userId101) return null;
+      return {
+        id: userId101 + "28.1",
+        userId: userId101,
+        level: 2,
+      };
+    }
+
     var compactL2 = BACKUP_NAME_COMPACT_L2_RE.exec(base);
     if (compactL2) {
       var userId = sanitizeBazaFileIdentifier(compactL2[1] || "");
@@ -144,7 +156,7 @@
     return null;
   }
 
-  /** У2: имя должно содержать маркер `281` — `{id}281_ddmmyyyy.sqlite`. */
+  /** У3/10.1: `{id}101_*.sqlite`; старые У2: `{id}281_*.sqlite`. */
   function validateL2BackupFileName(fileName) {
     var parsed = parseBazaBackupFileName(fileName);
     if (!parsed) return { ok: false, error: "bad_format" };
@@ -257,7 +269,7 @@
 
   /**
    * Проверка резервной копии перед импортом — логика как `importBazaDatabase.ts` на Android.
-   * У2: имя `*281_*.sqlite`, заголовок SQLite, таблица `results`, маркер уровня в идентификаторе.
+   * 10.1: имя `*101_*.sqlite` (старые `*281_*.sqlite`), SQLite, таблица `results`.
    */
   function validateBackupForImport(bytes, fileName, level) {
     var levelNum = level === 2 ? 2 : 1;
