@@ -2,8 +2,8 @@
   "use strict";
 
   var BTCA_BASE = "/btca-10-1/";
-  var INSTALL_CACHE = "btca10-web-10.1.202:static-install";
-  var MEDIA_CACHE = "btca10-web-10.1.202:static-media";
+  var INSTALL_CACHE = "btca10-web-10.1.203:static-install";
+  var MEDIA_CACHE = "btca10-web-10.1.203:static-media";
   var MEDIA_PROBE_RE = /offline-unpacked\/level3\/exercises\/.+\.(jpe?g|png|webp|gif)$/i;
   var MEDIA_STATE_KEY = "btca10-web:static-media-state";
   var APP_READY_KEY = "btca10-web:app-ready";
@@ -54,8 +54,8 @@
     "*Упражнений* – более 150, *Задач* – более 700, *Полезности* – интеллектуальная поисковая система по Базе знаний школы: 14 основополагающих документов, 114 рисунков и видео и более 370 тематических материалов.\n" +
     "\nCopyright © Юрий Алинт (Андрей Юрьев) 2026";
   var installedHomeSnapshot = "";
-  var LEVEL1_MODULE_VERSION = "10.1.163";
-  var LEVEL3_MODULE_VERSION = "10.1.163";
+  var LEVEL1_MODULE_VERSION = "10.1.164";
+  var LEVEL3_MODULE_VERSION = "10.1.164";
 
   var CORE_REL_PATHS = [
     "",
@@ -3080,13 +3080,16 @@
       });
   }
 
-  function licensePost(path, body) {
+  function licensePost(path, body, opts) {
+    opts = opts || {};
+    var timeoutMs = Number(opts.timeoutMs);
+    if (!Number.isFinite(timeoutMs) || timeoutMs < 1000) timeoutMs = 20000;
     var ctrl = typeof AbortController !== "undefined" ? new AbortController() : null;
     var timer = window.setTimeout(function () {
       try {
         if (ctrl) ctrl.abort();
       } catch (e) { }
-    }, 20000);
+    }, timeoutMs);
     // Cross-origin с github.io: без cookies (иначе Safari режет CORS * + credentials).
     return fetch(LICENSE_API_BASE + path, {
       method: "POST",
@@ -3399,14 +3402,20 @@
       platformKey === "pwa" ||
       platformKey === "ios" ||
       !readStoredPackageReleaseDate();
-    return licensePost("/v1/downloads/claim", {
-      session_token: token,
-      device_id: getLicenseDeviceId() || "",
-      platform: platform,
-      app_version: PACKAGE_APP_VERSION,
-      device_label: label || platform,
-      version_date: versionDate || "",
-    }).then(function (data) {
+    // Windows: первая сборка персонального EXE может занять дольше обычного API-таймаута 20с.
+    var claimTimeoutMs = platformKey === "windows" ? 180000 : 20000;
+    return licensePost(
+      "/v1/downloads/claim",
+      {
+        session_token: token,
+        device_id: getLicenseDeviceId() || "",
+        platform: platform,
+        app_version: PACKAGE_APP_VERSION,
+        device_label: label || platform,
+        version_date: versionDate || "",
+      },
+      { timeoutMs: claimTimeoutMs }
+    ).then(function (data) {
       var assigned = data && String(data.device_id || "").trim();
       if (assigned.length >= 6) {
         persistLicenseDeviceId(assigned);
