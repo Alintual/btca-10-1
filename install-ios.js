@@ -2,8 +2,8 @@
   "use strict";
 
   var BTCA_BASE = "/btca-10-1/";
-  var INSTALL_CACHE = "btca10-web-10.1.199:static-install";
-  var MEDIA_CACHE = "btca10-web-10.1.199:static-media";
+  var INSTALL_CACHE = "btca10-web-10.1.200:static-install";
+  var MEDIA_CACHE = "btca10-web-10.1.200:static-media";
   var MEDIA_PROBE_RE = /offline-unpacked\/level3\/exercises\/.+\.(jpe?g|png|webp|gif)$/i;
   var MEDIA_STATE_KEY = "btca10-web:static-media-state";
   var APP_READY_KEY = "btca10-web:app-ready";
@@ -54,8 +54,8 @@
     "*Упражнений* – более 150, *Задач* – более 700, *Полезности* – интеллектуальная поисковая система по Базе знаний школы: 14 основополагающих документов, 114 рисунков и видео и более 370 тематических материалов.\n" +
     "\nCopyright © Юрий Алинт (Андрей Юрьев) 2026";
   var installedHomeSnapshot = "";
-  var LEVEL1_MODULE_VERSION = "10.1.160";
-  var LEVEL3_MODULE_VERSION = "10.1.160";
+  var LEVEL1_MODULE_VERSION = "10.1.161";
+  var LEVEL3_MODULE_VERSION = "10.1.161";
 
   var CORE_REL_PATHS = [
     "",
@@ -782,6 +782,16 @@
 
   function isDebugAndroidMode() {
     return new URLSearchParams(window.location.search).get("debugAndroid") === "1";
+  }
+
+  function isWindowsDevice() {
+    var ua = navigator.userAgent || "";
+    var platform = navigator.platform || "";
+    return /Windows/i.test(ua) || /^Win/i.test(platform);
+  }
+
+  function isDebugWindowsMode() {
+    return new URLSearchParams(window.location.search).get("debugWindows") === "1";
   }
 
   function isStandalone() {
@@ -3631,6 +3641,13 @@
       );
     }
 
+    function windowsInstallGuidanceHtml() {
+      return (
+        '<p class="hint">Запустите скачанный файл BTCA-Windows 10.1.exe: распакуйте при запросе и откройте BTCA-desktop.exe.</p>' +
+        '<p class="prepare-status prepare-status--warning">ВНИМАНИЕ. Если на ПК уже установлена предыдущая версия 10.1, перед запуском новой закройте старое приложение.</p>'
+      );
+    }
+
     function renderAndroidDownloadProgress(percent, message, done) {
       var pct = Math.max(0, Math.min(100, Math.round(percent)));
       setPanel(
@@ -3638,6 +3655,16 @@
         '<div class="progress" aria-label="Прогресс загрузки APK"><div class="progress__bar" style="width:' + pct + '%"></div></div>' +
         '<p class="prepare-status prepare-status--running">' + escapeHtml(message) + "</p>" +
         (done ? androidInstallGuidanceHtml() : "")
+      );
+    }
+
+    function renderWindowsDownloadProgress(percent, message, done) {
+      var pct = Math.max(0, Math.min(100, Math.round(percent)));
+      setPanel(
+        '<div class="ios-panel__header"><span>Windows</span><span>' + pct + "%</span></div>" +
+        '<div class="progress" aria-label="Прогресс загрузки EXE"><div class="progress__bar" style="width:' + pct + '%"></div></div>' +
+        '<p class="prepare-status prepare-status--running">' + escapeHtml(message) + "</p>" +
+        (done ? windowsInstallGuidanceHtml() : "")
       );
     }
 
@@ -3674,7 +3701,7 @@
       }, 2500);
     }
 
-    function downloadApkWithRealProgress(url, onProgress) {
+    function downloadBinaryWithRealProgress(url, fallbackName, label, onProgress) {
       return new Promise(function (resolve, reject) {
         var xhr = new XMLHttpRequest();
         xhr.open("GET", url, true);
@@ -3689,27 +3716,35 @@
         xhr.onload = function () {
           var type = String(xhr.getResponseHeader("Content-Type") || "").toLowerCase();
           if (xhr.status < 200 || xhr.status >= 300) {
-            reject(new Error("Ошибка скачивания APK (" + xhr.status + ")."));
+            reject(new Error("Ошибка скачивания " + label + " (" + xhr.status + ")."));
             return;
           }
           if (type.indexOf("text/html") >= 0) {
-            reject(new Error("Ссылка на APK недоступна. Обновите страницу и повторите."));
+            reject(new Error("Ссылка на " + label + " недоступна. Обновите страницу и повторите."));
             return;
           }
           var name = filenameFromContentDisposition(
             xhr.getResponseHeader("Content-Disposition"),
-            "BTCA-Android 10.1.apk"
+            fallbackName
           );
           resolve({ blob: xhr.response, filename: name });
         };
         xhr.onerror = function () {
-          reject(new Error("Сеть недоступна при скачивании APK."));
+          reject(new Error("Сеть недоступна при скачивании " + label + "."));
         };
         xhr.onabort = function () {
-          reject(new Error("Скачивание APK прервано."));
+          reject(new Error("Скачивание " + label + " прервано."));
         };
         xhr.send();
       });
+    }
+
+    function downloadApkWithRealProgress(url, onProgress) {
+      return downloadBinaryWithRealProgress(url, "BTCA-Android 10.1.apk", "APK", onProgress);
+    }
+
+    function downloadExeWithRealProgress(url, onProgress) {
+      return downloadBinaryWithRealProgress(url, "BTCA-Windows 10.1.exe", "EXE", onProgress);
     }
 
     function startAndroidApkDownload(btn, href) {
@@ -3762,6 +3797,55 @@
         });
     }
 
+    function startWindowsExeDownload(btn, href) {
+      var small = btn.querySelector("small");
+      btn.disabled = true;
+      if (small) small.textContent = "Подготовка скачивания...";
+      renderWindowsDownloadProgress(0, "Подготовка персонального EXE…", false);
+
+      claimPlatformDownload("windows", "Windows")
+        .then(function (data) {
+          var url = String((data && data.download_url) || href || "").trim();
+          if (!url) {
+            throw new Error("Сервер не выдал ссылку на EXE. Обновите страницу и повторите.");
+          }
+          if (data && data.download_url) {
+            try {
+              var stored = readStoredDownloadLinks() || {};
+              stored.windows = url;
+              sessionStorage.setItem(LICENSE_DOWNLOAD_LINKS_KEY, JSON.stringify(stored));
+            } catch (e) { }
+          }
+          if (small) small.textContent = "Скачивание....";
+          renderWindowsDownloadProgress(0, "Идёт загрузка EXE на Ваше устройство…", false);
+          return downloadExeWithRealProgress(url, function (pct) {
+            renderWindowsDownloadProgress(pct, "Идёт загрузка EXE на Ваше устройство…", false);
+            if (small) small.textContent = "Скачивание....";
+          });
+        })
+        .then(function (result) {
+          saveBlobToDevice(result.blob, result.filename || "BTCA-Windows 10.1.exe");
+          renderWindowsDownloadProgress(
+            100,
+            "Готово, дистрибутив скачан на устройство.",
+            true
+          );
+          if (small) small.textContent = "Скачано";
+          btn.disabled = false;
+        })
+        .catch(function (error) {
+          btn.disabled = false;
+          if (small) small.textContent = "Скачать дистрибутив EXE";
+          showDownloadLimitWarning(
+            localizeUserFacingError(error, "Не удалось скачать EXE. Повторите попытку.")
+          );
+          renderInfo(
+            "Windows",
+            localizeUserFacingError(error, "Не удалось скачать EXE. Повторите попытку.")
+          );
+        });
+    }
+
     function bindClaimThenOpen(el, platform, href, label) {
       if (!el || !href) return;
       var btn = replaceWithPlatformButton(el);
@@ -3780,6 +3864,17 @@
             return;
           }
           startAndroidApkDownload(btn, href);
+          return;
+        }
+        if (platform === "windows") {
+          if (!isWindowsDevice() && !isDebugWindowsMode()) {
+            renderInfo(
+              "Windows",
+              "Вы открыли страницу не на Windows. Для скачивания EXE откройте эту ссылку в браузере на ПК с Windows."
+            );
+            return;
+          }
+          startWindowsExeDownload(btn, href);
           return;
         }
         btn.disabled = true;
