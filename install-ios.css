@@ -281,34 +281,35 @@ body:not(.btca-installed-mode) .home__tagline-slot .home__phrase2-line2 {
   height: calc(16rem / 17);
 }
 
+/* Как в 8.1 относительно фраз: при logo 106.92 (было 132) сдвиг −25 к tops 182/197/212. */
 .btca-installed-mode .home__logo-pyramid span:nth-child(1) {
   left: calc(50% - 25rem / 17);
-  top: calc(169rem / 17);
+  top: calc(157rem / 17);
 }
 
 .btca-installed-mode .home__logo-pyramid span:nth-child(2) {
   left: calc(50% - 8rem / 17);
-  top: calc(169rem / 17);
+  top: calc(157rem / 17);
 }
 
 .btca-installed-mode .home__logo-pyramid span:nth-child(3) {
   left: calc(50% + 9rem / 17);
-  top: calc(169rem / 17);
+  top: calc(157rem / 17);
 }
 
 .btca-installed-mode .home__logo-pyramid span:nth-child(4) {
   left: calc(50% - 16.5rem / 17);
-  top: calc(184rem / 17);
+  top: calc(172rem / 17);
 }
 
 .btca-installed-mode .home__logo-pyramid span:nth-child(5) {
   left: calc(50% + 0.5rem / 17);
-  top: calc(184rem / 17);
+  top: calc(172rem / 17);
 }
 
 .btca-installed-mode .home__logo-pyramid span:nth-child(6) {
   left: calc(50% - 8rem / 17);
-  top: calc(199rem / 17);
+  top: calc(187rem / 17);
 }
 
 .btca-installed-mode .home__tagline-outer {
