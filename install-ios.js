@@ -2,8 +2,8 @@
   "use strict";
 
   var BTCA_BASE = "/btca-10-1/";
-  var INSTALL_CACHE = "btca10-web-10.1.203:static-install";
-  var MEDIA_CACHE = "btca10-web-10.1.203:static-media";
+  var INSTALL_CACHE = "btca10-web-10.1.204:static-install";
+  var MEDIA_CACHE = "btca10-web-10.1.204:static-media";
   var MEDIA_PROBE_RE = /offline-unpacked\/level3\/exercises\/.+\.(jpe?g|png|webp|gif)$/i;
   var MEDIA_STATE_KEY = "btca10-web:static-media-state";
   var APP_READY_KEY = "btca10-web:app-ready";
@@ -54,8 +54,8 @@
     "*Упражнений* – более 150, *Задач* – более 700, *Полезности* – интеллектуальная поисковая система по Базе знаний школы: 14 основополагающих документов, 114 рисунков и видео и более 370 тематических материалов.\n" +
     "\nCopyright © Юрий Алинт (Андрей Юрьев) 2026";
   var installedHomeSnapshot = "";
-  var LEVEL1_MODULE_VERSION = "10.1.164";
-  var LEVEL3_MODULE_VERSION = "10.1.164";
+  var LEVEL1_MODULE_VERSION = "10.1.165";
+  var LEVEL3_MODULE_VERSION = "10.1.165";
 
   var CORE_REL_PATHS = [
     "",
@@ -3652,8 +3652,8 @@
 
     function windowsInstallGuidanceHtml() {
       return (
-        '<p class="hint">Запустите скачанный файл BTCA-Windows 10.1.exe: распакуйте при запросе и откройте BTCA-desktop.exe.</p>' +
-        '<p class="prepare-status prepare-status--warning">ВНИМАНИЕ. Если на ПК уже установлена предыдущая версия 10.1, перед запуском новой закройте старое приложение.</p>'
+        '<p class="hint">Запустите скачанный файл BTCA-Windows-10.1-Setup.exe и установите приложение по шагам мастера (папка, ярлык).</p>' +
+        '<p class="prepare-status prepare-status--warning">ВНИМАНИЕ. Если на ПК уже установлена предыдущая версия 10.1, перед установкой новой закройте старое приложение.</p>'
       );
     }
 
@@ -3753,7 +3753,7 @@
     }
 
     function downloadExeWithRealProgress(url, onProgress) {
-      return downloadBinaryWithRealProgress(url, "BTCA-Windows 10.1.exe", "EXE", onProgress);
+      return downloadBinaryWithRealProgress(url, "BTCA-Windows-10.1-Setup.exe", "EXE", onProgress);
     }
 
     function startAndroidApkDownload(btn, href) {
@@ -3833,7 +3833,7 @@
           });
         })
         .then(function (result) {
-          saveBlobToDevice(result.blob, result.filename || "BTCA-Windows 10.1.exe");
+          saveBlobToDevice(result.blob, result.filename || "BTCA-Windows-10.1-Setup.exe");
           renderWindowsDownloadProgress(
             100,
             "Готово, дистрибутив скачан на устройство.",

@@ -3989,7 +3989,7 @@ body.btca-apple-comfort .btca-l1-ok-input {
   height: auto;
   min-height: var(--btca-l1-picker-row, calc(40rem / 17));
   max-height: none;
-  align-items: flex-start;
+  align-items: center;
   justify-content: flex-start;
   padding-top: 8px;
   padding-bottom: 8px;
