@@ -2,8 +2,8 @@
   "use strict";
 
   var BTCA_BASE = "/btca-10-1/";
-  var INSTALL_CACHE = "btca10-web-10.1.207:static-install";
-  var MEDIA_CACHE = "btca10-web-10.1.207:static-media";
+  var INSTALL_CACHE = "btca10-web-10.1.208:static-install";
+  var MEDIA_CACHE = "btca10-web-10.1.208:static-media";
   var MEDIA_PROBE_RE = /offline-unpacked\/level3\/exercises\/.+\.(jpe?g|png|webp|gif)$/i;
   var MEDIA_STATE_KEY = "btca10-web:static-media-state";
   var APP_READY_KEY = "btca10-web:app-ready";
@@ -54,8 +54,8 @@
     "*Упражнений* – более 150, *Задач* – более 700, *Полезности* – интеллектуальная поисковая система по Базе знаний школы: 14 основополагающих документов, 114 рисунков и видео и более 370 тематических материалов.\n" +
     "\nCopyright © Юрий Алинт (Андрей Юрьев) 2026";
   var installedHomeSnapshot = "";
-  var LEVEL1_MODULE_VERSION = "10.1.168";
-  var LEVEL3_MODULE_VERSION = "10.1.168";
+  var LEVEL1_MODULE_VERSION = "10.1.169";
+  var LEVEL3_MODULE_VERSION = "10.1.169";
 
   var CORE_REL_PATHS = [
     "",
@@ -229,6 +229,9 @@
   var LICENSE_BROWSER_COOKIE = "btca101_browser";
   var LICENSE_PACKAGE_DATE_KEY = "btca101.packageReleaseDate";
   var LICENSE_PACKAGE_DATE_COOKIE = "btca101_pkg_date";
+  /** Стабильный seed железа PWA (localStorage + identity); hash = SHA-256("pwa:"+seed). */
+  var LICENSE_HW_SEED_KEY = "btca101.hardwareSeed";
+  var LICENSE_HW_HASH_KEY = "btca101.hardwareHash";
   /** Непрерывная сессия PWA без смахивания (sessionStorage сбрасывается при kill/swipe). */
   var PWA_SESSION_STARTED_KEY = "btca101.pwaSessionStartedAt";
   var PWA_SESSION_EXPIRED_KEY = "btca101.pwaSessionExpired";
@@ -246,6 +249,17 @@
     panel.innerHTML = "";
       panel.setAttribute("hidden", "hidden");
     }
+    // Меню главного экрана — только после splash (как Android).
+    try {
+      if (
+        document.body.classList.contains("btca-installed-mode") &&
+        isLaunchUnlocked() &&
+        !options.keepMenuHidden
+      ) {
+        var menu = document.querySelector(".platform-menu.btca-work-menu");
+        if (menu) menu.removeAttribute("hidden");
+      }
+    } catch (e) { }
     // Подсказки «Есть обновление…» / «Режим оффлайн…» — только после splash.
     try {
       flushPendingHomeStatusHint();
@@ -466,6 +480,117 @@
     return "";
   }
 
+  /**
+   * Подтянуть дату пакета, если кандидат не старше сохранённой
+   * (переустановка PWA без очистки origin — без ложного «Есть обновление…»).
+   */
+  function adoptInstalledVersionDate(versionDate) {
+    var next = String(versionDate || "").trim();
+    if (!/^\d{2}\.\d{2}\.\d{4}$/.test(next)) return readStoredPackageReleaseDate();
+    var existing = readStoredPackageReleaseDate();
+    if (existing && parseDateRuValue(next) < parseDateRuValue(existing)) return existing;
+    if (existing === next) return existing;
+    return persistPackageReleaseDate(next);
+  }
+
+  function readHardwareSeed() {
+    try {
+      var fromLs = String(localStorage.getItem(LICENSE_HW_SEED_KEY) || "").trim();
+      if (fromLs.length >= 16) return fromLs;
+    } catch (e) { }
+    try {
+      var fromJson = JSON.parse(localStorage.getItem("btca101.identityJson") || "null");
+      var fromId = fromJson && String(fromJson.hardware_seed || "").trim();
+      if (fromId.length >= 16) {
+        try {
+          localStorage.setItem(LICENSE_HW_SEED_KEY, fromId);
+        } catch (e2) { }
+        return fromId;
+      }
+    } catch (e) { }
+    return "";
+  }
+
+  function persistHardwareSeed(seed) {
+    var clean = String(seed || "").trim();
+    if (clean.length < 16) return "";
+    try {
+      localStorage.setItem(LICENSE_HW_SEED_KEY, clean);
+    } catch (e) { }
+    return clean;
+  }
+
+  function makeHardwareSeed() {
+    try {
+      if (window.crypto && typeof crypto.getRandomValues === "function") {
+        var bytes = new Uint8Array(32);
+        crypto.getRandomValues(bytes);
+        var hex = "";
+        for (var i = 0; i < bytes.length; i++) {
+          hex += (bytes[i] + 256).toString(16).slice(-2);
+        }
+        return hex;
+      }
+    } catch (e) { }
+    return (
+      String(Date.now()) +
+      "-" +
+      String(Math.random()).slice(2) +
+      "-" +
+      String(Math.random()).slice(2)
+    );
+  }
+
+  function sha256HexUtf8(text) {
+    var input = String(text || "");
+    if (window.crypto && crypto.subtle && typeof crypto.subtle.digest === "function" && window.TextEncoder) {
+      var data = new TextEncoder().encode(input);
+      return crypto.subtle.digest("SHA-256", data).then(function (buf) {
+        var view = new Uint8Array(buf);
+        var out = "";
+        for (var i = 0; i < view.length; i++) {
+          out += (view[i] + 256).toString(16).slice(-2);
+        }
+        return out;
+      });
+    }
+    // Fallback без SubtleCrypto: стабильный, но не SHA-256 (редкие старые WebView).
+    var h1 = 0x811c9dc5;
+    var h2 = 0x01000193;
+    for (var i = 0; i < input.length; i++) {
+      h1 ^= input.charCodeAt(i);
+      h1 = Math.imul(h1, 0x01000193);
+      h2 ^= input.charCodeAt(i);
+      h2 = Math.imul(h2, 0x1000193);
+    }
+    var a = ("00000000" + (h1 >>> 0).toString(16)).slice(-8);
+    var b = ("00000000" + (h2 >>> 0).toString(16)).slice(-8);
+    return Promise.resolve((a + b + a + b + a + b + a + b).slice(0, 64));
+  }
+
+  /** SHA-256("pwa:"+seed) — фиксация «железа» установки PWA для device-session. */
+  function ensureHardwareHashReady() {
+    try {
+      var cached = String(localStorage.getItem(LICENSE_HW_HASH_KEY) || "")
+        .trim()
+        .toLowerCase();
+      if (/^[a-f0-9]{64}$/.test(cached)) return Promise.resolve(cached);
+    } catch (e) { }
+    var seed = readHardwareSeed();
+    if (!seed) seed = persistHardwareSeed(makeHardwareSeed());
+    if (!seed) return Promise.resolve("");
+    return sha256HexUtf8("pwa:" + seed).then(function (hash) {
+      var clean = String(hash || "")
+        .trim()
+        .toLowerCase();
+      if (!/^[a-f0-9]{64}$/.test(clean)) return "";
+      try {
+        localStorage.setItem(LICENSE_HW_HASH_KEY, clean);
+      } catch (e) { }
+      return clean;
+    });
+  }
+
   function putIdentityInCache(cacheName, body) {
     if (!("caches" in window) || !cacheName) return Promise.resolve();
     return caches
@@ -487,11 +612,14 @@
     var deviceId = getLicenseDeviceId();
     var packageDate = readStoredPackageReleaseDate() || readLocalPackageReleaseDate();
     if (packageDate) persistPackageReleaseDate(packageDate);
+    var hardwareSeed = readHardwareSeed();
+    if (!hardwareSeed) hardwareSeed = persistHardwareSeed(makeHardwareSeed());
     var payload = {
       login: clean,
       auth_by_email_otp: Boolean(authOtp),
       device_id: deviceId,
       package_release_date: packageDate || "",
+      hardware_seed: hardwareSeed || "",
       saved_at: Date.now(),
     };
     try {
@@ -614,8 +742,14 @@
       if (data && data.device_id) {
         persistLicenseDeviceId(data.device_id);
       }
+      if (data && data.hardware_seed) {
+        persistHardwareSeed(data.hardware_seed);
+        try {
+          localStorage.removeItem(LICENSE_HW_HASH_KEY);
+        } catch (e) { }
+      }
       if (data && data.package_release_date) {
-        persistPackageReleaseDate(data.package_release_date);
+        adoptInstalledVersionDate(data.package_release_date);
       }
       persistLicenseIdentity(login, Boolean(data && data.auth_by_email_otp));
       return login;
@@ -3420,7 +3554,10 @@
       if (assigned.length >= 6) {
         persistLicenseDeviceId(assigned);
       }
-      if (versionDate && mayPersistInstalledDate) persistPackageReleaseDate(versionDate);
+      if (versionDate && mayPersistInstalledDate) adoptInstalledVersionDate(versionDate);
+      else if (data && data.version_date && mayPersistInstalledDate) {
+        adoptInstalledVersionDate(data.version_date);
+      }
       try {
         var login = String(localStorage.getItem(LICENSE_LOGIN_KEY) || "").trim() || readLoginCookie();
         if (login) {
@@ -4690,7 +4827,6 @@
     if (gate) gate.setAttribute("hidden", "hidden");
     if (!preserveSplash) hideHomeSplashIndicator();
     if (menu) {
-      menu.removeAttribute("hidden");
       menu.className = "platform-menu btca-work-menu";
       menu.setAttribute("aria-label", "Главное меню БТКА");
       menu.innerHTML =
@@ -4700,6 +4836,9 @@
         escapeHtml(LOADING_PAGE_URL + (LOADING_PAGE_URL.indexOf("?") >= 0 ? "&" : "?") + "open=login") +
         '" target="_blank" rel="noopener noreferrer" data-btca-route="account-update">Аккаунт | Обновление</a>' +
         '<p id="btca-home-status-hint" class="btca-work-menu__update-hint btca-work-menu__update-hint--offline" hidden></p>';
+      // Как Android: меню не показываем, пока висит splash / идут проверки.
+      if (preserveSplash) menu.setAttribute("hidden", "hidden");
+      else menu.removeAttribute("hidden");
     }
     syncAccountLinkOnlineState();
     if (preserveSplash && panel && panel.classList.contains("btca-home-splash-panel")) {
@@ -4765,20 +4904,12 @@
     return installedDate;
   }
 
-  /** После splash: дата claim пакета (если локальной ещё нет). */
+  /** После splash: дата claim/устройства — подтянуть, если не старше сохранённой. */
   function syncInstalledVersionDateFromServer(versionDate) {
-    var existing = readStoredPackageReleaseDate();
-    if (existing) {
-      var releaseElExisting = document.querySelector(".eyebrow--release");
-      if (releaseElExisting) applyInstalledReleaseDateToEyebrow(releaseElExisting);
-      return existing;
-    }
-    var clean = String(versionDate || "").trim();
-    if (!/^\d{2}\.\d{2}\.\d{4}$/.test(clean)) return "";
-    persistPackageReleaseDate(clean);
+    var adopted = adoptInstalledVersionDate(versionDate);
     var releaseEl = document.querySelector(".eyebrow--release");
     if (releaseEl) applyInstalledReleaseDateToEyebrow(releaseEl);
-    return clean;
+    return adopted;
   }
 
   /**
@@ -4928,7 +5059,11 @@
   function applyUpdateAvailableHint(remoteDate, localDate) {
     var local = String(localDate || readLocalPackageReleaseDate() || "").trim();
     var remote = String(remoteDate || "").trim();
-    var hasUpdate = Boolean(remote && local && remote !== local);
+    // Как Android/Win: только если remote строго новее local (не !==).
+    var hasUpdate =
+      Boolean(remote) &&
+      Boolean(local) &&
+      parseDateRuValue(remote) > parseDateRuValue(local);
     showHomeOfflineStatusHint(hasUpdate);
     var splashPanel = getEls().panel;
     if (hasUpdate && splashPanel && splashPanel.classList.contains("btca-home-splash-panel")) {
@@ -5016,20 +5151,26 @@
       renderHomeSplashIndicator(18);
     } catch (e) { }
 
-    return licensePost("/v1/auth/device-session", {
-      device_id: getLicenseDeviceId() || "",
-      platform: "pwa",
-      app_version: PACKAGE_APP_VERSION,
-      device_label: "iOS/PWA",
-      version_date: "",
-    })
+    return ensureHardwareHashReady()
+      .catch(function () {
+        return "";
+      })
+      .then(function (hardwareHash) {
+        return licensePost("/v1/auth/device-session", {
+          device_id: getLicenseDeviceId() || "",
+          platform: "pwa",
+          app_version: PACKAGE_APP_VERSION,
+          device_label: "iOS/PWA",
+          version_date: "",
+          hardware_hash: hardwareHash || "",
+        });
+      })
       .then(function (data) {
         try {
           renderHomeSplashIndicator(40);
         } catch (e) { }
-        // Дата на стартовой = дата пакета на устройстве (claim), не глобальный деплой.
-        // Не перетираем локальную дату датой деплоя — иначе пропадёт «Есть обновление».
-        if (data && data.version_date && !readStoredPackageReleaseDate()) {
+        // Дата claim/устройства — подтянуть при свежем пакете (без ложного «Есть обновление»).
+        if (data && data.version_date) {
           syncInstalledVersionDateFromServer(data.version_date);
         }
         // Сначала подписка (если аккаунт уже известен по ID), затем привязка.
@@ -5498,6 +5639,8 @@
   function bootstrapStandaloneShell(mediaReady) {
     // Уже истекшие 12 ч — только экран сессии, без сетевого boot.
     if (enforcePwaSessionLimit()) return Promise.resolve();
+    // Не вспыхивать форму/gate до конца проверок.
+    hideInstalledAuthGate();
     // Холодный старт / после смахивания: splash + device_id / подписка / дата версии.
     renderInstalledHome({ preserveSplash: true });
     // Не открываем форму входа по таймауту — решение примет device-session.
@@ -5505,6 +5648,9 @@
     // Сначала общий device_id (cookie/IDB), иначе Safari и PWA получат разные UUID.
     var deviceWarm = ensureLicenseDeviceIdReady();
     var identityWarm = ensureLicenseIdentityRestored();
+    var hardwareWarm = ensureHardwareHashReady().catch(function () {
+      return "";
+    });
     var chain = Promise.resolve();
     if (!mediaReady) {
       chain = repairStandaloneShell({ deferHome: true });
@@ -5515,6 +5661,9 @@
         return deviceWarm.catch(function () {
           return getLicenseDeviceId();
         });
+      })
+      .then(function () {
+        return hardwareWarm;
       })
       .then(function () {
         return runSplashBootChecks();
