@@ -2,8 +2,8 @@
   "use strict";
 
   var BTCA_BASE = "/btca-10-1/";
-  var INSTALL_CACHE = "btca10-web-10.1.204:static-install";
-  var MEDIA_CACHE = "btca10-web-10.1.204:static-media";
+  var INSTALL_CACHE = "btca10-web-10.1.205:static-install";
+  var MEDIA_CACHE = "btca10-web-10.1.205:static-media";
   var MEDIA_PROBE_RE = /offline-unpacked\/level3\/exercises\/.+\.(jpe?g|png|webp|gif)$/i;
   var MEDIA_STATE_KEY = "btca10-web:static-media-state";
   var APP_READY_KEY = "btca10-web:app-ready";
@@ -54,8 +54,8 @@
     "*Упражнений* – более 150, *Задач* – более 700, *Полезности* – интеллектуальная поисковая система по Базе знаний школы: 14 основополагающих документов, 114 рисунков и видео и более 370 тематических материалов.\n" +
     "\nCopyright © Юрий Алинт (Андрей Юрьев) 2026";
   var installedHomeSnapshot = "";
-  var LEVEL1_MODULE_VERSION = "10.1.165";
-  var LEVEL3_MODULE_VERSION = "10.1.165";
+  var LEVEL1_MODULE_VERSION = "10.1.166";
+  var LEVEL3_MODULE_VERSION = "10.1.166";
 
   var CORE_REL_PATHS = [
     "",
@@ -3453,9 +3453,24 @@
     if (existing) existing.setAttribute("hidden", "hidden");
   }
 
+  function ensureAccountSupportLink(modal) {
+    if (!modal) return;
+    var form = modal.querySelector("form");
+    if (!form) return;
+    if (!form.querySelector("[data-account-support]")) {
+      var p = document.createElement("p");
+      p.className = "account-modal__support";
+      p.innerHTML = '<a href="#" data-account-support>Поддержка</a>';
+      form.appendChild(p);
+    }
+  }
+
   function ensureAccountModalMount() {
     var modal = document.getElementById("btca-account-modal");
-    if (modal) return modal;
+    if (modal) {
+      ensureAccountSupportLink(modal);
+      return modal;
+    }
     modal = document.createElement("div");
     modal.id = "btca-account-modal";
     modal.className = "account-modal";
@@ -3473,11 +3488,18 @@
       '<label class="account-modal__field"><span>Подписка</span><input name="subscription" readonly tabindex="-1"/></label>' +
       '<p class="account-modal__error" data-account-error hidden></p>' +
       '<button class="platform-button account-modal__save" type="submit"><span>Сохранить</span></button>' +
+      '<p class="account-modal__support"><a href="#" data-account-support>Поддержка</a></p>' +
       "</form></div>";
     document.body.appendChild(modal);
     modal.addEventListener("click", function (event) {
       if (event.target === modal || (event.target && event.target.getAttribute("data-account-close") != null)) {
         modal.setAttribute("hidden", "hidden");
+      }
+      var supportLink = event.target && event.target.closest ? event.target.closest("[data-account-support]") : null;
+      if (supportLink) {
+        event.preventDefault();
+        openSupportModal();
+        return;
       }
       var gen = event.target && event.target.closest ? event.target.closest("[data-pw-gen]") : null;
       if (gen) {
@@ -3549,6 +3571,107 @@
       };
     }
     return modal;
+  }
+
+  function ensureSupportModalMount() {
+    var modal = document.getElementById("btca-support-modal");
+    if (modal) return modal;
+    modal = document.createElement("div");
+    modal.id = "btca-support-modal";
+    modal.className = "account-modal support-modal";
+    modal.setAttribute("hidden", "hidden");
+    modal.innerHTML =
+      '<div class="account-modal__card support-modal__card" role="dialog" aria-labelledby="btca-support-title">' +
+      '<button type="button" class="account-modal__close" data-support-close aria-label="Закрыть">×</button>' +
+      '<h2 id="btca-support-title" class="account-modal__title">Поддержка</h2>' +
+      '<form class="account-modal__form support-modal__form" novalidate>' +
+      '<p class="support-modal__to">Кому: <a href="mailto:interual@gmail.com">interual@gmail.com</a></p>' +
+      '<label class="account-modal__field"><span>Ваш e-mail</span><input name="from_email" type="email" autocomplete="email" maxlength="255" placeholder="для ответа"/></label>' +
+      '<label class="account-modal__field"><span>Тема</span><input name="subject" type="text" maxlength="200" placeholder="Кратко о вопросе"/></label>' +
+      '<label class="account-modal__field"><span>Сообщение</span><textarea name="message" rows="6" maxlength="4000" placeholder="Опишите вопрос или проблему"></textarea></label>' +
+      '<p class="account-modal__error" data-support-error hidden></p>' +
+      '<button class="platform-button account-modal__save" type="submit"><span>Отправить</span></button>' +
+      "</form></div>";
+    document.body.appendChild(modal);
+    modal.addEventListener("click", function (event) {
+      if (event.target === modal || (event.target && event.target.getAttribute("data-support-close") != null)) {
+        modal.setAttribute("hidden", "hidden");
+      }
+    });
+    var form = modal.querySelector("form");
+    if (form) {
+      form.onsubmit = function (event) {
+        event.preventDefault();
+        var err = modal.querySelector("[data-support-error]");
+        if (err) {
+          err.setAttribute("hidden", "hidden");
+          err.textContent = "";
+        }
+        var fromInput = form.querySelector('input[name="from_email"]');
+        var subjectInput = form.querySelector('input[name="subject"]');
+        var messageInput = form.querySelector('textarea[name="message"]');
+        var fromEmail = fromInput ? String(fromInput.value || "").trim() : "";
+        var subject = subjectInput ? String(subjectInput.value || "").trim() : "";
+        var message = messageInput ? String(messageInput.value || "").trim() : "";
+        if (!message) {
+          if (err) {
+            err.removeAttribute("hidden");
+            err.textContent = "Введите текст сообщения.";
+          }
+          return false;
+        }
+        var bodyLines = [];
+        if (fromEmail) bodyLines.push("От: " + fromEmail, "");
+        bodyLines.push(message);
+        var mailto =
+          "mailto:interual@gmail.com" +
+          "?subject=" +
+          encodeURIComponent(subject || "Поддержка БТКА 10.1") +
+          "&body=" +
+          encodeURIComponent(bodyLines.join("\n"));
+        try {
+          window.location.href = mailto;
+        } catch (e) {
+          if (err) {
+            err.removeAttribute("hidden");
+            err.textContent = "Не удалось открыть почтовый клиент.";
+          }
+          return false;
+        }
+        modal.setAttribute("hidden", "hidden");
+        return false;
+      };
+    }
+    return modal;
+  }
+
+  function openSupportModal() {
+    var modal = ensureSupportModalMount();
+    var err = modal.querySelector("[data-support-error]");
+    if (err) {
+      err.setAttribute("hidden", "hidden");
+      err.textContent = "";
+    }
+    var form = modal.querySelector("form");
+    if (form) {
+      var fromInput = form.querySelector('input[name="from_email"]');
+      var subjectInput = form.querySelector('input[name="subject"]');
+      var messageInput = form.querySelector('textarea[name="message"]');
+      if (fromInput && !fromInput.value) {
+        try {
+          var accountModal = document.getElementById("btca-account-modal");
+          var accountEmail = accountModal
+            ? accountModal.querySelector('input[name="email"]')
+            : null;
+          if (accountEmail && accountEmail.value) fromInput.value = String(accountEmail.value).trim();
+        } catch (e) { }
+      }
+      if (subjectInput) subjectInput.value = subjectInput.value || "";
+      if (messageInput) messageInput.value = messageInput.value || "";
+    }
+    var accountModal = document.getElementById("btca-account-modal");
+    if (accountModal) accountModal.setAttribute("hidden", "hidden");
+    modal.removeAttribute("hidden");
   }
 
   function openAccountModal() {
@@ -3833,7 +3956,7 @@
           });
         })
         .then(function (result) {
-          saveBlobToDevice(result.blob, result.filename || "BTCA-Windows-10.1-Setup.exe");
+          saveBlobToDevice(result.blob, result.filename || "BTCA-Windows 10.1.exe");
           renderWindowsDownloadProgress(
             100,
             "Готово, дистрибутив скачан на устройство.",
@@ -5398,7 +5521,7 @@
           startPwaSessionWatch();
           if (enforcePwaSessionLimit()) return;
           if (!readAppPreparedState()) markAppPrepared();
-          discardStaleRuntimeModules();
+      discardStaleRuntimeModules();
           renderInstalledHome({ preserveSplash: true });
           return preloadAppModulesForHome().then(function () {
             ensureUpdateAvailableHint();

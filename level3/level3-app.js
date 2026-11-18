@@ -3,7 +3,7 @@
 
   var DB = window.BTCA_LEVEL3_DB;
   var BAZA = window.BTCA_LEVEL3_BAZA;
-  var VERSION = "10.1.165";
+  var VERSION = "10.1.166";
   var BRANDING_UP = "branding/up.png";
   var BRANDING_UP_LIST = "branding/up_list.png";
   var BRANDING_BAZA = "branding/baza.png";
@@ -3844,13 +3844,13 @@
       taskBtn.addEventListener("click", function (event) {
         var anchorEl = event.currentTarget;
         refreshBazaRows().then(function () {
-          var options = [{ value: "all", label: "Все" }].concat(
-            state.bazaRuleTasks.map(function (t) { return { value: String(t), label: String(t) }; })
-          );
+        var options = [{ value: "all", label: "Все" }].concat(
+          state.bazaRuleTasks.map(function (t) { return { value: String(t), label: String(t) }; })
+        );
           openPicker("Задача", options, state.ui.baza.task, function (value) {
-            state.ui.baza.task = value;
-            applyUiPatch({ baza: { task: value } });
-            refreshBazaRowsWithReconcile().then(function () { renderBazaTab(content); });
+          state.ui.baza.task = value;
+          applyUiPatch({ baza: { task: value } });
+          refreshBazaRowsWithReconcile().then(function () { renderBazaTab(content); });
           }, anchorEl);
         });
       });
@@ -4923,10 +4923,10 @@
 
   function fetchJsonCached(url) {
     function fromNetwork() {
-      return fetch(url).then(function (response) {
+        return fetch(url).then(function (response) {
         if (!response || !response.ok) throw new Error("Не удалось загрузить " + url);
-        return response.json();
-      });
+          return response.json();
+        });
     }
     function matchByPathname() {
       if (!("caches" in window)) return Promise.resolve(null);
