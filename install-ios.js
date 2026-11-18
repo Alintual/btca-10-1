@@ -2,8 +2,8 @@
   "use strict";
 
   var BTCA_BASE = "/btca-10-1/";
-  var INSTALL_CACHE = "btca10-web-10.1.205:static-install";
-  var MEDIA_CACHE = "btca10-web-10.1.205:static-media";
+  var INSTALL_CACHE = "btca10-web-10.1.206:static-install";
+  var MEDIA_CACHE = "btca10-web-10.1.206:static-media";
   var MEDIA_PROBE_RE = /offline-unpacked\/level3\/exercises\/.+\.(jpe?g|png|webp|gif)$/i;
   var MEDIA_STATE_KEY = "btca10-web:static-media-state";
   var APP_READY_KEY = "btca10-web:app-ready";
@@ -54,8 +54,8 @@
     "*Упражнений* – более 150, *Задач* – более 700, *Полезности* – интеллектуальная поисковая система по Базе знаний школы: 14 основополагающих документов, 114 рисунков и видео и более 370 тематических материалов.\n" +
     "\nCopyright © Юрий Алинт (Андрей Юрьев) 2026";
   var installedHomeSnapshot = "";
-  var LEVEL1_MODULE_VERSION = "10.1.166";
-  var LEVEL3_MODULE_VERSION = "10.1.166";
+  var LEVEL1_MODULE_VERSION = "10.1.167";
+  var LEVEL3_MODULE_VERSION = "10.1.167";
 
   var CORE_REL_PATHS = [
     "",
@@ -3585,11 +3585,12 @@
       '<button type="button" class="account-modal__close" data-support-close aria-label="Закрыть">×</button>' +
       '<h2 id="btca-support-title" class="account-modal__title">Поддержка</h2>' +
       '<form class="account-modal__form support-modal__form" novalidate>' +
-      '<p class="support-modal__to">Кому: <a href="mailto:interual@gmail.com">interual@gmail.com</a></p>' +
+      '<p class="support-modal__to">Кому: interual@gmail.com</p>' +
       '<label class="account-modal__field"><span>Ваш e-mail</span><input name="from_email" type="email" autocomplete="email" maxlength="255" placeholder="для ответа"/></label>' +
       '<label class="account-modal__field"><span>Тема</span><input name="subject" type="text" maxlength="200" placeholder="Кратко о вопросе"/></label>' +
       '<label class="account-modal__field"><span>Сообщение</span><textarea name="message" rows="6" maxlength="4000" placeholder="Опишите вопрос или проблему"></textarea></label>' +
       '<p class="account-modal__error" data-support-error hidden></p>' +
+      '<p class="support-modal__sent" data-support-sent hidden>Ваше письмо отправлено.</p>' +
       '<button class="platform-button account-modal__save" type="submit"><span>Отправить</span></button>' +
       "</form></div>";
     document.body.appendChild(modal);
@@ -3603,10 +3604,13 @@
       form.onsubmit = function (event) {
         event.preventDefault();
         var err = modal.querySelector("[data-support-error]");
+        var sent = modal.querySelector("[data-support-sent]");
+        var submitBtn = form.querySelector('button[type="submit"]');
         if (err) {
           err.setAttribute("hidden", "hidden");
           err.textContent = "";
         }
+        if (sent) sent.setAttribute("hidden", "hidden");
         var fromInput = form.querySelector('input[name="from_email"]');
         var subjectInput = form.querySelector('input[name="subject"]');
         var messageInput = form.querySelector('textarea[name="message"]');
@@ -3620,25 +3624,31 @@
           }
           return false;
         }
-        var bodyLines = [];
-        if (fromEmail) bodyLines.push("От: " + fromEmail, "");
-        bodyLines.push(message);
-        var mailto =
-          "mailto:interual@gmail.com" +
-          "?subject=" +
-          encodeURIComponent(subject || "Поддержка БТКА 10.1") +
-          "&body=" +
-          encodeURIComponent(bodyLines.join("\n"));
+        var login = "";
         try {
-          window.location.href = mailto;
-        } catch (e) {
-          if (err) {
-            err.removeAttribute("hidden");
-            err.textContent = "Не удалось открыть почтовый клиент.";
-          }
-          return false;
-        }
-        modal.setAttribute("hidden", "hidden");
+          login = String(localStorage.getItem(LICENSE_LOGIN_KEY) || "").trim();
+        } catch (e) { }
+        if (submitBtn) submitBtn.disabled = true;
+        licensePost("/v1/support/contact", {
+          from_email: fromEmail,
+          subject: subject || "Поддержка БТКА 10.1",
+          message: message,
+          login: login,
+        })
+          .then(function () {
+            if (sent) sent.removeAttribute("hidden");
+            if (messageInput) messageInput.value = "";
+            if (subjectInput) subjectInput.value = "";
+          })
+          .catch(function (error) {
+            if (err) {
+              err.removeAttribute("hidden");
+              err.textContent = localizeUserFacingError(error, "Не удалось отправить письмо.");
+            }
+          })
+          .then(function () {
+            if (submitBtn) submitBtn.disabled = false;
+          });
         return false;
       };
     }
@@ -3648,10 +3658,12 @@
   function openSupportModal() {
     var modal = ensureSupportModalMount();
     var err = modal.querySelector("[data-support-error]");
+    var sent = modal.querySelector("[data-support-sent]");
     if (err) {
       err.setAttribute("hidden", "hidden");
       err.textContent = "";
     }
+    if (sent) sent.setAttribute("hidden", "hidden");
     var form = modal.querySelector("form");
     if (form) {
       var fromInput = form.querySelector('input[name="from_email"]');

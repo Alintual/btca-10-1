@@ -1067,6 +1067,18 @@ body.btca-installed-mode #btca-static-ios-panel.btca-home-splash-panel {
   width: 100%;
 }
 
+.support-modal__sent {
+  margin: 0;
+  color: #ffe08a;
+  font-size: 0.95rem;
+  text-align: center;
+  font-weight: 600;
+}
+
+.support-modal__sent[hidden] {
+  display: none !important;
+}
+
 .platform-menu[hidden],
 .ios-panel[hidden] {
   display: none !important;
