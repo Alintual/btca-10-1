@@ -150,42 +150,24 @@ body.btca-apple-comfort:not(.btca-installed-mode) {
   object-fit: contain;
 }
 
-.home__logo-pyramid span {
+/* Пирамида из pir.png — footprint как у 6 кругов (50×46). */
+.home__logo-pyramid {
   position: absolute;
-  width: 16px;
-  height: 16px;
-  border-radius: 999px;
-  background: #ffffff;
-}
-
-.home__logo-pyramid span:nth-child(1) {
   left: calc(50% - 25px);
   top: 182px;
+  width: 50px;
+  height: 46px;
+  pointer-events: none;
+  overflow: visible;
 }
 
-.home__logo-pyramid span:nth-child(2) {
-  left: calc(50% - 8px);
-  top: 182px;
-}
-
-.home__logo-pyramid span:nth-child(3) {
-  left: calc(50% + 9px);
-  top: 182px;
-}
-
-.home__logo-pyramid span:nth-child(4) {
-  left: calc(50% - 16.5px);
-  top: 197px;
-}
-
-.home__logo-pyramid span:nth-child(5) {
-  left: calc(50% + 0.5px);
-  top: 197px;
-}
-
-.home__logo-pyramid span:nth-child(6) {
-  left: calc(50% - 8px);
-  top: 212px;
+.home__logo-pyramid img,
+.home__logo-pyramid-img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  mix-blend-mode: screen;
 }
 
 .home__tagline-outer {
@@ -276,40 +258,11 @@ body:not(.btca-installed-mode) .home__tagline-slot .home__phrase2-line2 {
   margin: 0 auto calc(14rem / 17);
 }
 
-.btca-installed-mode .home__logo-pyramid span {
-  width: calc(16rem / 17);
-  height: calc(16rem / 17);
-}
-
-/* Как в 8.1 относительно фраз: при logo 106.92 (было 132) сдвиг −25 к tops 182/197/212. */
-.btca-installed-mode .home__logo-pyramid span:nth-child(1) {
+.btca-installed-mode .home__logo-pyramid {
   left: calc(50% - 25rem / 17);
   top: calc(157rem / 17);
-}
-
-.btca-installed-mode .home__logo-pyramid span:nth-child(2) {
-  left: calc(50% - 8rem / 17);
-  top: calc(157rem / 17);
-}
-
-.btca-installed-mode .home__logo-pyramid span:nth-child(3) {
-  left: calc(50% + 9rem / 17);
-  top: calc(157rem / 17);
-}
-
-.btca-installed-mode .home__logo-pyramid span:nth-child(4) {
-  left: calc(50% - 16.5rem / 17);
-  top: calc(172rem / 17);
-}
-
-.btca-installed-mode .home__logo-pyramid span:nth-child(5) {
-  left: calc(50% + 0.5rem / 17);
-  top: calc(172rem / 17);
-}
-
-.btca-installed-mode .home__logo-pyramid span:nth-child(6) {
-  left: calc(50% - 8rem / 17);
-  top: calc(187rem / 17);
+  width: calc(50rem / 17);
+  height: calc(46rem / 17);
 }
 
 .btca-installed-mode .home__tagline-outer {
