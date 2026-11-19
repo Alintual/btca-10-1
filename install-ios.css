@@ -732,6 +732,34 @@ body:not(.btca-apple-comfort) .platform-button.account-modal__save {
   font-weight: 600;
 }
 
+/* Блок «Устройство не авторизовано» (standalone) — как Win license-gate. */
+.auth-gate__card--device-blocked {
+  width: min(420px, 100%);
+  margin: 20vh auto 0;
+  padding: 22px 20px;
+  border-radius: 14px;
+  border: 1px solid rgba(255, 224, 138, 0.35);
+  background: #1a4854;
+  text-align: center;
+  box-sizing: border-box;
+}
+
+.auth-gate__title--device-blocked {
+  margin: 0 0 12px;
+  color: #ffe08a;
+  font-size: 1.05rem;
+  font-weight: 500;
+  text-decoration: none;
+}
+
+.auth-gate__hint--device-blocked {
+  margin: 0;
+  color: #ff4d4d;
+  font-size: 1rem;
+  font-weight: 400;
+  line-height: 1.5;
+}
+
 /* Универсальный экран «Сессия завершена» (PWA standalone, 12 ч). */
 .btca-session-expired__title,
 .btca-session-expired .auth-gate__title {

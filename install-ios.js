@@ -2,8 +2,8 @@
   "use strict";
 
   var BTCA_BASE = "/btca-10-1/";
-  var INSTALL_CACHE = "btca10-web-10.1.209:static-install";
-  var MEDIA_CACHE = "btca10-web-10.1.209:static-media";
+  var INSTALL_CACHE = "btca10-web-10.1.210:static-install";
+  var MEDIA_CACHE = "btca10-web-10.1.210:static-media";
   var MEDIA_PROBE_RE = /offline-unpacked\/level3\/exercises\/.+\.(jpe?g|png|webp|gif)$/i;
   var MEDIA_STATE_KEY = "btca10-web:static-media-state";
   var APP_READY_KEY = "btca10-web:app-ready";
@@ -54,8 +54,8 @@
     "*Упражнений* – более 150, *Задач* – более 700, *Полезности* – интеллектуальная поисковая система по Базе знаний школы: 14 основополагающих документов, 114 рисунков и видео и более 370 тематических материалов.\n" +
     "\nCopyright © Юрий Алинт (Андрей Юрьев) 2026";
   var installedHomeSnapshot = "";
-  var LEVEL1_MODULE_VERSION = "10.1.170";
-  var LEVEL3_MODULE_VERSION = "10.1.170";
+  var LEVEL1_MODULE_VERSION = "10.1.171";
+  var LEVEL3_MODULE_VERSION = "10.1.171";
 
   var CORE_REL_PATHS = [
     "",
@@ -4207,8 +4207,7 @@
 
   var SUBSCRIPTION_INACTIVE_MSG =
     "Подписка не активна, обратитесь в Службу поддержки";
-  var DEVICE_NOT_BOUND_MSG =
-    "Запуск Приложения не возможен. Устройство не авторизовано!";
+  var DEVICE_NOT_BOUND_MSG = "Запуск приложения на этом устройстве не возможен!";
   var DEVICE_LIMIT_MSG =
     "Превышен лимит устройств. На платформу — не более 2, всего — по лимиту в админке.";
   var MSG_WRONG_LOGIN_PASSWORD = "Не правильный Логин или Пароль.";
@@ -5116,17 +5115,20 @@
     gate.oninput = null;
     gate.onchange = null;
     gate.onclick = null;
-    var text = message || DEVICE_NOT_BOUND_MSG;
-    var title = /подписка не активна/i.test(text)
-      ? "Подписка не активна"
-      : "Устройство не авторизовано";
+    var raw = String(message || DEVICE_NOT_BOUND_MSG);
+    var inactive = /подписка не активна/i.test(raw);
+    var title = inactive ? "Подписка не активна" : "Устройство не авторизовано";
+    var body = inactive ? raw : DEVICE_NOT_BOUND_MSG;
+    // Как Win: без кнопки «Повторить», заголовок легче, текст красным.
     gate.innerHTML =
-      '<p class="auth-gate__title">' +
+      '<div class="auth-gate__card auth-gate__card--device-blocked" role="alertdialog">' +
+      '<p class="auth-gate__title auth-gate__title--device-blocked">' +
       escapeHtml(title) +
       "</p>" +
-      '<p class="auth-gate__hint auth-gate__hint--danger">' +
-      escapeHtml(text) +
-      "</p>";
+      '<p class="auth-gate__hint auth-gate__hint--danger auth-gate__hint--device-blocked">' +
+      escapeHtml(body) +
+      "</p>" +
+      "</div>";
   }
 
   /**
