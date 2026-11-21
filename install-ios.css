@@ -1098,16 +1098,14 @@ body.btca-installed-mode #btca-static-ios-panel.btca-home-splash-panel {
 
 .platform-button {
   display: grid;
-  /* 72% × 1.2 ≈ 86.4%; max 320×1.2 = 384 */
-  width: 86.4%;
-  max-width: 384px;
-  min-height: 52px;
+  width: 95%;
+  min-height: 64px;
   margin: 0 auto;
-  padding: 8px 14px;
+  padding: 10px 16px;
   border: 2px solid #d31472;
-  border-radius: 14px;
+  border-radius: 16px;
   align-content: center;
-  gap: 3px;
+  gap: 4px;
   color: #ffffff;
   background: rgba(12, 36, 45, 0.58);
   text-align: center;
@@ -1119,10 +1117,19 @@ body.btca-installed-mode #btca-static-ios-panel.btca-home-splash-panel {
     transform 120ms ease;
 }
 
-/* После .platform-button — иначе width перекрывает половину. */
+/* Только кнопки загрузки в блоках Mobile/Desktop (не меню стартовой PWA). */
+.platform-group .platform-button {
+  width: 86.4%;
+  max-width: 384px;
+  min-height: 52px;
+  padding: 8px 14px;
+  border-radius: 14px;
+  gap: 3px;
+}
+
+/* После .platform-button — иначе width: 95% перекрывает половину. */
 .platform-button.platform-button--account {
-  width: calc(86.4% / 2);
-  max-width: 192px;
+  width: calc(95% / 2);
   min-height: 44px;
   padding-top: 8px;
   padding-bottom: 8px;
