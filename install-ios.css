@@ -786,8 +786,35 @@ body:not(.btca-apple-comfort) .platform-button.account-modal__save {
 
 .platform-menu {
   display: grid;
-  gap: 14px;
+  gap: 16px;
   margin-top: 18px;
+}
+
+/* Блоки Mobile / Desktop — как окна auth-gate / ios-panel на загрузочной. */
+.platform-group {
+  display: grid;
+  gap: 10px;
+  margin: 0;
+  padding: 10px 12px 14px;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 16px;
+  background: rgba(12, 36, 45, 0.45);
+}
+
+.platform-group__header {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  margin: 0 2px 2px;
+  color: #c8e2e6;
+  font-size: 0.95rem;
+  font-weight: 600;
+  line-height: 1.2;
+  letter-spacing: 0.02em;
+}
+
+.platform-group__header > span {
+  color: #c8e2e6;
 }
 
 .platform-menu__links-hint {
@@ -1071,14 +1098,15 @@ body.btca-installed-mode #btca-static-ios-panel.btca-home-splash-panel {
 
 .platform-button {
   display: grid;
-  width: 95%;
-  min-height: 64px;
+  width: 72%;
+  max-width: 320px;
+  min-height: 52px;
   margin: 0 auto;
-  padding: 10px 16px;
+  padding: 8px 14px;
   border: 2px solid #d31472;
-  border-radius: 16px;
+  border-radius: 14px;
   align-content: center;
-  gap: 4px;
+  gap: 3px;
   color: #ffffff;
   background: rgba(12, 36, 45, 0.58);
   text-align: center;
@@ -1090,9 +1118,10 @@ body.btca-installed-mode #btca-static-ios-panel.btca-home-splash-panel {
     transform 120ms ease;
 }
 
-/* После .platform-button — иначе width: 95% перекрывает половину. */
+/* После .platform-button — иначе width перекрывает половину. */
 .platform-button.platform-button--account {
-  width: calc(95% / 2);
+  width: calc(72% / 2);
+  max-width: 160px;
   min-height: 44px;
   padding-top: 8px;
   padding-bottom: 8px;
