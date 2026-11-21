@@ -1098,8 +1098,9 @@ body.btca-installed-mode #btca-static-ios-panel.btca-home-splash-panel {
 
 .platform-button {
   display: grid;
-  width: 72%;
-  max-width: 320px;
+  /* 72% × 1.2 ≈ 86.4%; max 320×1.2 = 384 */
+  width: 86.4%;
+  max-width: 384px;
   min-height: 52px;
   margin: 0 auto;
   padding: 8px 14px;
@@ -1120,8 +1121,8 @@ body.btca-installed-mode #btca-static-ios-panel.btca-home-splash-panel {
 
 /* После .platform-button — иначе width перекрывает половину. */
 .platform-button.platform-button--account {
-  width: calc(72% / 2);
-  max-width: 160px;
+  width: calc(86.4% / 2);
+  max-width: 192px;
   min-height: 44px;
   padding-top: 8px;
   padding-bottom: 8px;
