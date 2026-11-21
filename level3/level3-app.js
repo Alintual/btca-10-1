@@ -3,7 +3,7 @@
 
   var DB = window.BTCA_LEVEL3_DB;
   var BAZA = window.BTCA_LEVEL3_BAZA;
-  var VERSION = "10.1.171";
+  var VERSION = "10.1.172";
   var BRANDING_UP = "branding/up.png";
   var BRANDING_UP_LIST = "branding/up_list.png";
   var BRANDING_BAZA = "branding/baza.png";
@@ -1954,6 +1954,16 @@
     if (polezSourceHasInlineVideo(item) && !isPolezSheetFigureItem(item)) return true;
     if (String(item.sectionId || "") !== "1") return true;
     return !isPolezSheetFigureItem(item);
+  }
+
+  /** Как Win `polezSheetHasFigureImage`: на главном окне листа есть картинка пособия. */
+  function polezSheetHasFigureImage() {
+    var catalogKey = state.ui.polez.catalogKey;
+    if (catalogKey === POLEZ_ALL) return false;
+    var item = polezNavItemByKey(catalogKey);
+    if (!item || !isPolezSheetFigureItem(item) || polezOpensDescImmediately(item)) return false;
+    var row = polezFigRow(item.figKey);
+    return !!(row && row.file);
   }
 
   /**
@@ -4468,9 +4478,11 @@
     function closeOverlay() {
       document.body.classList.remove("btca-screen-mode");
       overlay.remove();
-      // Вернуться к фильтрованному Каталогу с последним запросом
+      // Как Win: без картинки на главном окне — снова открыть Каталог с выбранным пунктом.
+      // (С поисковым запросом — тоже, чтобы вернуть фильтрованный список.)
       var q = typeof state.ui.polez.searchQuery === "string" ? state.ui.polez.searchQuery : "";
-      if (String(q).trim()) {
+      var shouldReopen = String(q).trim() || !polezSheetHasFigureImage();
+      if (shouldReopen) {
         var contentRestore = state.root && state.root.querySelector("[data-btca-level3-content]");
         if (contentRestore && state.ui.tab === "polez") {
           window.setTimeout(function () {
