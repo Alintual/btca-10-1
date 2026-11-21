@@ -2,8 +2,8 @@
   "use strict";
 
   var BTCA_BASE = "/btca-10-1/";
-  var INSTALL_CACHE = "btca10-web-10.1.212:static-install";
-  var MEDIA_CACHE = "btca10-web-10.1.212:static-media";
+  var INSTALL_CACHE = "btca10-web-10.1.213:static-install";
+  var MEDIA_CACHE = "btca10-web-10.1.213:static-media";
   var MEDIA_PROBE_RE = /offline-unpacked\/level3\/exercises\/.+\.(jpe?g|png|webp|gif)$/i;
   var MEDIA_STATE_KEY = "btca10-web:static-media-state";
   var APP_READY_KEY = "btca10-web:app-ready";
@@ -54,8 +54,8 @@
     "*Упражнений* – более 150, *Задач* – более 700, *Полезности* – интеллектуальная поисковая система по Базе знаний школы: 14 основополагающих документов, 114 рисунков и видео и более 370 тематических материалов.\n" +
     "\nCopyright © Юрий Алинт (Андрей Юрьев) 2026";
   var installedHomeSnapshot = "";
-  var LEVEL1_MODULE_VERSION = "10.1.173";
-  var LEVEL3_MODULE_VERSION = "10.1.173";
+  var LEVEL1_MODULE_VERSION = "10.1.174";
+  var LEVEL3_MODULE_VERSION = "10.1.174";
 
   var CORE_REL_PATHS = [
     "",
@@ -5201,20 +5201,15 @@
       renderHomeSplashIndicator(18);
     } catch (e) { }
 
-    return ensureHardwareHashReady()
-      .catch(function () {
-        return "";
-      })
-      .then(function (hardwareHash) {
-        return licensePost("/v1/auth/device-session", {
-          device_id: getLicenseDeviceId() || "",
-          platform: "pwa",
-          app_version: PACKAGE_APP_VERSION,
-          device_label: "iOS/PWA",
-          version_date: "",
-          hardware_hash: hardwareHash || "",
-        });
-      })
+    // PWA: привязка только по device_id (на iOS нет стабильного железа).
+    return licensePost("/v1/auth/device-session", {
+      device_id: getLicenseDeviceId() || "",
+      platform: "pwa",
+      app_version: PACKAGE_APP_VERSION,
+      device_label: "iOS/PWA",
+      version_date: "",
+      hardware_hash: "",
+    })
       .then(function (data) {
         try {
           renderHomeSplashIndicator(40);
@@ -5695,8 +5690,7 @@
     renderInstalledHome({ preserveSplash: true });
     // Не открываем форму входа по таймауту — решение примет device-session.
     pendingInstalledLoginReveal = false;
-    // Порядок важен: device_id → identity/seed → hash.
-    // Параллельный hash до восстановления seed давал новый SHA и «Устройство не авторизовано».
+    // device_id (cookie/IDB) + identity; hardware_hash для PWA не используем.
     var chain = Promise.resolve();
     if (!mediaReady) {
       chain = repairStandaloneShell({ deferHome: true });
@@ -5710,16 +5704,6 @@
       })
       .then(function () {
         return ensureLicenseIdentityRestored().catch(function () {
-          return "";
-        });
-      })
-      .then(function () {
-        return ensureHardwareSeedReady().catch(function () {
-          return "";
-        });
-      })
-      .then(function () {
-        return ensureHardwareHashReady().catch(function () {
           return "";
         });
       })
