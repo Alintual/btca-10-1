@@ -2,8 +2,8 @@
   "use strict";
 
   var BTCA_BASE = "/btca-10-1/";
-  var INSTALL_CACHE = "btca10-web-10.1.213:static-install";
-  var MEDIA_CACHE = "btca10-web-10.1.213:static-media";
+  var INSTALL_CACHE = "btca10-web-10.1.214:static-install";
+  var MEDIA_CACHE = "btca10-web-10.1.214:static-media";
   var MEDIA_PROBE_RE = /offline-unpacked\/level3\/exercises\/.+\.(jpe?g|png|webp|gif)$/i;
   var MEDIA_STATE_KEY = "btca10-web:static-media-state";
   var APP_READY_KEY = "btca10-web:app-ready";
@@ -30,7 +30,7 @@
     "Тренировочный комплекс БТКА в сочетании с уникальной Методологией обучения составляют общую Систему тренировок БТКА школы русского бильярда «Абриколь» г. Красноярск.\n" +
     "<a href=\"https://cloud.mail.ru/public/sujN/mpE8mr6aW\">Методика обучения</a> (pdf).\n" +
     "\n*****\n" +
-    "В состав проекта входят два Приложения — BTCA-Android 10.1 (дистрибутив .apk) и BTCA-iOS 10.1 (пакет оффлайн PWA).\n" +
+    "В состав проекта входят приложения: BTCA-Android 10.1 и BTCA-iOS 10.1 (Mobile), BTCA-Windows 10.1 и BTCA-Android TV 10.1 (Desktop).\n" +
     "Приложения устанавливаются через web-страницу <a href=\"https://clc.li/btca-10-1\">Загрузчик БТКА 10.1</a> при условии регистрации персонального аккаунта и активации подписки.\n" +
     "Для регистрации аккаунта требуется:\n" +
     "1. Логин.\n" +
@@ -54,8 +54,8 @@
     "*Упражнений* – более 150, *Задач* – более 700, *Полезности* – интеллектуальная поисковая система по Базе знаний школы: 14 основополагающих документов, 114 рисунков и видео и более 370 тематических материалов.\n" +
     "\nCopyright © Юрий Алинт (Андрей Юрьев) 2026";
   var installedHomeSnapshot = "";
-  var LEVEL1_MODULE_VERSION = "10.1.174";
-  var LEVEL3_MODULE_VERSION = "10.1.174";
+  var LEVEL1_MODULE_VERSION = "10.1.175";
+  var LEVEL3_MODULE_VERSION = "10.1.175";
 
   var CORE_REL_PATHS = [
     "",
@@ -3434,7 +3434,7 @@
     if (paragraphs.length) {
       paragraphs[paragraphs.length - 1].textContent = locked
         ? "Войдите или зарегистрируйтесь. После проверки данных станут доступны варианты загрузки."
-        : "Для Android и Windows будет скачан дистрибутив. Для iPhone и iPad приложение подготовит данные на устройстве, чтобы дальше работать без сети.";
+        : "Mobile: iOS (offline-пакет) и Android (APK). Desktop: Windows (EXE) и Android TV (APK для Smart TV).";
     }
   }
 
@@ -3585,7 +3585,8 @@
       platformKey === "ios" ||
       !readStoredPackageReleaseDate();
     // Windows: первая сборка персонального EXE может занять дольше обычного API-таймаута 20с.
-    var claimTimeoutMs = platformKey === "windows" ? 180000 : 20000;
+    var claimTimeoutMs =
+      platformKey === "windows" ? 180000 : platformKey === "smart" ? 120000 : 20000;
     return licensePost(
       "/v1/downloads/claim",
       {
@@ -3949,7 +3950,7 @@
 
   function wirePlatformMenuWithDownloadLinks(links) {
     links = links || readStoredDownloadLinks();
-    var hasAny = Boolean(links.pwa || links.android || links.windows);
+    var hasAny = Boolean(links.pwa || links.android || links.windows || links.smart);
     if (!hasAny) {
       ensurePlatformDownloadHint(false);
       return;
@@ -3962,6 +3963,7 @@
 
     var android = menu.querySelector(".platform-button--android");
     var windows = menu.querySelector(".platform-button--windows");
+    var smart = menu.querySelector(".platform-button--smart");
 
     function androidInstallGuidanceHtml() {
       return (
@@ -3974,6 +3976,13 @@
       return (
         '<p class="hint">Запустите скачанный файл BTCA-Windows-10.1-Setup.exe и установите приложение по шагам мастера (папка, ярлык).</p>' +
         '<p class="prepare-status prepare-status--warning">ВНИМАНИЕ. Если на ПК уже установлена предыдущая версия 10.1, перед установкой новой закройте старое приложение.</p>'
+      );
+    }
+
+    function smartInstallGuidanceHtml() {
+      return (
+        '<p class="hint">Скопируйте APK на USB-накопитель и установите на Android TV / Smart TV через «Проводник» (или ADB). Приложение: BTCA-Android TV 10.1.</p>' +
+        '<p class="prepare-status prepare-status--warning">ВНИМАНИЕ. Если на приставке уже установлена предыдущая версия, перед установкой удалите её.</p>'
       );
     }
 
@@ -3994,6 +4003,16 @@
         '<div class="progress" aria-label="Прогресс загрузки EXE"><div class="progress__bar" style="width:' + pct + '%"></div></div>' +
         '<p class="prepare-status prepare-status--running">' + escapeHtml(message) + "</p>" +
         (done ? windowsInstallGuidanceHtml() : "")
+      );
+    }
+
+    function renderSmartDownloadProgress(percent, message, done) {
+      var pct = Math.max(0, Math.min(100, Math.round(percent)));
+      setPanel(
+        '<div class="ios-panel__header"><span>Android TV</span><span>' + pct + "%</span></div>" +
+        '<div class="progress" aria-label="Прогресс загрузки Smart APK"><div class="progress__bar" style="width:' + pct + '%"></div></div>' +
+        '<p class="prepare-status prepare-status--running">' + escapeHtml(message) + "</p>" +
+        (done ? smartInstallGuidanceHtml() : "")
       );
     }
 
@@ -4074,6 +4093,10 @@
 
     function downloadExeWithRealProgress(url, onProgress) {
       return downloadBinaryWithRealProgress(url, "BTCA-Windows-10.1-Setup.exe", "EXE", onProgress);
+    }
+
+    function downloadSmartApkWithRealProgress(url, onProgress) {
+      return downloadBinaryWithRealProgress(url, "BTCA-Android TV 10.1.apk", "APK", onProgress);
     }
 
     function startAndroidApkDownload(btn, href) {
@@ -4175,6 +4198,55 @@
         });
     }
 
+    function startSmartApkDownload(btn, href) {
+      var small = btn.querySelector("small");
+      btn.disabled = true;
+      if (small) small.textContent = "Подготовка скачивания...";
+      renderSmartDownloadProgress(0, "Подготовка персонального APK для Android TV…", false);
+
+      claimPlatformDownload("smart", "Android TV")
+        .then(function (data) {
+          var url = String((data && data.download_url) || href || "").trim();
+          if (!url) {
+            throw new Error("Сервер не выдал ссылку на Smart APK. Обновите страницу и повторите.");
+          }
+          if (data && data.download_url) {
+            try {
+              var stored = readStoredDownloadLinks() || {};
+              stored.smart = url;
+              sessionStorage.setItem(LICENSE_DOWNLOAD_LINKS_KEY, JSON.stringify(stored));
+            } catch (e) { }
+          }
+          if (small) small.textContent = "Скачивание....";
+          renderSmartDownloadProgress(0, "Идёт загрузка APK на Ваше устройство…", false);
+          return downloadSmartApkWithRealProgress(url, function (pct) {
+            renderSmartDownloadProgress(pct, "Идёт загрузка APK на Ваше устройство…", false);
+            if (small) small.textContent = "Скачивание....";
+          });
+        })
+        .then(function (result) {
+          saveBlobToDevice(result.blob, result.filename || "BTCA-Android TV 10.1.apk");
+          renderSmartDownloadProgress(
+            100,
+            "Готово, дистрибутив скачан. Установите на приставку с USB.",
+            true
+          );
+          if (small) small.textContent = "Скачано";
+          btn.disabled = false;
+        })
+        .catch(function (error) {
+          btn.disabled = false;
+          if (small) small.textContent = "Скачать дистрибутив APK";
+          showDownloadLimitWarning(
+            localizeUserFacingError(error, "Не удалось скачать Smart APK. Повторите попытку.")
+          );
+          renderInfo(
+            "Android TV",
+            localizeUserFacingError(error, "Не удалось скачать Smart APK. Повторите попытку.")
+          );
+        });
+    }
+
     function bindClaimThenOpen(el, platform, href, label) {
       if (!el || !href) return;
       var btn = replaceWithPlatformButton(el);
@@ -4206,6 +4278,11 @@
           startWindowsExeDownload(btn, href);
           return;
         }
+        if (platform === "smart") {
+          // Скачивание с ПК для установки на приставку по USB — без ограничения по UA.
+          startSmartApkDownload(btn, href);
+          return;
+        }
         btn.disabled = true;
         claimPlatformDownload(platform, platform.toUpperCase())
           .then(function () {
@@ -4225,6 +4302,9 @@
     }
     if (windows && links.windows) {
       bindClaimThenOpen(windows, "windows", links.windows, "Скачать дистрибутив EXE");
+    }
+    if (smart && links.smart) {
+      bindClaimThenOpen(smart, "smart", links.smart, "Скачать дистрибутив APK");
     }
 
     // iOS: слот устройства при нажатии, без авто-claim при показе меню.
