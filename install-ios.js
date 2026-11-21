@@ -2,8 +2,8 @@
   "use strict";
 
   var BTCA_BASE = "/btca-10-1/";
-  var INSTALL_CACHE = "btca10-web-10.1.211:static-install";
-  var MEDIA_CACHE = "btca10-web-10.1.211:static-media";
+  var INSTALL_CACHE = "btca10-web-10.1.212:static-install";
+  var MEDIA_CACHE = "btca10-web-10.1.212:static-media";
   var MEDIA_PROBE_RE = /offline-unpacked\/level3\/exercises\/.+\.(jpe?g|png|webp|gif)$/i;
   var MEDIA_STATE_KEY = "btca10-web:static-media-state";
   var APP_READY_KEY = "btca10-web:app-ready";
@@ -54,8 +54,8 @@
     "*Упражнений* – более 150, *Задач* – более 700, *Полезности* – интеллектуальная поисковая система по Базе знаний школы: 14 основополагающих документов, 114 рисунков и видео и более 370 тематических материалов.\n" +
     "\nCopyright © Юрий Алинт (Андрей Юрьев) 2026";
   var installedHomeSnapshot = "";
-  var LEVEL1_MODULE_VERSION = "10.1.172";
-  var LEVEL3_MODULE_VERSION = "10.1.172";
+  var LEVEL1_MODULE_VERSION = "10.1.173";
+  var LEVEL3_MODULE_VERSION = "10.1.173";
 
   var CORE_REL_PATHS = [
     "",
@@ -230,8 +230,9 @@
   var LICENSE_BROWSER_COOKIE = "btca101_browser";
   var LICENSE_PACKAGE_DATE_KEY = "btca101.packageReleaseDate";
   var LICENSE_PACKAGE_DATE_COOKIE = "btca101_pkg_date";
-  /** Стабильный seed железа PWA (localStorage + identity); hash = SHA-256("pwa:"+seed). */
+  /** Стабильный seed железа PWA (cookie + localStorage + identity); hash = SHA-256("pwa:"+seed). */
   var LICENSE_HW_SEED_KEY = "btca101.hardwareSeed";
+  var LICENSE_HW_SEED_COOKIE = "btca101_hw_seed";
   var LICENSE_HW_HASH_KEY = "btca101.hardwareHash";
   /** Непрерывная сессия PWA без смахивания (sessionStorage сбрасывается при kill/swipe). */
   var PWA_SESSION_STARTED_KEY = "btca101.pwaSessionStartedAt";
@@ -497,15 +498,26 @@
   function readHardwareSeed() {
     try {
       var fromLs = String(localStorage.getItem(LICENSE_HW_SEED_KEY) || "").trim();
-      if (fromLs.length >= 16) return fromLs;
+      if (fromLs.length >= 16) {
+        writePathCookie(LICENSE_HW_SEED_COOKIE, fromLs);
+        return fromLs;
+      }
     } catch (e) { }
+    var fromCookie = readPathCookie(LICENSE_HW_SEED_COOKIE);
+    if (fromCookie.length >= 16) {
+      try {
+        localStorage.setItem(LICENSE_HW_SEED_KEY, fromCookie);
+      } catch (e2) { }
+      return fromCookie;
+    }
     try {
       var fromJson = JSON.parse(localStorage.getItem("btca101.identityJson") || "null");
       var fromId = fromJson && String(fromJson.hardware_seed || "").trim();
       if (fromId.length >= 16) {
         try {
           localStorage.setItem(LICENSE_HW_SEED_KEY, fromId);
-        } catch (e2) { }
+        } catch (e3) { }
+        writePathCookie(LICENSE_HW_SEED_COOKIE, fromId);
         return fromId;
       }
     } catch (e) { }
@@ -518,7 +530,42 @@
     try {
       localStorage.setItem(LICENSE_HW_SEED_KEY, clean);
     } catch (e) { }
+    writePathCookie(LICENSE_HW_SEED_COOKIE, clean);
     return clean;
+  }
+
+  /**
+   * До device-session: подтянуть seed из cookie / IDB / cache.
+   * Иначе Safari может сохранить device_id в cookie, а seed в LS стереть → новый hash → «не авторизовано».
+   */
+  function ensureHardwareSeedReady() {
+    var existing = readHardwareSeed();
+    if (existing.length >= 16) return Promise.resolve(existing);
+    return readIdentityFromIdb()
+      .then(function (data) {
+        var fromIdb = data && String(data.hardware_seed || "").trim();
+        if (fromIdb.length >= 16) {
+          persistHardwareSeed(fromIdb);
+          try {
+            localStorage.removeItem(LICENSE_HW_HASH_KEY);
+          } catch (e) { }
+          return fromIdb;
+        }
+        return readIdentityFromAnyCache().then(function (cached) {
+          var fromCache = cached && String(cached.hardware_seed || "").trim();
+          if (fromCache.length >= 16) {
+            persistHardwareSeed(fromCache);
+            try {
+              localStorage.removeItem(LICENSE_HW_HASH_KEY);
+            } catch (e2) { }
+            return fromCache;
+          }
+          return "";
+        });
+      })
+      .catch(function () {
+        return "";
+      });
   }
 
   function makeHardwareSeed() {
@@ -5648,12 +5695,8 @@
     renderInstalledHome({ preserveSplash: true });
     // Не открываем форму входа по таймауту — решение примет device-session.
     pendingInstalledLoginReveal = false;
-    // Сначала общий device_id (cookie/IDB), иначе Safari и PWA получат разные UUID.
-    var deviceWarm = ensureLicenseDeviceIdReady();
-    var identityWarm = ensureLicenseIdentityRestored();
-    var hardwareWarm = ensureHardwareHashReady().catch(function () {
-      return "";
-    });
+    // Порядок важен: device_id → identity/seed → hash.
+    // Параллельный hash до восстановления seed давал новый SHA и «Устройство не авторизовано».
     var chain = Promise.resolve();
     if (!mediaReady) {
       chain = repairStandaloneShell({ deferHome: true });
@@ -5661,22 +5704,27 @@
 
     return chain
       .then(function () {
-        return deviceWarm.catch(function () {
+        return ensureLicenseDeviceIdReady().catch(function () {
           return getLicenseDeviceId();
         });
       })
       .then(function () {
-        return hardwareWarm;
+        return ensureLicenseIdentityRestored().catch(function () {
+          return "";
+        });
+      })
+      .then(function () {
+        return ensureHardwareSeedReady().catch(function () {
+          return "";
+        });
+      })
+      .then(function () {
+        return ensureHardwareHashReady().catch(function () {
+          return "";
+        });
       })
       .then(function () {
         return runSplashBootChecks();
-      })
-      .then(function (check) {
-        return identityWarm.catch(function () {
-          return "";
-        }).then(function () {
-          return check;
-        });
       })
       .then(function (check) {
         if (enforcePwaSessionLimit()) return;
