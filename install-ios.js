@@ -2,8 +2,8 @@
   "use strict";
 
   var BTCA_BASE = "/btca-10-1/";
-  var INSTALL_CACHE = "btca10-web-10.1.218:static-install";
-  var MEDIA_CACHE = "btca10-web-10.1.218:static-media";
+  var INSTALL_CACHE = "btca10-web-10.1.219:static-install";
+  var MEDIA_CACHE = "btca10-web-10.1.219:static-media";
   var MEDIA_PROBE_RE = /offline-unpacked\/level3\/exercises\/.+\.(jpe?g|png|webp|gif)$/i;
   var MEDIA_STATE_KEY = "btca10-web:static-media-state";
   var APP_READY_KEY = "btca10-web:app-ready";
@@ -54,8 +54,8 @@
     "*Упражнений* – более 150, *Задач* – более 700, *Полезности* – интеллектуальная поисковая система по Базе знаний школы: 14 основополагающих документов, 114 рисунков и видео и более 370 тематических материалов.\n" +
     "\nCopyright © Юрий Алинт (Андрей Юрьев) 2026";
   var installedHomeSnapshot = "";
-  var LEVEL1_MODULE_VERSION = "10.1.179";
-  var LEVEL3_MODULE_VERSION = "10.1.179";
+  var LEVEL1_MODULE_VERSION = "10.1.180";
+  var LEVEL3_MODULE_VERSION = "10.1.180";
 
   var CORE_REL_PATHS = [
     "",
@@ -5039,20 +5039,9 @@
     return adopted;
   }
 
-  /**
-   * Загрузочная (не standalone): жёстко выставляем «версия от …» из единого источника
-   * (app-shell → License meta). DOM/index.html и кэш браузера не должны оставлять старую дату.
-   */
-  function syncLoadingPageReleaseDate() {
-    if (isStandalone()) return Promise.resolve("");
-    var fromShell = fetchRemoteAppShellPayload()
-      .then(function (payload) {
-        return remoteLatestVersionDate(payload) || "";
-      })
-      .catch(function () {
-        return "";
-      });
-    var fromMeta = fetch(LICENSE_API_BASE.replace(/\/$/, "") + "/v1/meta/last-version-date", {
+  /** Как Android/Win: единая дата последней версии из License meta. */
+  function fetchMetaLastVersionDate() {
+    return fetch(LICENSE_API_BASE.replace(/\/$/, "") + "/v1/meta/last-version-date", {
       method: "GET",
       headers: { Accept: "application/json" },
       cache: "no-store",
@@ -5067,8 +5056,32 @@
       .catch(function () {
         return "";
       });
-    return Promise.all([fromShell, fromMeta]).then(function (pair) {
-      var date = pickNewestReleaseDate(pair[0], pair[1], readDomPackageReleaseDate());
+  }
+
+  /**
+   * Удалённая дата для «Есть обновление…»: meta (как Android) + app-shell как запасной max.
+   */
+  function fetchRemoteUpdateVersionDate() {
+    var fromShell = fetchRemoteAppShellPayload()
+      .then(function (payload) {
+        return remoteLatestVersionDate(payload) || "";
+      })
+      .catch(function () {
+        return "";
+      });
+    return Promise.all([fetchMetaLastVersionDate(), fromShell]).then(function (pair) {
+      return pickNewestReleaseDate(pair[0], pair[1]) || "";
+    });
+  }
+
+  /**
+   * Загрузочная (не standalone): жёстко выставляем «версия от …» из единого источника
+   * (app-shell → License meta). DOM/index.html и кэш браузера не должны оставлять старую дату.
+   */
+  function syncLoadingPageReleaseDate() {
+    if (isStandalone()) return Promise.resolve("");
+    return fetchRemoteUpdateVersionDate().then(function (remoteDate) {
+      var date = pickNewestReleaseDate(remoteDate, readDomPackageReleaseDate());
       if (date) setEyebrowReleaseDate(date);
       return date || "";
     });
@@ -5211,13 +5224,13 @@
       showHomeOfflineStatusHint(false);
       return Promise.resolve(false);
     }
-    return fetchRemoteAppShellPayload()
-      .then(function (payload) {
-        if (!payload) {
+    // Как Android: remote = License meta (+ shell max). Не только Pages app-shell.
+    return fetchRemoteUpdateVersionDate()
+      .then(function (remoteDate) {
+        if (!remoteDate) {
           showHomeOfflineStatusHint(false);
           return false;
         }
-        var remoteDate = remoteLatestVersionDate(payload);
         return applyUpdateAvailableHint(remoteDate, localDate);
       })
       .catch(function () {
@@ -5267,15 +5280,10 @@
     try {
       renderHomeSplashIndicator(8);
     } catch (e) { }
-    var updateCheck = fetchRemoteAppShellPayload()
-      .then(function (payload) {
-        var remoteDate = remoteLatestVersionDate(payload);
-        // Подсказку обновления покажем после открытия дома (п.9в).
-        return remoteDate;
-      })
-      .catch(function () {
-        return "";
-      });
+    // Prefetch meta/shell date while device-session runs; hint applies after home (п.9в).
+    var updateCheck = fetchRemoteUpdateVersionDate().catch(function () {
+      return "";
+    });
 
     try {
       renderHomeSplashIndicator(18);
@@ -5343,7 +5351,11 @@
         };
       })
       .then(function (result) {
-        return updateCheck.then(function () {
+        return updateCheck.then(function (remoteDate) {
+          // Как Android: мягкая подсказка по meta-дате, пока splash ещё на экране.
+          if (result && result.ok && remoteDate) {
+            applyUpdateAvailableHint(remoteDate, readLocalPackageReleaseDate());
+          }
           return result;
         });
       });
