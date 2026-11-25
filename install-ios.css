@@ -808,7 +808,7 @@ body:not(.btca-apple-comfort) .platform-button.account-modal__save {
   margin: 0 2px 2px;
   color: #c8e2e6;
   font-size: 0.95rem;
-  font-weight: 600;
+  font-weight: 400;
   line-height: 1.2;
   letter-spacing: 0.02em;
 }
