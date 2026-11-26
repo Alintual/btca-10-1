@@ -2,8 +2,8 @@
   "use strict";
 
   var BTCA_BASE = "/btca-10-1/";
-  var INSTALL_CACHE = "btca10-web-10.1.221:static-install";
-  var MEDIA_CACHE = "btca10-web-10.1.221:static-media";
+  var INSTALL_CACHE = "btca10-web-10.1.222:static-install";
+  var MEDIA_CACHE = "btca10-web-10.1.222:static-media";
   var MEDIA_PROBE_RE = /offline-unpacked\/level3\/exercises\/.+\.(jpe?g|png|webp|gif)$/i;
   var MEDIA_STATE_KEY = "btca10-web:static-media-state";
   var APP_READY_KEY = "btca10-web:app-ready";
@@ -54,8 +54,8 @@
     "*Упражнений* – более 150, *Задач* – более 700, *Полезности* – интеллектуальная поисковая система по Базе знаний школы: 14 основополагающих документов, 114 рисунков и видео и более 370 тематических материалов.\n" +
     "\nCopyright © Юрий Алинт (Андрей Юрьев) 2026";
   var installedHomeSnapshot = "";
-  var LEVEL1_MODULE_VERSION = "10.1.182";
-  var LEVEL3_MODULE_VERSION = "10.1.182";
+  var LEVEL1_MODULE_VERSION = "10.1.183";
+  var LEVEL3_MODULE_VERSION = "10.1.183";
 
   var CORE_REL_PATHS = [
     "",
@@ -4130,7 +4130,7 @@
           saveBlobToDevice(result.blob, result.filename);
           renderAndroidDownloadProgress(
             100,
-            "Готово, дистрибутив скачан на устройство.",
+            "Дистрибутив готов для загрузки на устройство.",
             true
           );
           if (small) small.textContent = "Скачано";
@@ -4179,7 +4179,7 @@
           saveBlobToDevice(result.blob, result.filename || "BTCA-Windows 10.1.exe");
           renderWindowsDownloadProgress(
             100,
-            "Готово, дистрибутив скачан на устройство.",
+            "Дистрибутив готов для загрузки на устройство.",
             true
           );
           if (small) small.textContent = "Скачано";
@@ -4228,7 +4228,7 @@
           saveBlobToDevice(result.blob, result.filename || "BTCA-Android TV 10.1.apk");
           renderSmartDownloadProgress(
             100,
-            "Готово, дистрибутив скачан. Установите на приставку с USB.",
+            "Дистрибутив готов для загрузки на устройство.",
             true
           );
           if (small) small.textContent = "Скачано";
