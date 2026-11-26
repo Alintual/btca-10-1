@@ -2,8 +2,8 @@
   "use strict";
 
   var BTCA_BASE = "/btca-10-1/";
-  var INSTALL_CACHE = "btca10-web-10.1.220:static-install";
-  var MEDIA_CACHE = "btca10-web-10.1.220:static-media";
+  var INSTALL_CACHE = "btca10-web-10.1.221:static-install";
+  var MEDIA_CACHE = "btca10-web-10.1.221:static-media";
   var MEDIA_PROBE_RE = /offline-unpacked\/level3\/exercises\/.+\.(jpe?g|png|webp|gif)$/i;
   var MEDIA_STATE_KEY = "btca10-web:static-media-state";
   var APP_READY_KEY = "btca10-web:app-ready";
@@ -54,8 +54,8 @@
     "*Упражнений* – более 150, *Задач* – более 700, *Полезности* – интеллектуальная поисковая система по Базе знаний школы: 14 основополагающих документов, 114 рисунков и видео и более 370 тематических материалов.\n" +
     "\nCopyright © Юрий Алинт (Андрей Юрьев) 2026";
   var installedHomeSnapshot = "";
-  var LEVEL1_MODULE_VERSION = "10.1.181";
-  var LEVEL3_MODULE_VERSION = "10.1.181";
+  var LEVEL1_MODULE_VERSION = "10.1.182";
+  var LEVEL3_MODULE_VERSION = "10.1.182";
 
   var CORE_REL_PATHS = [
     "",
@@ -4103,7 +4103,7 @@
       var small = btn.querySelector("small");
       btn.disabled = true;
       if (small) small.textContent = "Подготовка скачивания...";
-      renderAndroidDownloadProgress(0, "Подготовка персонального APK…", false);
+      renderAndroidDownloadProgress(0, "Идёт подготовка к загрузке...", false);
 
       claimPlatformDownload("android", "Android")
         .then(function (data) {
@@ -4120,9 +4120,9 @@
             } catch (e) { }
           }
           if (small) small.textContent = "Скачивание....";
-          renderAndroidDownloadProgress(0, "Идёт загрузка APK на Ваше устройство…", false);
+          renderAndroidDownloadProgress(0, "Идёт подготовка к загрузке...", false);
           return downloadApkWithRealProgress(url, function (pct) {
-            renderAndroidDownloadProgress(pct, "Идёт загрузка APK на Ваше устройство…", false);
+            renderAndroidDownloadProgress(pct, "Идёт подготовка к загрузке...", false);
             if (small) small.textContent = "Скачивание....";
           });
         })
@@ -4153,7 +4153,7 @@
       var small = btn.querySelector("small");
       btn.disabled = true;
       if (small) small.textContent = "Подготовка скачивания...";
-      renderWindowsDownloadProgress(0, "Подготовка персонального EXE…", false);
+      renderWindowsDownloadProgress(0, "Идёт подготовка к загрузке...", false);
 
       claimPlatformDownload("windows", "Windows")
         .then(function (data) {
@@ -4169,9 +4169,9 @@
             } catch (e) { }
           }
           if (small) small.textContent = "Скачивание....";
-          renderWindowsDownloadProgress(0, "Идёт загрузка EXE на Ваше устройство…", false);
+          renderWindowsDownloadProgress(0, "Идёт подготовка к загрузке...", false);
           return downloadExeWithRealProgress(url, function (pct) {
-            renderWindowsDownloadProgress(pct, "Идёт загрузка EXE на Ваше устройство…", false);
+            renderWindowsDownloadProgress(pct, "Идёт подготовка к загрузке...", false);
             if (small) small.textContent = "Скачивание....";
           });
         })
@@ -4202,7 +4202,7 @@
       var small = btn.querySelector("small");
       btn.disabled = true;
       if (small) small.textContent = "Подготовка скачивания...";
-      renderSmartDownloadProgress(0, "Подготовка персонального APK для Android TV…", false);
+      renderSmartDownloadProgress(0, "Идёт подготовка к загрузке...", false);
 
       claimPlatformDownload("smart", "Android TV")
         .then(function (data) {
@@ -4218,9 +4218,9 @@
             } catch (e) { }
           }
           if (small) small.textContent = "Скачивание....";
-          renderSmartDownloadProgress(0, "Идёт загрузка APK на Ваше устройство…", false);
+          renderSmartDownloadProgress(0, "Идёт подготовка к загрузке...", false);
           return downloadSmartApkWithRealProgress(url, function (pct) {
-            renderSmartDownloadProgress(pct, "Идёт загрузка APK на Ваше устройство…", false);
+            renderSmartDownloadProgress(pct, "Идёт подготовка к загрузке...", false);
             if (small) small.textContent = "Скачивание....";
           });
         })
